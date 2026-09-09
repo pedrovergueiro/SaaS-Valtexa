@@ -1,0 +1,44 @@
+[project]
+name = "valtexa-platform"
+version = "0.1.0"
+description = "Plataforma da ValTexa: nuvem, gêmeo digital, missões e segurança operacional"
+requires-python = ">=3.11"
+
+[tool.ruff]
+# Mesmo limite do valtexa-disease-backend: PEP 8 permite estender as 79 colunas,
+# e 100 mantém as assinaturas do FastAPI e as mensagens em português legíveis.
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "SIM",  # simplify
+    "RUF",
+]
+# B008 é o padrão do FastAPI para declarar dependências (Depends(...), Query(...)).
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Os testes acessam helpers privados de propósito, para cobrir caminhos internos.
+"tests/*" = ["SLF001"]
+# O simulador imprime o passo a passo da missão: é a saída do programa.
+"simulator/*" = ["T201"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    # Aviso do nosso código é erro: não deixamos dívida de depreciação passar.
+    "error::DeprecationWarning",
+    # O starlette.testclient ainda importa um alias que o anyio depreciou. Não é
+    # nosso para consertar, e transformá-lo em erro impediria a suíte de rodar.
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]

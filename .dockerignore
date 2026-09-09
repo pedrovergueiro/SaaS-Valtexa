@@ -1,0 +1,11 @@
+.venv/
+.simulacao/
+storage/
+*.db
+*.sqlite3
+.git/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+tests/
+docs/

@@ -1,0 +1,42 @@
+# Ambiente completo: plataforma + Postgres.
+#
+# O serviço de inferência (VALTEXA-B) fica de fora de propósito: ele precisa de
+# GPU e de uma faixa de Python diferente, então tem ciclo de vida próprio.
+# Aponte INFERENCE_URL para onde ele estiver.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: valtexa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: valtexa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U valtexa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://valtexa:${POSTGRES_PASSWORD}@db:5432/valtexa
+      # Obrigatórios e diferentes entre si: ver .env.example.
+      SESSION_SECRET: ${SESSION_SECRET:?defina SESSION_SECRET}
+      COMMAND_SIGNING_SECRET: ${COMMAND_SIGNING_SECRET:?defina COMMAND_SIGNING_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://app.valtexa.com.br}
+      INFERENCE_URL: ${INFERENCE_URL:-http://host.docker.internal:8000}
+      STORAGE_DIR: /app/storage
+    ports:
+      - "8080:8080"
+    volumes:
+      - assets:/app/storage
+
+volumes:
+  pgdata:
+  assets:
