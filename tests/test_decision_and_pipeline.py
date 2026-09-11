@@ -85,6 +85,12 @@ class TestPipelineCombination:
         assert not outcome.independent_pair
         assert "não é independente" in outcome.rationale
 
+    def test_par_dependente_que_concorda_vai_para_o_agronomo(self) -> None:
+        """Concordância correlacionada não pula a fila, nem com tudo o mais em ordem."""
+        outcome = pipeline.combine([analysis("a"), analysis("dependent:tta")])
+        assert outcome.status is DiagnosisStatus.NEEDS_REVIEW
+        assert outcome.label is not None
+
     def test_cultura_sem_modelo_e_recusada(self) -> None:
         """Classificar soja com o modelo de milho devolveria uma classe de milho."""
         with pytest.raises(pipeline.AnalyzerUnavailableError, match="soja"):

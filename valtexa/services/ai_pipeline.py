@@ -389,6 +389,24 @@ def combine(analyses: Sequence[Analysis]) -> PipelineOutcome:
             analyses=tuple(analyses),
         )
 
+    if not independent_pair:
+        # Concordância entre análises correlacionadas não é evidência: os dois
+        # modelos erram juntos justamente onde importa — na doença que nenhum
+        # deles viu. Sem par independente, quem fecha é o agrônomo.
+        return PipelineOutcome(
+            status=DiagnosisStatus.NEEDS_REVIEW,
+            agreement=Agreement.AGREE,
+            label=best.label,
+            confidence=min(confidences),
+            novelty_score=novelty,
+            rationale=(
+                f"{len(usable)} análises concordaram em {best.label!r}, mas o par não é "
+                "independente: concordância correlacionada não valida."
+            ),
+            independent_pair=False,
+            analyses=tuple(analyses),
+        )
+
     return PipelineOutcome(
         status=DiagnosisStatus.AI_VALIDATED,
         agreement=Agreement.AGREE,
@@ -399,11 +417,10 @@ def combine(analyses: Sequence[Analysis]) -> PipelineOutcome:
         confidence=min(confidences),
         novelty_score=novelty,
         rationale=(
-            f"{len(usable)} análises concordaram em {best.label!r} "
+            f"{len(usable)} análises independentes concordaram em {best.label!r} "
             f"(confiança mínima {min(confidences):.3f})."
-            + ("" if independent_pair else " Atenção: o par não é independente.")
         ),
-        independent_pair=independent_pair,
+        independent_pair=True,
         analyses=tuple(analyses),
     )
 

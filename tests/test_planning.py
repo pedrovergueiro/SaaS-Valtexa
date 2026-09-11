@@ -117,7 +117,7 @@ class TestSecondaryAnalyzer:
         assert mapping == {"corn": "a", "cafe": "b"}
 
     def test_par_dependente_nao_valida(self) -> None:
-        """Concordância com o modelo marcado como dependente não vira AI_VALIDATED puro."""
+        """Concordância com o modelo marcado como dependente não vira AI_VALIDATED."""
         outcome = ai_pipeline.combine(
             [
                 ai_pipeline.Analysis(analyzer="cloud-primary", label="Blight", confidence=0.95),
@@ -127,3 +127,4 @@ class TestSecondaryAnalyzer:
             ]
         )
         assert not outcome.independent_pair
+        assert outcome.status is ai_pipeline.DiagnosisStatus.NEEDS_REVIEW
