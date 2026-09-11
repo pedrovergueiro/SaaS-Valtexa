@@ -283,8 +283,11 @@ O que **não** está pronto, e por quê:
    `AI_VALIDATED` e tudo vai para a fila do agrônomo. Ligar é decisão sobre essa
    medida, de preferência repetida com imagens da própria frota.
    → `docs/AI_PIPELINE.md`
-2. **A severidade não é estimada.** Os modelos classificam, não quantificam.
-   `Diagnosis.severity` existe no esquema e fica nulo.
+2. **A severidade é área no quadro, e fica fora da decisão.** A segmentação de
+   lesão erra em média 7,6 pontos percentuais do quadro (correlação 0,89 com a
+   máscara), mas mede lesão sobre a imagem, não sobre a folha, e ainda não foi
+   comparada com a escala de um fitopatologista. O agrônomo vê o número; a regra
+   de aplicação não o usa. → `docs/AI_PIPELINE.md`
 3. **`SIMULATED_INFERENCE`** troca os modelos por analisadores falsos, para o
    simulador. É recusado em produção — um diagnóstico inventado chegando a um
    produtor seria pior do que não ter diagnóstico.

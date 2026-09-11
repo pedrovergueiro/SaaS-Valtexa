@@ -97,6 +97,21 @@ Duas notas sobre o desenho:
   reportar o número mais otimista apagaria justamente a dúvida que a segunda
   análise existe para revelar.
 
+### Severidade — medida, não votada
+
+O serviço de inferência devolve, junto com a classe, a fração do quadro marcada
+como lesão por um modelo de segmentação (`VALTEXA-B`, `MODELS.md#severidade`).
+Ela vai para `Diagnosis.severity` sem passar pelo combinador: é medida de área,
+não opinião sobre o rótulo, e os dois analisadores a recebem do mesmo modelo.
+
+No teste que o modelo nunca viu, o erro médio é de 7,6 pontos percentuais do
+quadro, com correlação 0,89 com a máscara; nas folhas saudáveis, a lesão falsa
+média foi 0,01%. Duas ressalvas mantêm o número **fora da regra de decisão**: é
+área no quadro, não na folha (aproxima a folha só quando ela preenche a
+imagem), e ainda não foi comparada com a escala diagramática de um
+fitopatologista. Até lá, é informação para o agrônomo — o console mostra a área
+lesionada na fila e na foto da observação.
+
 ### `AI_VALIDATED` não é autorização
 
 É só o estado em que duas análises independentes chegaram à mesma resposta com
