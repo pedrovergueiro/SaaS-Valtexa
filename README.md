@@ -275,13 +275,14 @@ institucional; o console é outra aplicação.
 
 O que **não** está pronto, e por quê:
 
-1. **O segundo analisador não conta como independente.** Um segundo modelo
-   entra por `SECONDARY_MODELS`, mas com `SECONDARY_MODEL_INDEPENDENT=false` — o
-   padrão — o combinador não conta o par: concordância entre modelos
-   correlacionados não é evidência. Sem par independente, nada chega a
-   `AI_VALIDATED` e tudo vai para a fila do agrônomo. A fila crescer é o
-   comportamento correto, não uma falha; ligar a marca é decisão tomada sobre
-   medida. → `docs/AI_PIPELINE.md`
+1. **O segundo analisador não conta como independente por padrão.** O
+   `leaf-foliar-b` (outra arquitetura, mesmo dataset) foi medido: quando
+   concorda com o primário, acerta 98,1%, e a discordância pega 60% dos erros —
+   mas 40% dos erros são compartilhados, e 55% de uma doença nunca vista passa
+   concordante. Com `SECONDARY_MODEL_INDEPENDENT=false`, o padrão, nada chega a
+   `AI_VALIDATED` e tudo vai para a fila do agrônomo. Ligar é decisão sobre essa
+   medida, de preferência repetida com imagens da própria frota.
+   → `docs/AI_PIPELINE.md`
 2. **A severidade não é estimada.** Os modelos classificam, não quantificam.
    `Diagnosis.severity` existe no esquema e fica nulo.
 3. **`SIMULATED_INFERENCE`** troca os modelos por analisadores falsos, para o

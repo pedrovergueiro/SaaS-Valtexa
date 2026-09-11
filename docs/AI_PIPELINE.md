@@ -58,7 +58,7 @@ Toda a arquitetura em volta existe por causa desse número.
 | Barreira | Onde | O que cobre |
 |---|---|---|
 | Amostra mínima | `decision_engine.MIN_SAMPLE` + incidência | erro pontual não vira ação |
-| Independência medida | `combine()` marca `independent_pair` | concordância correlacionada não vale |
+| Independência medida | `combine()` exige par independente para validar | concordância correlacionada não vale |
 | Anomalia no talhão | `services/twin.anomalies` | **o que a novidade não pega** |
 | Fila do agrônomo | `/v1/review/queue` | rótulo novo entra no dataset |
 
@@ -86,7 +86,8 @@ imagem ──┬──► IA A ──┐
 3. rótulos diferentes → `NEEDS_REVIEW` (a discordância é o sinal);
 4. novidade acima do limiar → `NEEDS_REVIEW`, **mesmo com as duas concordando**;
 5. concordância frágil (confianças distantes) → `NEEDS_REVIEW`;
-6. resto → `AI_VALIDATED`.
+6. par não independente → `NEEDS_REVIEW` (concordância correlacionada não valida);
+7. resto → `AI_VALIDATED`.
 
 Duas notas sobre o desenho:
 
@@ -105,26 +106,71 @@ engine.
 
 ---
 
-## 4. Independência — e por que hoje não existe
+## 4. Independência — medida
 
 Duas cópias correlacionadas do mesmo modelo **concordariam com a mesma resposta
 errada** e produziriam uma falsa sensação de validação. Por isso cada analisador
-declara `independent`, e um par sem independência é marcado.
-
-**Estado atual: não existe um segundo analisador de fato independente.** Só há um
-modelo por cultura.
-
-A consequência foi construída no código, não deixada para a documentação:
-`default_analyzers()` devolve **um** analisador, `combine()` responde
-`Agreement.UNAVAILABLE`, e **nada chega a `AI_VALIDATED`**. Tudo vai para a fila
-do agrônomo.
-
-A fila crescer é o comportamento correto e honesto. Quando existir um segundo
-modelo genuinamente independente, ele entra em `default_analyzers()` e o sistema
-passa a validar sozinho — sem nenhuma outra mudança.
+declara `independent`, e um par sem independência **nunca** chega a
+`AI_VALIDATED`: a concordância vai para a fila do agrônomo, com o motivo
+"concordância correlacionada não valida". O motor de decisão confere de novo
+(`NOT_INDEPENDENT`) antes de qualquer recomendação de aplicação.
 
 Convenção: um analisador cujo nome começa com `dependent:` (TTA, outro recorte,
-outra resolução do mesmo peso) não conta para independência.
+outra resolução do mesmo peso, ou um segundo modelo não declarado independente)
+não conta para independência.
+
+### O segundo modelo
+
+`VALTEXA-B` treinou o `leaf-foliar-b`: mesmas classes, mesmo dataset, outra
+arquitetura (EfficientNetV2B0, contra a MobileNetV2 do primário). Arquitetura
+diferente não prova independência — os dois aprendem dos mesmos rótulos,
+inclusive dos contraditórios. Então ela foi medida, em 11/09/2026.
+
+**Par de produção** — 4 classes, 1.978 imagens de teste que nenhum dos dois viu:
+
+| | |
+|---|---:|
+| acurácia do primário (A) | 95,4% |
+| acurácia do segundo (B) | 95,3% |
+| discordam | 5,2% |
+| acurácia quando concordam | **98,1%** |
+| erros de A que a discordância pega | **60%** |
+| erros de A em que B erra igual | 36 de 90 (40%) |
+
+**Doença retida** — par de 3 classes treinado sem cercosporiose, diante de 400
+imagens dela:
+
+| O que intercepta | Fração |
+|---|---:|
+| confiança baixa em algum dos dois | 26,5% |
+| novidade (A) | 3,5% |
+| discordância entre A e B | 32,0% |
+| **os três juntos** | **45,0%** |
+
+Os dois erram diferente diante do que nunca viram: A dividiu a cercosporiose
+entre ferrugem (186) e helmintosporiose (174); B puxou para helmintosporiose
+(267). É o que faz da discordância o maior sinal isolado. Na medição da seção 1,
+o modelo sozinho interceptava 19%.
+
+### O que isso decide
+
+O par **não** é independente no sentido forte: 40% dos erros do primário são
+compartilhados, e 55% de uma doença nunca vista ainda passam pelos três filtros
+como diagnóstico concordante. Mas também não é cópia: quando concordam, o erro
+cai de 4,6% para 1,9%, e a discordância pega 60% dos erros.
+
+Por isso a configuração padrão continua conservadora, e cada passo é explícito:
+
+| Configuração | Efeito |
+|---|---|
+| `SECONDARY_MODELS=` (vazio) | um analisador; tudo vai para o agrônomo |
+| `SECONDARY_MODELS=corn:leaf-foliar-b` | par; concordância e discordância aparecem no console, mas tudo continua indo para o agrônomo |
+| + `SECONDARY_MODEL_INDEPENDENT=true` | a concordância entre A e B valida sozinha (`AI_VALIDATED`) |
+
+Recomendação: o segundo passo já; o terceiro só depois de repetir esta medição
+num conjunto de teste capturado pela própria frota. Os números acima são de
+dataset público — e a proteção contra a doença nova que passa concordante não é o
+par: é a anomalia no talhão (seção 2).
 
 ---
 

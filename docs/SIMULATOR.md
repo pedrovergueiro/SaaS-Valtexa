@@ -100,7 +100,9 @@ O truque: o rover monta imagens PNG válidas com uma marca anexada ao fim do
 arquivo (`VTXSIM:<rótulo>:<novidade>`). PNG ignora bytes depois do bloco `IEND`,
 então a etiqueta viaja junto sem corromper o arquivo, e o `SimulatedAnalyzer` a
 lê para saber o que responder. A confiança vem do hash da imagem — mesma imagem,
-mesma resposta, como num modelo de verdade.
+mesma resposta, como num modelo de verdade. A severidade também: zero em folha
+sadia, entre 3% e 35% nas demais, e a mesma para os dois analisadores, porque é
+medida da imagem, não opinião sobre ela.
 
 A imagem em si é uma folha de milho desenhada por
 [`simulator/leaf.py`](../simulator/leaf.py), com a lesão típica do rótulo —
