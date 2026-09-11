@@ -403,6 +403,9 @@ class ObservationOut(ApiModel):
     label: str | None = None
     confidence: float | None = None
     novelty_score: float | None = None
+    severity: float | None = Field(
+        default=None, description="Fração do quadro com lesão, quando medida."
+    )
 
 
 class SignedCommandOut(ApiModel):
@@ -565,6 +568,14 @@ class DiagnosisOut(ApiModel):
     effective_label: str | None
     confidence: float | None
     novelty_score: float | None
+    severity: float | None = Field(
+        default=None,
+        description=(
+            "Fração do quadro com lesão, em [0, 1]. Aproxima a severidade da folha "
+            "quando ela preenche o quadro. Informação para o agrônomo: não entra na "
+            "regra de decisão."
+        ),
+    )
     rationale: str | None
     pipeline_version: str
     reviewed_by: str | None

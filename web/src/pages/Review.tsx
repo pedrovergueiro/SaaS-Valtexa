@@ -199,6 +199,18 @@ function ReviewItem({
               </li>
             ))}
           </ul>
+          {item.severity != null && (
+            <div className="border-t border-line-soft px-5 py-3 text-[13px]">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Área lesionada no quadro</span>
+                <span className="num">{fmt.percent(item.severity)}</span>
+              </div>
+              <p className="mt-1 text-[12px] text-muted">
+                Medida pela segmentação de lesão. Aproxima a severidade quando a folha preenche o quadro; não entra na
+                decisão de aplicar.
+              </p>
+            </div>
+          )}
         </Card>
 
         {canReview ? (

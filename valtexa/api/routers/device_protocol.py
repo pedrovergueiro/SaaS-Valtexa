@@ -748,6 +748,7 @@ def _observation_out(session: Session, observation: Observation) -> ObservationO
         label=diagnosis.label if diagnosis else None,
         confidence=diagnosis.confidence if diagnosis else None,
         novelty_score=diagnosis.novelty_score if diagnosis else None,
+        severity=diagnosis.severity if diagnosis else None,
     )
 
 

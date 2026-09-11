@@ -2149,6 +2149,11 @@ export interface components {
             confidence: number | null;
             /** Novelty Score */
             novelty_score: number | null;
+            /**
+             * Severity
+             * @description Fração do quadro com lesão, em [0, 1]. Aproxima a severidade da folha quando ela preenche o quadro. Informação para o agrônomo: não entra na regra de decisão.
+             */
+            severity?: number | null;
             /** Rationale */
             rationale: string | null;
             /** Pipeline Version */
@@ -2651,6 +2656,11 @@ export interface components {
             confidence?: number | null;
             /** Novelty Score */
             novelty_score?: number | null;
+            /**
+             * Severity
+             * @description Fração do quadro com lesão, quando medida.
+             */
+            severity?: number | null;
         };
         /** OutboxEventOut */
         OutboxEventOut: {

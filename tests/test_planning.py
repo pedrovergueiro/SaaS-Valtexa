@@ -128,3 +128,36 @@ class TestSecondaryAnalyzer:
         )
         assert not outcome.independent_pair
         assert outcome.status is ai_pipeline.DiagnosisStatus.NEEDS_REVIEW
+
+
+class TestSeveridade:
+    """Área lesionada: medida, não opinião — não passa pelo combinador."""
+
+    def test_vem_do_primeiro_analisador_que_mediu(self) -> None:
+        analyses = [
+            ai_pipeline.Analysis(analyzer="a", label="Blight", confidence=0.9),
+            ai_pipeline.Analysis(analyzer="b", label="Blight", confidence=0.9, severity=0.18),
+            ai_pipeline.Analysis(analyzer="c", label="Blight", confidence=0.9, severity=0.2),
+        ]
+        assert ai_pipeline.measured_severity(analyses) == pytest.approx(0.18)
+
+    def test_analisador_com_erro_nao_conta(self) -> None:
+        failed = ai_pipeline.Analysis(
+            analyzer="a", label=None, confidence=None, severity=0.5, error="Timeout"
+        )
+        assert ai_pipeline.measured_severity([failed]) is None
+
+    def test_simulado_mede_zero_em_folha_sadia(self) -> None:
+        image = b"folha" + ai_pipeline.SIMULATION_MARKER + b"Healthy:0.4"
+        analysis = ai_pipeline.SimulatedAnalyzer(name="sim-a").analyze(image, "f.png", "corn")
+        assert analysis.severity == 0.0
+
+    def test_simulados_respondem_a_mesma_severidade(self) -> None:
+        """É medida da imagem: dois analisadores não podem discordar dela."""
+        image = b"folha" + ai_pipeline.SIMULATION_MARKER + b"Common_Rust:0.4"
+        first = ai_pipeline.SimulatedAnalyzer(name="sim-a").analyze(image, "f.png", "corn")
+        second = ai_pipeline.SimulatedAnalyzer(name="sim-b", bias=-0.02).analyze(
+            image, "f.png", "corn"
+        )
+        assert first.severity == second.severity
+        assert 0.03 <= first.severity <= 0.35

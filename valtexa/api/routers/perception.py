@@ -311,6 +311,7 @@ def _observation_out(row: Observation, diagnosis: Diagnosis | None) -> Observati
         label=diagnosis.effective_label if diagnosis else None,
         confidence=diagnosis.confidence if diagnosis else None,
         novelty_score=diagnosis.novelty_score if diagnosis else None,
+        severity=diagnosis.severity if diagnosis else None,
     )
 
 
@@ -329,6 +330,7 @@ def _diagnosis_out(session: Session, row: Diagnosis) -> DiagnosisOut:
         effective_label=row.effective_label,
         confidence=row.confidence,
         novelty_score=row.novelty_score,
+        severity=row.severity,
         rationale=row.rationale,
         pipeline_version=row.pipeline_version,
         reviewed_by=row.reviewed_by,

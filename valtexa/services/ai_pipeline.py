@@ -75,6 +75,9 @@ class Analysis:
     label: str | None
     confidence: float | None
     novelty_score: float | None = None
+    severity: float | None = None
+    """Fração do quadro com lesão, quando o serviço de inferência mede."""
+
     abstained: bool = False
     probabilities: dict = field(default_factory=dict)
     model_key: str | None = None
@@ -163,6 +166,7 @@ class HttpModelAnalyzer:
             label=body.get("predicted_class"),
             confidence=body.get("confidence"),
             novelty_score=body.get("novelty_score"),
+            severity=body.get("severity"),
             abstained=bool(body.get("abstained", False)),
             probabilities={
                 item["class_name"]: item["probability"] for item in body.get("probabilities", [])
@@ -241,13 +245,18 @@ class SimulatedAnalyzer:
     def analyze(self, image: bytes, filename: str, crop: str) -> Analysis:
         label, novelty = _read_marker(image, self.fallback)
         digest = hashlib.sha256(image + self.name.encode()).digest()
+        image_digest = hashlib.sha256(image).digest()
         # 0,80 a 0,99, deslocado pelo viés do analisador.
         confidence = min(0.99, max(0.05, 0.80 + digest[0] / 255 * 0.19 + self.bias))
+        # Severidade da imagem, não do analisador: os dois simulados respondem o
+        # mesmo número, como os dois reais recebem o mesmo da segmentação.
+        severity = 0.0 if label in HEALTHY_LABELS else 0.03 + image_digest[1] / 255 * 0.32
         return Analysis(
             analyzer=self.name,
             label=label,
             confidence=round(confidence, 4),
             novelty_score=novelty,
+            severity=round(severity, 3),
             probabilities={label: round(confidence, 4)},
             model_key=f"simulated-{crop or 'generic'}",
             model_version="sim-1",
@@ -470,10 +479,24 @@ def analyze_observation(
         label=outcome.label,
         confidence=outcome.confidence,
         novelty_score=outcome.novelty_score,
+        severity=measured_severity(analyses),
         pipeline_version=PIPELINE_VERSION,
         rationale=outcome.rationale,
     )
     return detections, diagnosis
+
+
+def measured_severity(analyses: Sequence[Analysis]) -> float | None:
+    """A severidade medida, se algum analisador mediu.
+
+    Não passa pelo combinador: é medida de área lesionada, não opinião sobre o
+    rótulo — e os analisadores reais a recebem do mesmo modelo de segmentação.
+    Por isso também não entra na regra de decisão: até ser validada em campo, é
+    informação para o agrônomo, não gatilho de aplicação.
+    """
+    return next(
+        (a.severity for a in analyses if a.error is None and a.severity is not None), None
+    )
 
 
 def default_analyzers() -> list[Analyzer]:

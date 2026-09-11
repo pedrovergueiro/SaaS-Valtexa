@@ -7639,6 +7639,18 @@
       ],
       "title": "Novelty Score"
      },
+     "severity": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Severity",
+      "description": "Fração do quadro com lesão, em [0, 1]. Aproxima a severidade da folha quando ela preenche o quadro. Informação para o agrônomo: não entra na regra de decisão."
+     },
      "rationale": {
       "anyOf": [
        {
@@ -9279,6 +9291,18 @@
        }
       ],
       "title": "Novelty Score"
+     },
+     "severity": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Severity",
+      "description": "Fração do quadro com lesão, quando medida."
      }
     },
     "type": "object",

@@ -45,6 +45,9 @@ export function ObservationModal({
             {observation.novelty_score != null && (
               <span className="text-ink-2">novidade {fmt.number(observation.novelty_score, 2)}</span>
             )}
+            {observation.severity != null && (
+              <span className="text-ink-2">área lesionada {fmt.percent(observation.severity)}</span>
+            )}
           </div>
           <div className="num text-[12px] text-muted">
             {fmt.number(observation.lat, 6)}, {fmt.number(observation.lon, 6)}
