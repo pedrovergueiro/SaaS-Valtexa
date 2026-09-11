@@ -150,7 +150,10 @@ def plan_coverage(
     # constante aqui obrigaria a alterar código para planejar com outra câmera.
     width = swath_m or float((mission.plan or {}).get("swath_m") or 0) or capabilities.swath_m
 
-    legs = geo.boustrophedon(mission.target_polygon, width)
+    field_row = session.get(Field, mission.field_id)
+    azimuth = _row_azimuth(mission.plan or {}, field_row)
+
+    legs = geo.boustrophedon(mission.target_polygon, width, azimuth_deg=azimuth)
     segments = [
         MissionSegment(
             mission_id=mission.id,
@@ -167,6 +170,7 @@ def plan_coverage(
     mission.plan = {
         **(mission.plan or {}),
         "swath_m": width,
+        "row_azimuth_deg": azimuth,
         "segments": len(segments),
         "path_length_m": round(geo.path_length_m(mission.waypoints), 1),
         "area_ha": round(geo.area_ha(mission.target_polygon), 3),
@@ -528,6 +532,53 @@ def abort(
     )
 
 
+EXPIRABLE_STATES = frozenset(
+    {MissionState.AUTHORIZED, MissionState.DISPATCHED, MissionState.READY_TO_RESUME}
+)
+"""Estados em que uma missão pode vencer.
+
+``RUNNING`` fica de fora de propósito: a validade impede *começar* uma missão
+autorizada há muito tempo, não interromper uma que já está em execução. Parar um
+robô no meio da faixa é decisão do operador (abortar), não do relógio.
+"""
+
+
+def expire_stale(session: Session, *, now: datetime | None = None) -> int:
+    """Vence as missões cuja validade passou antes da execução. Devolve quantas.
+
+    Sem isto, uma missão despachada para um robô que nunca a buscou ficaria
+    "despachada" para sempre — e o robô, preso a ela por ``active_mission_id``,
+    nunca mais receberia outra.
+    """
+    moment = now or datetime.now(UTC)
+    stale = list(
+        session.scalars(
+            select(Mission).where(
+                Mission.state.in_(EXPIRABLE_STATES),
+                Mission.expires_at.is_not(None),
+                Mission.expires_at < moment,
+            )
+        )
+    )
+    for mission in stale:
+        transition(
+            session,
+            mission,
+            MissionState.EXPIRED,
+            reason="Validade do comando vencida antes da execução.",
+        )
+    return len(stale)
+
+
+def _row_azimuth(plan: dict, field_row: Field | None) -> float:
+    """Direção das linhas: a do plano, depois a do talhão, depois leste-oeste."""
+    if plan.get("row_azimuth_deg") is not None:
+        return float(plan["row_azimuth_deg"])
+    if field_row is not None and field_row.row_azimuth_deg is not None:
+        return float(field_row.row_azimuth_deg)
+    return 90.0
+
+
 def default_offline_policy(kind: MissionKind) -> dict:
     """O que o robô faz sozinho quando a nuvem some.
 
@@ -590,6 +641,7 @@ _EVENT_FOR_STATE = {
     MissionState.READY_TO_RESUME: events.MISSION_RESUMED,
     MissionState.COMPLETED: events.MISSION_COMPLETED,
     MissionState.ABORTED: events.MISSION_ABORTED,
+    MissionState.EXPIRED: events.MISSION_EXPIRED,
 }
 
 

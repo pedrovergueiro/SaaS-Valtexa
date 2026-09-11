@@ -8,6 +8,8 @@ maioria dos erros de transação aparece.
 
 from __future__ import annotations
 
+import logging
+import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 
@@ -15,7 +17,17 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from valtexa.config import settings
+from valtexa.config import BASE_DIR, settings
+
+logger = logging.getLogger(__name__)
+
+BASELINE_REVISION = "0001"
+"""A migração que descreve o esquema de antes do Alembic.
+
+O banco do piloto foi criado por ``create_all``. Ao encontrar um banco assim —
+tabelas sem ``alembic_version`` —, :func:`migrate` o marca nesta revisão e
+aplica o resto por cima, em vez de tentar recriar o que já existe.
+"""
 
 
 def _build_engine(url: str) -> Engine:
@@ -40,9 +52,11 @@ def _sqlite_pragmas(dbapi_connection: object, _record: object) -> None:
     aceitaria uma missão apontando para um dispositivo que não existe. O WAL
     permite leitura concorrente durante a escrita da telemetria.
     """
-    if not settings.database_url.startswith("sqlite"):
+    # Decide pela conexão, não pela configuração: os testes contra Postgres
+    # rodam com DATABASE_URL de SQLite, e um PRAGMA enviado ao Postgres é erro.
+    if not isinstance(dbapi_connection, sqlite3.Connection):
         return
-    cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
+    cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.close()
@@ -72,11 +86,58 @@ def session_scope() -> Iterator[Session]:
 
 
 def create_all() -> None:
-    """Cria o esquema.
+    """Cria o esquema direto dos modelos, sem migração.
 
-    Suficiente para o piloto. Quando houver dado em produção, o caminho é Alembic:
-    ver ``docs/DEPLOYMENT.md``.
+    Só para os testes, que recriam o banco a cada caso. A aplicação usa
+    :func:`migrate`: um esquema criado por ``create_all`` não tem como evoluir
+    sem perder dado.
     """
     from valtexa.models import Base  # importado aqui para evitar ciclo de import
 
     Base.metadata.create_all(bind=engine)
+
+
+def alembic_config(url: str | None = None):
+    """Configuração do Alembic apontando para ``url`` (padrão: ``DATABASE_URL``)."""
+    from alembic.config import Config
+
+    config = Config(str(BASE_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BASE_DIR / "migrations"))
+    config.attributes["url"] = url or settings.database_url
+    config.attributes["configure_logger"] = False
+    return config
+
+
+def head_revision() -> str:
+    from alembic.script import ScriptDirectory
+
+    return ScriptDirectory.from_config(alembic_config()).get_current_head()
+
+
+def migrate(url: str | None = None) -> str:
+    """Leva o banco à última migração. Devolve ``"adopted"`` ou ``"upgraded"``.
+
+    Roda no start da aplicação. É idempotente: num banco já atualizado, não faz
+    nada.
+    """
+    from alembic import command
+    from sqlalchemy import inspect
+
+    target = url or settings.database_url
+    probe = _build_engine(target)
+    try:
+        tables = set(inspect(probe).get_table_names())
+    finally:
+        probe.dispose()
+
+    config = alembic_config(target)
+    action = "upgraded"
+    if "tenant" in tables and "alembic_version" not in tables:
+        logger.warning(
+            "Banco criado antes das migrações: marcando a revisão %s e aplicando o resto.",
+            BASELINE_REVISION,
+        )
+        command.stamp(config, BASELINE_REVISION)
+        action = "adopted"
+    command.upgrade(config, "head")
+    return action

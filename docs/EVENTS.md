@@ -47,6 +47,7 @@ handler não idempotente aqui vira aplicação duplicada no campo.
 | `mission.created` / `.authorized` / `.dispatched` | ciclo da missão |
 | `mission.started` / `.paused` / `.resumed` | execução |
 | `mission.completed` / `.aborted` | fim |
+| `mission.expired` | a validade venceu antes de a execução começar (worker) |
 | `application.started` / `.completed` | bico aberto e fechado |
 | `application.out_of_bounds` | **ponto da trilha fora do polígono** |
 | `verification.scheduled` / `.completed` | verificação pós-tratamento |
@@ -83,9 +84,12 @@ GET /v1/events?pending_only=true
 ```
 
 Um evento parado com `last_error` preenchido é a primeira pista de que uma
-integração quebrou. Em desenvolvimento, uma thread drena a cada 5 s; em produção
-o mesmo `events.drain()` vira um worker separado — ver
-[`DEPLOYMENT.md`](DEPLOYMENT.md).
+integração quebrou. Quem drena é o worker (`python -m valtexa.worker`), a cada
+5 s — numa thread da API em desenvolvimento, num processo à parte em produção.
+Ver [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+O console recebe os mesmos eventos por SSE em `GET /v1/stream` — ver
+[`API.md`](API.md#tempo-real).
 
 ---
 
@@ -143,7 +147,8 @@ do sistema precisa entrar aqui **e** ganhar um handler.
 
 | Tabela | Política |
 |---|---|
-| `outbox_event` | `purge_delivered()` remove entregues com mais de 30 dias |
+| `outbox_event` | o worker remove os entregues com mais de 30 dias |
+| nonces de requisição | o worker remove os vencidos (`NONCE_RETENTION_SECONDS`) |
 | `device_event` | mantido; é registro operacional |
 | `audit_entry` | **nunca removido** |
-| `telemetry_sample` | ver [`TELEMETRY.md`](TELEMETRY.md) |
+| `telemetry_sample` | agregada por minuto depois de `TELEMETRY_RETENTION_DAYS` — ver [`TELEMETRY.md`](TELEMETRY.md) |

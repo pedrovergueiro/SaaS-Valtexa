@@ -199,7 +199,7 @@ class DeviceClient:
         return self.request(
             "POST",
             "/v1/device/observations",
-            files={"file": (filename, image, "image/jpeg")},
+            files={"file": (filename, image, _image_type(filename))},
             data={"metadata": _compact_json(metadata)},
         ).json()
 
@@ -291,6 +291,15 @@ def _compact_json(payload: dict) -> str:
     import json
 
     return json.dumps(payload, separators=(",", ":"), default=str)
+
+
+def _image_type(filename: str) -> str:
+    lowered = filename.lower()
+    if lowered.endswith(".png"):
+        return "image/png"
+    if lowered.endswith(".webp"):
+        return "image/webp"
+    return "image/jpeg"
 
 
 def _raise_for_status(response: httpx.Response) -> None:

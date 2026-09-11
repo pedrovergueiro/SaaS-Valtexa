@@ -13,35 +13,27 @@ Quando o hardware existir, ele substitui estas classes. A nuvem não muda.
 
 from __future__ import annotations
 
-import base64
 import math
 import random
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from simulator.client import DeviceClient
+from simulator.leaf import leaf_png
 from valtexa.models.enums import EnergyState, RtkFix
 from valtexa.services import geo
 from valtexa.services.ai_pipeline import SIMULATION_MARKER
 
-# JPEG 1x1 válido. O simulador precisa de bytes que passem pela validação de
-# tipo; o conteúdo visual é irrelevante porque o analisador simulado lê a marca
-# anexada ao fim do arquivo.
-BLANK_JPEG = base64.b64decode(
-    "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRof"
-    "Hh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAAB"
-    "AAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=="
-)
 
-
-def frame_with_label(label: str, novelty: float = 0.4) -> bytes:
+def frame_with_label(label: str, novelty: float = 0.4, seed: int = 0) -> bytes:
     """Monta um quadro que carrega a resposta esperada.
 
-    JPEG ignora bytes depois do marcador de fim, então a etiqueta viaja junto sem
+    PNG ignora bytes depois do ``IEND``, então a etiqueta viaja junto sem
     corromper o arquivo. É andaime de simulação, e o único lugar do sistema que
-    o lê é o :class:`~valtexa.services.ai_pipeline.SimulatedAnalyzer`.
+    o lê é o :class:`~valtexa.services.ai_pipeline.SimulatedAnalyzer`. A folha
+    desenhada é só para quem olha a foto no console.
     """
-    return BLANK_JPEG + SIMULATION_MARKER + f"{label}:{novelty}".encode("ascii")
+    return leaf_png(label, novelty, seed) + SIMULATION_MARKER + f"{label}:{novelty}".encode("ascii")
 
 
 @dataclass
@@ -247,8 +239,8 @@ class SimulatedRover(SimulatedDevice):
                     "model_input_ok": True,
                     "edge_summary": {"blur": 0.1, "leaf_fill": 0.8},
                 },
-                image=frame_with_label(label, novelty),
-                filename=f"seg{segment['index']}_{index}.jpg",
+                image=frame_with_label(label, novelty, seed=segment["index"] * 100 + index),
+                filename=f"seg{segment['index']}_{index}.png",
             )
 
         self.client.complete_segment(
@@ -315,6 +307,17 @@ class SimulatedDrone(SimulatedDevice):
                 dose = self.rate_l_ha * area_ha / max(1, _point_count(payload))
                 used += dose
                 track.append([lon, lat, round(dose, 4)])
+
+            if not exhausted:
+                # Mesmo contrato do rover: faixa terminada vira checkpoint. Sem
+                # isso, um drone que cai no meio refaria a área já aplicada.
+                self.client.complete_segment(
+                    mission_id,
+                    segment["index"],
+                    lat=self.lat,
+                    lon=self.lon,
+                    battery_percent=round(self.battery.percent, 2),
+                )
 
         result = self.client.stop_application(
             started["id"],

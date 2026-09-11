@@ -19,7 +19,9 @@ apagar os dados de um cliente sem tocar nos dos demais.
 from __future__ import annotations
 
 import hashlib
+import io
 import shutil
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Protocol
@@ -62,6 +64,8 @@ class ObjectStore(Protocol):
     def put(self, data: bytes, content_type: str, namespace: str) -> StoredObject: ...
 
     def open(self, key: str) -> BinaryIO: ...
+
+    def read(self, key: str) -> bytes: ...
 
     def path(self, key: str) -> Path: ...
 
@@ -117,6 +121,9 @@ class LocalObjectStore:
     def open(self, key: str) -> BinaryIO:
         return self.path(key).open("rb")
 
+    def read(self, key: str) -> bytes:
+        return self.path(key).read_bytes()
+
     def exists(self, key: str) -> bool:
         try:
             self.path(key)
@@ -147,5 +154,108 @@ def _safe(namespace: str) -> str:
     return cleaned or "shared"
 
 
-store: ObjectStore = LocalObjectStore()
+class S3ObjectStore:
+    """Armazenamento em S3 ou compatível (MinIO, Cloudflare R2).
+
+    Mesmas chaves do disco local — prefixo do cliente e ``sha256`` do conteúdo —,
+    então migrar de um para o outro é copiar os objetos, sem reescrever o banco.
+
+    O cliente é injetável: os testes usam um falso em memória e a produção,
+    ``boto3``. A dependência só é importada quando o backend é usado.
+    """
+
+    def __init__(self, bucket: str, prefix: str = "valtexa", client: object | None = None) -> None:
+        if client is None:
+            try:
+                import boto3
+            except ImportError as exc:  # pragma: no cover - depende do ambiente
+                raise RuntimeError("STORAGE_BACKEND=s3 exige 'pip install boto3'.") from exc
+            client = boto3.client(
+                "s3", endpoint_url=settings.s3_endpoint_url, region_name=settings.s3_region
+            )
+        self.client = client
+        self.bucket = bucket
+        self.prefix = prefix.strip("/")
+        self.cache = Path(tempfile.gettempdir()) / "valtexa-s3-cache"
+
+    def put(self, data: bytes, content_type: str, namespace: str = "shared") -> StoredObject:
+        if len(data) > settings.max_asset_bytes:
+            raise AssetTooLargeError(
+                f"Arquivo de {len(data) / 1024 / 1024:.1f} MB excede o limite de "
+                f"{settings.max_asset_mb} MB."
+            )
+        digest = hashlib.sha256(data).hexdigest()
+        suffix = EXTENSIONS.get(content_type, DEFAULT_EXTENSION)
+        key = f"{_safe(namespace)}/{digest[:2]}/{digest[2:4]}/{digest}{suffix}"
+        if not self.exists(key):
+            self.client.put_object(
+                Bucket=self.bucket,
+                Key=self._object_key(key),
+                Body=data,
+                ContentType=content_type,
+                Metadata={"sha256": digest},
+            )
+        return StoredObject(key=key, sha256=digest, size_bytes=len(data), content_type=content_type)
+
+    def read(self, key: str) -> bytes:
+        try:
+            response = self.client.get_object(Bucket=self.bucket, Key=self._object_key(key))
+        except Exception as exc:
+            if _is_missing(exc):
+                raise UnknownAssetError(f"Objeto não encontrado: {key!r}") from exc
+            raise
+        return response["Body"].read()
+
+    def open(self, key: str) -> BinaryIO:
+        return io.BytesIO(self.read(key))
+
+    def path(self, key: str) -> Path:
+        """Baixa para um cache local e devolve o caminho.
+
+        Existe para quem precisa de arquivo em disco (uma biblioteca de imagem,
+        por exemplo). Para servir bytes, :meth:`read` é o caminho direto.
+        """
+        local = (self.cache / self._object_key(key)).resolve()
+        if not local.is_relative_to(self.cache.resolve()):
+            raise UnknownAssetError(f"Chave fora do armazenamento: {key!r}")
+        if not local.exists():
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_bytes(self.read(key))
+        return local
+
+    def exists(self, key: str) -> bool:
+        try:
+            self.client.head_object(Bucket=self.bucket, Key=self._object_key(key))
+        except Exception as exc:
+            if _is_missing(exc):
+                return False
+            raise
+        return True
+
+    def delete(self, key: str) -> None:
+        self.client.delete_object(Bucket=self.bucket, Key=self._object_key(key))
+
+    def _object_key(self, key: str) -> str:
+        if ".." in key.split("/"):
+            raise UnknownAssetError(f"Chave inválida: {key!r}")
+        return f"{self.prefix}/{key}" if self.prefix else key
+
+
+def _is_missing(exc: Exception) -> bool:
+    """Reconhece "não existe" nas duas formas que o boto3 usa."""
+    response = getattr(exc, "response", None) or {}
+    code = str(response.get("Error", {}).get("Code", ""))
+    return code in {"404", "NoSuchKey", "NotFound"} or type(exc).__name__ == "NoSuchKey"
+
+
+def build_store() -> ObjectStore:
+    """Instancia o backend configurado."""
+    if settings.storage_backend == "s3":
+        if not settings.s3_bucket:
+            raise RuntimeError("STORAGE_BACKEND=s3 exige S3_BUCKET.")
+        return S3ObjectStore(settings.s3_bucket, settings.s3_prefix)
+    return LocalObjectStore()
+
+
+store: ObjectStore = build_store()
 """Instância do processo. Trocada nos testes por uma apontando para ``tmp_path``."""

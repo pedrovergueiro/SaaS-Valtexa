@@ -241,46 +241,88 @@ def centroid(polygon: list) -> Point:
     )
 
 
-def boustrophedon(polygon: list, swath_m: float) -> list[list[Point]]:
+def boustrophedon(
+    polygon: list, swath_m: float, azimuth_deg: float = 90.0
+) -> list[list[Point]]:
     """Planeja a cobertura em vaivém — as passadas de ida e volta do rover.
 
     Cada faixa vira um segmento independente da missão, e é a segmentação que
     torna a retomada possível: um rover que voltou para recarregar continua da
     faixa seguinte em vez de refazer a lavoura inteira.
 
-    Varre no eixo leste-oeste por simplicidade. Alinhar as faixas à direção real
-    das linhas de plantio é o próximo passo — precisa do azimute da linha, que
-    ainda não é coletado.
+    ``azimuth_deg`` é a direção das linhas de plantio, em graus a partir do
+    norte, sentido horário: 0 para linhas norte-sul, 90 para leste-oeste. As
+    passadas seguem as linhas. Um rover que cruzasse as linhas passaria por cima
+    das plantas — e a câmera, feita para olhar a folha de lado, veria o solo.
+
+    Por dentro, o polígono é levado para metros locais, girado até as linhas
+    ficarem horizontais, varrido e girado de volta. Girar a geometria, e não o
+    laço de varredura, mantém um único algoritmo de varredura para qualquer
+    orientação.
     """
     if swath_m <= 0:
         raise ValueError("A largura da faixa precisa ser positiva.")
 
     points = as_points(polygon)
-    lon_min, lat_min, lon_max, lat_max = bounding_box(points)
-    center_lat = (lat_min + lat_max) / 2
-    step_lat = swath_m / METERS_PER_DEGREE_LAT
+    origin_lon, origin_lat = centroid(points)
+    rotation = math.radians(azimuth_deg - 90.0)
+    local = [_rotate(_to_local(point, origin_lon, origin_lat), rotation) for point in points]
 
-    stripes: list[list[Point]] = []
-    latitude = lat_min + step_lat / 2
-    going_east = True
+    ys = [point[1] for point in local]
+    y_min, y_max = min(ys), max(ys)
 
-    while latitude < lat_max:
-        crossings = _horizontal_crossings(points, latitude)
-        for start_lon, end_lon in _pair_up(crossings):
-            leg = [(start_lon, latitude), (end_lon, latitude)]
-            stripes.append(leg if going_east else leg[::-1])
-            going_east = not going_east
-        latitude += step_lat
+    legs: list[list[Point]] = []
+    y = y_min + swath_m / 2
+    forward = True
+    while y < y_max:
+        for x_start, x_end in _pair_up(_horizontal_crossings(local, y)):
+            leg = [(x_start, y), (x_end, y)]
+            legs.append(leg if forward else leg[::-1])
+            forward = not forward
+        y += swath_m
 
     # Um polígono mais estreito que uma faixa não produziria passada nenhuma.
     # Uma travessia pelo meio é melhor do que um plano vazio.
-    if not stripes:
-        stripes.append([(lon_min, center_lat), (lon_max, center_lat)])
-    return stripes
+    if not legs:
+        xs = [point[0] for point in local]
+        middle = (y_min + y_max) / 2
+        legs.append([(min(xs), middle), (max(xs), middle)])
+
+    return [
+        [_from_local(_rotate(point, -rotation), origin_lon, origin_lat) for point in leg]
+        for leg in legs
+    ]
+
+
+def _to_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
+    """Graus para metros a partir de uma origem, na aproximação local."""
+    scale_lon = METERS_PER_DEGREE_LAT * math.cos(math.radians(origin_lat))
+    return (
+        (point[0] - origin_lon) * scale_lon,
+        (point[1] - origin_lat) * METERS_PER_DEGREE_LAT,
+    )
+
+
+def _from_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
+    scale_lon = METERS_PER_DEGREE_LAT * math.cos(math.radians(origin_lat))
+    return (
+        origin_lon + point[0] / scale_lon,
+        origin_lat + point[1] / METERS_PER_DEGREE_LAT,
+    )
+
+
+def _rotate(point: Point, angle: float) -> Point:
+    """Gira no sentido anti-horário, em radianos, em torno da origem."""
+    cos_a, sin_a = math.cos(angle), math.sin(angle)
+    return (point[0] * cos_a - point[1] * sin_a, point[0] * sin_a + point[1] * cos_a)
 
 
 def _horizontal_crossings(points: list[Point], latitude: float) -> list[float]:
-    """Longitudes em que a horizontal ``latitude`` corta as arestas do polígono."""
+    """Abscissas em que a horizontal ``latitude`` corta as arestas do polígono.
+
+    Serve tanto a graus quanto a metros locais — só depende de a varredura ser
+    horizontal, que é o que :func:`boustrophedon` garante girando a geometria.
+    """
     crossings: list[float] = []
     for index in range(len(points)):
         lon_a, lat_a = points[index]

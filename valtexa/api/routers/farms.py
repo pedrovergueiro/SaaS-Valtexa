@@ -123,6 +123,16 @@ def create_field(
     return _field_out(row)
 
 
+@router.get("/fields", response_model=list[FieldOut], summary="Todos os talhões do cliente")
+def list_all_fields(
+    principal: Principal = Depends(require(rbac.FARM_READ)),
+    session: Session = Depends(get_session),
+) -> list[FieldOut]:
+    """Os talhões de todas as fazendas — o que o mapa pinta de uma vez."""
+    rows = session.scalars(scoped(select(Field).order_by(Field.name), Field, principal))
+    return [_field_out(row) for row in rows]
+
+
 @router.get("/fields/{field_id}", response_model=FieldOut, summary="Um talhão")
 def get_field(
     field_id: str,
@@ -216,6 +226,7 @@ def _field_out(row: Field) -> FieldOut:
         crop_stage=row.crop_stage,
         planted_on=row.planted_on,
         row_spacing_m=row.row_spacing_m,
+        row_azimuth_deg=row.row_azimuth_deg,
         area_ha=row.area_ha,
         boundary=row.boundary,
     )

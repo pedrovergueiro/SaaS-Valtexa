@@ -96,11 +96,17 @@ muda.
 O simulador liga essa opção, que substitui os modelos por analisadores falsos e
 determinísticos.
 
-O truque: o rover monta imagens JPEG válidas com uma marca anexada ao fim do
-arquivo (`VTXSIM:<rótulo>:<novidade>`). JPEG ignora bytes depois do marcador de
-fim, então a etiqueta viaja junto sem corromper o arquivo, e o
-`SimulatedAnalyzer` a lê para saber o que responder. A confiança vem do hash da
-imagem — mesma imagem, mesma resposta, como num modelo de verdade.
+O truque: o rover monta imagens PNG válidas com uma marca anexada ao fim do
+arquivo (`VTXSIM:<rótulo>:<novidade>`). PNG ignora bytes depois do bloco `IEND`,
+então a etiqueta viaja junto sem corromper o arquivo, e o `SimulatedAnalyzer` a
+lê para saber o que responder. A confiança vem do hash da imagem — mesma imagem,
+mesma resposta, como num modelo de verdade.
+
+A imagem em si é uma folha de milho desenhada por
+[`simulator/leaf.py`](../simulator/leaf.py), com a lesão típica do rótulo —
+pústulas de ferrugem, manchas retangulares de cercosporiose, lesões alongadas de
+helmintosporiose — e clorose entre as nervuras quando a novidade é alta. Existe
+para quem abre a fila do agrônomo no console: é ilustração, não dado de treino.
 
 É andaime de simulação e está **recusado em produção** por
 `Settings.production_problems()`: um diagnóstico inventado chegando a um produtor
@@ -108,6 +114,24 @@ seria pior do que não ter diagnóstico nenhum.
 
 Para rodar contra os modelos reais, suba o `VALTEXA-B` e use
 `--url` apontando para uma plataforma com `INFERENCE_ENABLED=true`.
+
+---
+
+## Vendo o resultado no console
+
+```bash
+python -m simulator --keep                 # deixa o banco em .simulacao/
+cd web && npm install && npm run build && cd ..
+DATABASE_URL=sqlite:///.simulacao/simulacao.db STORAGE_DIR=.simulacao/storage \
+  SIMULATED_INFERENCE=true INFERENCE_ENABLED=false uvicorn valtexa.main:app
+```
+
+Abra <http://127.0.0.1:8000> e entre com uma das contas abaixo. O banco guarda o
+que o roteiro produziu: a fila do agrônomo, a aplicação com a trilha, a
+verificação agendada, a auditoria.
+
+`--keep` também não limpa ao começar. Para rodar de novo do zero, apague
+`.simulacao/` antes.
 
 ---
 

@@ -86,8 +86,10 @@ alterar código para planejar com outra câmera.
 
 Alternar o sentido não é estética: sem isso o robô voltaria vazio a cada passada.
 
-**Limitação:** a varredura é leste-oeste e não se alinha às linhas de plantio.
-Falta coletar o azimute da linha.
+As faixas seguem as linhas de plantio: a direção vem de `row_azimuth_deg` do
+talhão (0 = norte-sul, 90 = leste-oeste). Sem azimute cadastrado, a varredura é
+leste-oeste. Não é detalhe: atravessar as linhas pisoteia a cultura e obriga o
+rover a passar por cima de cada fileira.
 
 ---
 

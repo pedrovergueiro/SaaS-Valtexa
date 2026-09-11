@@ -91,6 +91,22 @@ class DeviceCaller:
 # ---------------------------------------------------------------------------
 
 
+def current_user(
+    session: Session = Depends(get_session),
+    authorization: str | None = Header(default=None),
+) -> User:
+    """O usuário do token, sem exigir cliente ativo.
+
+    Serve só às rotas que existem justamente para escolher o cliente — um
+    agrônomo de cooperativa entra sem cliente definido e precisa ver a lista.
+    """
+    claims = _claims_from(authorization, expected_kind="user")
+    user = session.get(User, claims.subject_id)
+    if user is None or not user.is_active:
+        raise UNAUTHORIZED
+    return user
+
+
 def current_principal(
     session: Session = Depends(get_session),
     authorization: str | None = Header(default=None),

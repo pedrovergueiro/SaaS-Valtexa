@@ -238,6 +238,43 @@ class TelemetrySample(UUIDPrimaryKey, TenantScoped, Base):
     sync_id: Mapped[str | None] = mapped_column(String(32), doc="Lote de sincronização de origem.")
 
 
+class TelemetryRollup(UUIDPrimaryKey, TenantScoped, Base):
+    """Telemetria antiga agregada em janelas.
+
+    A amostra crua é a tabela que mais cresce: um rover a 1 Hz produz ~14 mil
+    linhas por jornada. Depois da janela de retenção ela vira uma linha por
+    minuto, com o que um relatório ainda precisa — mínimo, média e máximo de
+    bateria, velocidade, qualidade de enlace e a última posição. Ver
+    :mod:`valtexa.services.retention`.
+
+    Evento **não** é agregado nunca: é o registro que a auditoria precisa íntegro.
+    """
+
+    __tablename__ = "telemetry_rollup"
+    __table_args__ = (
+        UniqueConstraint("device_id", "bucket_start", name="uq_rollup_device_bucket"),
+    )
+
+    device_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("device.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    bucket_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    bucket_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
+    samples: Mapped[int] = mapped_column(Integer, nullable=False)
+    battery_min: Mapped[float | None] = mapped_column(Float)
+    battery_avg: Mapped[float | None] = mapped_column(Float)
+    battery_max: Mapped[float | None] = mapped_column(Float)
+    speed_avg_ms: Mapped[float | None] = mapped_column(Float)
+    link_quality_avg: Mapped[float | None] = mapped_column(Float)
+    rtk_fixed_ratio: Mapped[float | None] = mapped_column(
+        Float, doc="Fração das amostras com RTK fixo na janela."
+    )
+    last_lat: Mapped[float | None] = mapped_column(Float)
+    last_lon: Mapped[float | None] = mapped_column(Float)
+
+
 class DeviceEvent(UUIDPrimaryKey, TenantScoped, Base):
     """Um fato discreto relatado pelo robô.
 

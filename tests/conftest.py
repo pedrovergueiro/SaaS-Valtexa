@@ -32,19 +32,42 @@ from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 from valtexa import db  # noqa: E402
 from valtexa.db import get_session  # noqa: E402
 from valtexa.main import app  # noqa: E402
-from valtexa.models import Base  # noqa: E402
+from valtexa.models import (  # noqa: E402
+    Base,
+    Device,
+    DeviceKind,
+    DeviceModel,
+    DeviceStatus,
+    Farm,
+    Field,
+    Tenant,
+)
 from valtexa.seed import seed_demo, sync_device_models  # noqa: E402
 from valtexa.services import storage  # noqa: E402
+from valtexa.services.hal import REFERENCE_MODELS  # noqa: E402
 
 DEMO_PASSWORD = "valtexa-demo-2026"
+
+
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
+"""Banco externo para a suíte, tipicamente um Postgres descartável.
+
+Com ele definido, os mesmos testes rodam contra o banco de produção em vez do
+SQLite. O esquema é apagado e recriado a cada teste: nunca aponte para um banco
+com dado que importe.
+"""
 
 
 @pytest.fixture
 def engine(tmp_path: Path):
     """Um banco por teste."""
-    engine = create_engine(
-        f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False}
-    )
+    if TEST_DATABASE_URL:
+        engine = create_engine(TEST_DATABASE_URL)
+        Base.metadata.drop_all(engine)
+    else:
+        engine = create_engine(
+            f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False}
+        )
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -134,3 +157,53 @@ def _login(client: TestClient, email: str) -> dict[str, str]:
     assert response.status_code == 200, response.text
     body = response.json()
     return {"Authorization": f"Bearer {body['access_token']}", "X-Tenant-Id": body["tenant_id"]}
+
+
+FROTA_CAMPO = [
+    [-45.4530, -22.4120],
+    [-45.4500, -22.4120],
+    [-45.4500, -22.4140],
+    [-45.4530, -22.4140],
+]
+
+
+@pytest.fixture
+def frota(session: Session) -> dict:
+    """Um tenant com rover e talhão, sem passar pela API."""
+    tenant = Tenant(name="C", slug="c")
+    session.add(tenant)
+    session.flush()
+
+    modelo = DeviceModel(**next(m for m in REFERENCE_MODELS if m["code"] == "ROVER_SCOUT_V1"))
+    session.add(modelo)
+    session.flush()
+
+    farm = Farm(
+        tenant_id=tenant.id, name="F", center_lat=-22.413, center_lon=-45.4515,
+        base_lat=-22.4145, base_lon=-45.4515,
+    )
+    session.add(farm)
+    session.flush()
+
+    field_row = Field(
+        tenant_id=tenant.id, farm_id=farm.id, name="T", crop="corn", boundary=FROTA_CAMPO
+    )
+    device = Device(
+        tenant_id=tenant.id,
+        serial_number="R-1",
+        name="Rover",
+        kind=DeviceKind.ROVER,
+        device_model_id=modelo.id,
+        farm_id=farm.id,
+        status=DeviceStatus.ACTIVE,
+        battery_percent=95.0,
+    )
+    session.add_all([field_row, device])
+    session.commit()
+    return {
+        "session": session,
+        "tenant": tenant,
+        "farm": farm,
+        "field": field_row,
+        "device": device,
+    }

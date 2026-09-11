@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from valtexa.api.deps import Principal, current_principal, require
+from valtexa.api.deps import Principal, current_principal, current_user, require
 from valtexa.db import get_session
 from valtexa.models import ActorType, Membership, Role, SubjectType, Tenant, User
 from valtexa.schemas import (
@@ -21,6 +21,7 @@ from valtexa.schemas import (
     TokenResponse,
     UserInvite,
     UserOut,
+    UserUpdate,
 )
 from valtexa.security import rbac, tokens
 from valtexa.security.passwords import hash_password, needs_rehash, verify_password
@@ -119,6 +120,33 @@ def me(
             for membership, tenant in rows
         ],
     )
+
+
+@router.get(
+    "/auth/memberships",
+    response_model=list[MembershipOut],
+    summary="Clientes a que o usuário tem acesso",
+)
+def list_memberships(
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> list[MembershipOut]:
+    """Não exige cliente ativo: é a rota que o console usa para escolher um."""
+    rows = session.execute(
+        select(Membership, Tenant)
+        .join(Tenant, Tenant.id == Membership.tenant_id)
+        .where(Membership.user_id == user.id, Tenant.is_active)
+        .order_by(Tenant.name)
+    ).all()
+    return [
+        MembershipOut(
+            tenant_id=tenant.id,
+            tenant_name=tenant.name,
+            tenant_slug=tenant.slug,
+            role=membership.role,
+        )
+        for membership, tenant in rows
+    ]
 
 
 @router.get("/tenants/current", response_model=TenantOut, summary="Cliente ativo")
@@ -248,6 +276,89 @@ def list_users(
         )
         for user, membership in rows
     ]
+
+
+@router.patch("/users/{user_id}", response_model=UserOut, summary="Muda o papel de um usuário")
+def update_user(
+    user_id: str,
+    payload: UserUpdate,
+    principal: Principal = Depends(require(rbac.USER_MANAGE)),
+    session: Session = Depends(get_session),
+) -> UserOut:
+    """Muda o papel dentro do cliente ativo.
+
+    Ninguém muda o próprio papel: um administrador que se rebaixasse por engano
+    trancaria o cliente para fora da gestão de usuários.
+    """
+    membership = _membership_or_404(session, principal.tenant_id, user_id)
+    if user_id == principal.user_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Não é possível mudar o próprio papel.")
+
+    previous = membership.role
+    membership.role = payload.role
+    audit.record(
+        session,
+        tenant_id=principal.tenant_id,
+        action="user.role_changed",
+        subject_type=SubjectType.USER,
+        subject_id=user_id,
+        actor_type=ActorType.USER,
+        actor_id=principal.user_id,
+        actor_label=principal.user.email,
+        old_state=previous.value,
+        new_state=payload.role.value,
+    )
+    session.commit()
+    user = session.get(User, user_id)
+    return UserOut(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=membership.role,
+        is_active=user.is_active,
+    )
+
+
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove o usuário do cliente ativo",
+)
+def remove_user(
+    user_id: str,
+    principal: Principal = Depends(require(rbac.USER_MANAGE)),
+    session: Session = Depends(get_session),
+) -> None:
+    """Tira o acesso a este cliente.
+
+    A conta continua existindo — a mesma pessoa pode atender outros clientes — e
+    o histórico dela na auditoria fica intacto.
+    """
+    membership = _membership_or_404(session, principal.tenant_id, user_id)
+    if user_id == principal.user_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Não é possível remover a si mesmo.")
+    session.delete(membership)
+    audit.record(
+        session,
+        tenant_id=principal.tenant_id,
+        action="user.removed",
+        subject_type=SubjectType.USER,
+        subject_id=user_id,
+        actor_type=ActorType.USER,
+        actor_id=principal.user_id,
+        actor_label=principal.user.email,
+        old_state=membership.role.value,
+    )
+    session.commit()
+
+
+def _membership_or_404(session: Session, tenant_id: str, user_id: str) -> Membership:
+    membership = session.scalars(
+        select(Membership).where(Membership.tenant_id == tenant_id, Membership.user_id == user_id)
+    ).first()
+    if membership is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuário não pertence a este cliente.")
+    return membership
 
 
 def _resolve_tenant(

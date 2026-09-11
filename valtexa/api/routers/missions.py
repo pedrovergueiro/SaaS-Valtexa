@@ -91,11 +91,15 @@ def create_mission(
     field_row = get_scoped(session, Field, payload.field_id, principal)
     device = get_scoped(session, Device, payload.device_id, principal)
 
-    polygon = payload.target_polygon or field_row.boundary
-    try:
-        geo.as_points(polygon)
-    except geo.InvalidPolygonError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    # Sem polígono, create_mission usa o talhão menos a margem de segurança.
+    # Mandar a borda exata daqui faria a cerca virtual bloquear toda missão
+    # criada pela API — a borda do talhão nunca cabe dentro de si menos a margem.
+    polygon = payload.target_polygon
+    if polygon is not None:
+        try:
+            geo.as_points(polygon)
+        except geo.InvalidPolygonError as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
 
     if payload.kind is MissionKind.SPRAY and not payload.product_id:
         raise HTTPException(
@@ -410,6 +414,13 @@ def _mission_out(session: Session, mission: Mission) -> MissionOut:
         authorized_quantity_l=mission.authorized_quantity_l,
         created_by=mission.created_by,
         approved_by=mission.approved_by,
+        approved_at=mission.approved_at,
+        product_batch_id=mission.product_batch_id,
+        decision_id=mission.decision_id,
+        dispatched_at=mission.dispatched_at,
+        started_at=mission.started_at,
+        finished_at=mission.finished_at,
+        abort_reason=mission.abort_reason,
         authorized_at=mission.authorized_at,
         expires_at=mission.expires_at,
         safety_status=mission.safety_status,

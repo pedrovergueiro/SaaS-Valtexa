@@ -113,15 +113,30 @@ class HttpModelAnalyzer:
         model_key: str | None = None,
         independent: bool = True,
         timeout: float | None = None,
+        crop_models: dict[str, str] | None = None,
     ) -> None:
         self.name = name
         self.independent = independent
         self.base_url = (base_url or settings.inference_url).rstrip("/")
         self.model_key = model_key
         self.timeout = timeout or settings.inference_timeout_seconds
+        self.crop_models = crop_models
 
     def analyze(self, image: bytes, filename: str, crop: str) -> Analysis:
-        model_key = self.model_key or model_for_crop(crop)
+        if self.crop_models is not None:
+            # Sem modelo para a cultura, o analisador se declara ausente em vez de
+            # cair no modelo primário — uma "segunda opinião" dada pelo mesmo
+            # modelo seria a pior forma de dependência.
+            model_key = self.crop_models.get((crop or "").strip().lower())
+            if model_key is None:
+                return Analysis(
+                    analyzer=self.name,
+                    label=None,
+                    confidence=None,
+                    error=f"Sem modelo secundário para a cultura {crop!r}.",
+                )
+        else:
+            model_key = self.model_key or model_for_crop(crop)
         started = time.perf_counter()
         try:
             response = httpx.post(
@@ -447,11 +462,13 @@ def analyze_observation(
 def default_analyzers() -> list[Analyzer]:
     """Os analisadores configurados neste processo.
 
-    Hoje devolve **um só**: não existe segundo modelo de fato independente
-    treinado. A consequência é intencional e está no contrato do
-    :func:`combine` — nada chega a ``AI_VALIDATED``, e todo diagnóstico vai para
-    a fila do agrônomo. Um segundo analisador entra aqui, e a partir daí o
-    sistema valida sozinho.
+    O primário sempre; o secundário quando ``SECONDARY_MODELS`` está
+    configurado. O secundário só conta como par independente com
+    ``SECONDARY_MODEL_INDEPENDENT=true`` — do contrário ele entra com o prefixo
+    ``dependent:`` e o combinador não conta a concordância. Sem par
+    independente, a consequência é intencional e está no contrato do
+    :func:`combine`: nada chega a ``AI_VALIDATED``, e todo diagnóstico vai para
+    a fila do agrônomo.
     """
     if settings.simulated_inference:
         # Dois analisadores com vieses diferentes: o suficiente para a dupla
@@ -462,7 +479,20 @@ def default_analyzers() -> list[Analyzer]:
         ]
     if not settings.inference_enabled:
         return []
-    return [HttpModelAnalyzer(name="cloud-primary")]
+
+    analyzers: list[Analyzer] = [HttpModelAnalyzer(name="cloud-primary")]
+    if settings.secondary_model_map:
+        independent = settings.secondary_model_independent
+        analyzers.append(
+            HttpModelAnalyzer(
+                # O prefixo é o que o combinador lê para não contar o par como
+                # independente. Ver _is_independent.
+                name="cloud-secondary" if independent else "dependent:cloud-secondary",
+                crop_models=settings.secondary_model_map,
+                independent=independent,
+            )
+        )
+    return analyzers
 
 
 def _is_independent(analysis: Analysis) -> bool:

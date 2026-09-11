@@ -28,7 +28,7 @@ ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
 # Os testes acessam helpers privados de propósito, para cobrir caminhos internos.
-"tests/*" = ["SLF001"]
+"tests/*" = ["SLF001", "N803"]
 # O simulador imprime o passo a passo da missão: é a saída do programa.
 "simulator/*" = ["T201"]
 

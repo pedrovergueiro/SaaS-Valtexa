@@ -61,6 +61,14 @@ class Field(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     )
     planted_on: Mapped[date | None] = mapped_column(Date)
     row_spacing_m: Mapped[float | None] = mapped_column(Float)
+    row_azimuth_deg: Mapped[float | None] = mapped_column(
+        Float,
+        doc=(
+            "Direção das linhas de plantio, em graus a partir do norte, sentido "
+            "horário (0 = norte-sul, 90 = leste-oeste). O planejamento alinha as "
+            "passadas a ela: o rover anda entre as linhas, não por cima."
+        ),
+    )
     area_ha: Mapped[float | None] = mapped_column(Float)
     boundary: Mapped[list] = mapped_column(
         nullable=False,

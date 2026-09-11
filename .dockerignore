@@ -2,7 +2,11 @@
 .simulacao/
 storage/
 *.db
+*.db-shm
+*.db-wal
 *.sqlite3
+web/node_modules/
+web/dist/
 .git/
 .pytest_cache/
 .ruff_cache/

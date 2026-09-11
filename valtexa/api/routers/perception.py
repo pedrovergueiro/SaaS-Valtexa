@@ -43,12 +43,21 @@ router = APIRouter(tags=["percepção"])
 def list_observations(
     field_id: str | None = None,
     mission_id: str | None = None,
-    limit: int = 100,
+    zone_id: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    limit: int = 200,
     principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
     session: Session = Depends(get_session),
 ) -> list[ObservationOut]:
+    """Observações, da mais recente à mais antiga.
+
+    ``since``/``until`` recortam a janela — é o que a comparação antes/depois de
+    um tratamento usa. Teto de 2 000 por página: o suficiente para pintar um
+    talhão no mapa.
+    """
     statement = scoped(
-        select(Observation).order_by(Observation.captured_at.desc()).limit(min(limit, 500)),
+        select(Observation).order_by(Observation.captured_at.desc()).limit(min(limit, 2000)),
         Observation,
         principal,
     )
@@ -56,6 +65,12 @@ def list_observations(
         statement = statement.where(Observation.field_id == field_id)
     if mission_id:
         statement = statement.where(Observation.mission_id == mission_id)
+    if zone_id:
+        statement = statement.where(Observation.zone_id == zone_id)
+    if since:
+        statement = statement.where(Observation.captured_at >= since)
+    if until:
+        statement = statement.where(Observation.captured_at <= until)
 
     rows = list(session.scalars(statement))
     diagnoses = _diagnoses_for(session, [row.id for row in rows])
@@ -84,7 +99,7 @@ def observation_image(
 
     asset = get_scoped(session, Asset, observation.image_asset_id, principal)
     try:
-        data = storage.store.path(asset.storage_key).read_bytes()
+        data = storage.store.read(asset.storage_key)
     except storage.UnknownAssetError as exc:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "Arquivo ausente no armazenamento."

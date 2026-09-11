@@ -15,16 +15,20 @@ import logging
 import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select, text
 
+from valtexa import worker as background
 from valtexa.api.middleware import RawBodyMiddleware
 from valtexa.api.routers import (
     agro,
     auth,
+    console,
     device_protocol,
     farms,
     fleet,
@@ -32,27 +36,18 @@ from valtexa.api.routers import (
     perception,
     twin,
 )
-from valtexa.config import settings
-from valtexa.db import create_all, engine, session_scope
+from valtexa.config import BASE_DIR, settings
+from valtexa.db import engine, migrate, session_scope
 from valtexa.models import OutboxEvent
 from valtexa.models.fleet import PROTOCOL_VERSION
 from valtexa.schemas import HealthResponse
 from valtexa.seed import sync_device_models
-from valtexa.services import events, geo, storage
+from valtexa.services import geo, storage
 from valtexa.services.mission_manager import MissionNotAuthorizedError, MissionStateError
 
 logger = logging.getLogger(__name__)
 
 API_PREFIX = "/v1"
-
-EVENT_WORKER_INTERVAL = 5.0
-"""Intervalo do drenador do *outbox*, em segundos.
-
-Uma thread no processo da API é suficiente para o piloto e mantém o sistema
-inteiro num único container. Em produção, o mesmo :func:`events.drain` vira um
-worker separado — nada no código muda, só onde ele roda. Ver
-``docs/DEPLOYMENT.md``.
-"""
 
 _worker_stop = threading.Event()
 
@@ -64,7 +59,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         level=settings.log_level, format="%(asctime)s %(levelname)-8s %(name)s: %(message)s"
     )
 
-    create_all()
+    migrate()
     storage.store.root.mkdir(parents=True, exist_ok=True)
 
     with session_scope() as session:
@@ -83,13 +78,21 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         for problem in problems:
             logger.warning("Pendência para produção: %s", problem)
 
-    worker = threading.Thread(target=_drain_events_forever, name="outbox-drain", daemon=True)
-    worker.start()
+    worker_thread: threading.Thread | None = None
+    if settings.event_worker_in_api:
+        # Uma thread basta para o piloto e mantém tudo num container. Com várias
+        # réplicas, desligue e rode ``python -m valtexa.worker`` à parte.
+        _worker_stop.clear()
+        worker_thread = threading.Thread(
+            target=background.run_forever, args=(_worker_stop,), name="valtexa-worker", daemon=True
+        )
+        worker_thread.start()
     try:
         yield
     finally:
         _worker_stop.set()
-        worker.join(timeout=EVENT_WORKER_INTERVAL + 1)
+        if worker_thread is not None:
+            worker_thread.join(timeout=background.TICK_SECONDS + 1)
 
 
 app = FastAPI(
@@ -137,7 +140,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (auth, farms, fleet, device_protocol, missions, perception, agro, twin):
+for module in (auth, farms, fleet, device_protocol, missions, perception, agro, twin, console):
     app.include_router(module.router, prefix=API_PREFIX)
 
 
@@ -199,22 +202,34 @@ def health() -> HealthResponse:
     )
 
 
-def _drain_events_forever() -> None:
-    """Entrega os eventos do *outbox* em segundo plano.
+WEB_DIST = BASE_DIR / "web" / "dist"
 
-    Nunca deixa uma exceção escapar: a thread morrer silenciosamente pararia a
-    entrega de eventos sem nenhum sinal, e o sistema pareceria saudável enquanto
-    a verificação pós-tratamento nunca fosse agendada.
+
+def _mount_console(application: FastAPI, dist: Path) -> None:
+    """Serve o console na raiz, com o *fallback* que uma SPA precisa.
+
+    Qualquer caminho que não seja arquivo do build devolve ``index.html`` — é o
+    roteador do navegador que resolve ``/missoes/123``. A exceção é ``/v1``: uma
+    rota de API inexistente precisa de 404 de verdade, não de uma página HTML
+    que o cliente tentaria interpretar como JSON.
     """
-    while not _worker_stop.is_set():
-        try:
-            with session_scope() as session:
-                delivered = events.drain(session)
-            if delivered:
-                logger.debug("Outbox: %d evento(s) entregue(s).", delivered)
-        except Exception:
-            logger.exception("Falha no drenador de eventos; seguindo para o próximo ciclo.")
-        _worker_stop.wait(EVENT_WORKER_INTERVAL)
+    root = dist.resolve()
+    index = root / "index.html"
+    if (root / "assets").is_dir():
+        application.mount("/assets", StaticFiles(directory=root / "assets"), name="console")
+
+    @application.get("/{path:path}", include_in_schema=False)
+    def console_app(path: str) -> FileResponse:
+        if path == "v1" or path.startswith("v1/"):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Rota não encontrada.")
+        candidate = (root / path).resolve()
+        if path and candidate.is_file() and candidate.is_relative_to(root):
+            return FileResponse(candidate)
+        return FileResponse(index)
+
+
+if settings.serve_web and (WEB_DIST / "index.html").is_file():
+    _mount_console(app, WEB_DIST)
 
 
 __all__ = ["app", "engine"]

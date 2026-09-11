@@ -1,6 +1,16 @@
-# Imagem da plataforma. Sem Keras/TensorFlow: a inferência é um serviço à parte
-# (VALTEXA-B), consumido por HTTP. É o que mantém esta imagem em poucas centenas
-# de MB e permite escalar a API sem GPU.
+# Estágio 1: o console. Node só existe aqui; a imagem final serve os arquivos
+# estáticos já compilados e não carrega nada do ecossistema JavaScript.
+FROM node:22-alpine AS web
+
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+RUN npm run build
+
+# Estágio 2: a plataforma. Sem Keras/TensorFlow: a inferência é um serviço à
+# parte (VALTEXA-B), consumido por HTTP. É o que mantém esta imagem em poucas
+# centenas de MB e permite escalar a API sem GPU.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -15,13 +25,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY valtexa ./valtexa
 COPY simulator ./simulator
-COPY pyproject.toml README.md ./
+# As migrações rodam no start da API (`alembic upgrade head` via lifespan).
+# Sem elas na imagem, o processo não sobe.
+COPY migrations ./migrations
+COPY alembic.ini pyproject.toml README.md ./
+COPY --from=web /web/dist ./web/dist
 
 # Usuário sem privilégios: um processo comprometido não deve poder escrever no
 # próprio código.
 RUN useradd --create-home --uid 10001 valtexa \
     && mkdir -p /app/storage \
-    && chown -R valtexa:valtexa /app
+    && chown -R valtexa:valtexa /app/storage
 USER valtexa
 
 EXPOSE 8080

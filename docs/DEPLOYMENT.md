@@ -38,12 +38,43 @@ export CORS_ORIGINS=https://app.valtexa.com.br
 docker compose up -d --build
 ```
 
-O `docker-compose.yml` sobe a plataforma e o Postgres. O serviço de inferência
-(`VALTEXA-B`) fica **de fora de propósito**: ele precisa de GPU e de uma faixa de
-Python diferente, então tem ciclo de vida próprio. Aponte `INFERENCE_URL`.
+O `docker-compose.yml` sobe dois serviços da mesma imagem, mais o Postgres:
+
+| Serviço | O que roda |
+|---|---|
+| `api` | a API e o console, na porta 8080; aplica as migrações ao subir |
+| `worker` | `python -m valtexa.worker` — eventos, expiração, conectividade, retenção |
+| `db` | Postgres 16 |
+
+A imagem é construída em dois estágios: o primeiro, com Node, compila o console;
+o segundo, só com Python, recebe o `web/dist` pronto. Node não vai para
+produção.
+
+O serviço de inferência (`VALTEXA-B`) fica **de fora de propósito**: ele precisa
+de GPU e de uma faixa de Python diferente, então tem ciclo de vida próprio.
+Aponte `INFERENCE_URL`.
 
 A imagem não carrega Keras nem TensorFlow. É o que a mantém em poucas centenas de
 MB e permite escalar a API sem GPU.
+
+---
+
+## O console
+
+A API serve o console no mesmo endereço. `/` e qualquer caminho fora de `/v1`,
+`/docs` e `/health` devolvem o `index.html`, e o roteamento acontece no
+navegador. Um `/v1/...` inexistente continua respondendo `404` em JSON: o
+*fallback* do SPA nunca mascara erro de API.
+
+Mesma origem significa console sem CORS. `SERVE_WEB=false` desliga o console na
+API — para servi-lo por CDN, por exemplo; nesse caso `CORS_ORIGINS` precisa
+listar a origem dele.
+
+Em desenvolvimento, o Vite serve com recarga e faz *proxy* de `/v1` para a API:
+
+```bash
+cd web && npm install && npm run dev      # http://127.0.0.1:5173
+```
 
 ---
 
@@ -57,21 +88,33 @@ escrita já vira gargalo.
 DATABASE_URL=postgresql+psycopg://valtexa:senha@host:5432/valtexa
 ```
 
+A suíte de testes roda nos dois: `TEST_DATABASE_URL=postgresql+psycopg://...
+pytest`.
+
 ### Migrações
 
-O esquema é criado por `create_all()`. **Antes do primeiro dado real em
-produção, Alembic precisa entrar.**
+O esquema é versionado com Alembic, em `migrations/`. **A API aplica
+`alembic upgrade head` ao subir**: um deploy com migração nova não pede passo
+manual, e uma migração que falha impede o processo de subir em vez de deixá-lo
+rodar contra um esquema pela metade.
+
+Um banco criado antes do Alembic, pelo antigo `create_all()`, é reconhecido — tem
+as tabelas e não tem `alembic_version`. Ele é marcado na revisão base (`0001`) e
+segue dali, sem recriar nada.
+
+Mudou um modelo? Gere a revisão e **leia antes de commitar**:
 
 ```bash
-pip install alembic
-alembic init migrations
-# em env.py: target_metadata = valtexa.models.Base.metadata
-alembic revision --autogenerate -m "esquema inicial"
+alembic revision --autogenerate -m "o que mudou"
+alembic upgrade head
 ```
 
-A partir daí, remova a chamada a `create_all()` do `lifespan` e rode
-`alembic upgrade head` no deploy. Enquanto isso não existir, qualquer alteração
-de coluna em produção é manual — e é a maior dívida técnica aberta do projeto.
+O *autogenerate* não enxerga tudo — uma renomeação vira remoção mais criação, e
+os dados se perdem. No SQLite, as migrações rodam em modo *batch* (a tabela é
+recriada), porque o SQLite não altera coluna; o `env.py` desliga as chaves
+estrangeiras durante a cópia e as religa depois.
+
+`create_all()` só existe nos testes.
 
 Uma escolha ajuda aqui: os `enum` são gravados como `VARCHAR` sem `CHECK`. Um
 rótulo novo no vocabulário **não** exige migração — e o vocabulário do domínio
@@ -88,38 +131,45 @@ O prefixo por cliente existe para que atender um pedido de exclusão de um clien
 não apague o arquivo de outro que enviou bytes idênticos. Custa duplicar
 conteúdo repetido entre clientes, e devolve a possibilidade de apagar.
 
-Para S3/MinIO, implemente o protocolo `ObjectStore` em
-[`valtexa/services/storage.py`](../valtexa/services/storage.py) e troque a
-instância `store`. Nenhum código de domínio abre arquivo diretamente.
+Para S3 ou compatível (MinIO, Cloudflare R2):
 
-Em contêiner, **monte um volume**: sem isso as imagens somem no próximo deploy.
+```
+STORAGE_BACKEND=s3
+S3_BUCKET=valtexa-assets
+S3_PREFIX=valtexa             # opcional
+S3_ENDPOINT_URL=https://...   # só para MinIO/R2; vazio usa a AWS
+S3_REGION=sa-east-1
+```
+
+As credenciais seguem a cadeia padrão do `boto3` — variáveis `AWS_*`, perfil ou
+papel da instância —, nunca num `.env` versionado. A chave é derivada do mesmo
+jeito nos dois armazenamentos (cliente + `sha256`). Nenhum código de domínio
+abre arquivo diretamente: tudo passa por
+[`valtexa/services/storage.py`](../valtexa/services/storage.py).
+
+Com disco local em contêiner, **monte um volume**: sem isso as imagens somem no
+próximo deploy.
 
 ---
 
-## O drenador de eventos
+## O worker
 
-Em desenvolvimento, uma thread no processo da API drena o *outbox* a cada 5 s.
-Simples, e mantém tudo num container só.
+`python -m valtexa.worker` roda um laço de 5 s:
 
-Em produção, com mais de uma réplica da API, todas drenariam a mesma fila. A
-entrega é ao-menos-uma-vez e os handlers são idempotentes, então isso é correto —
-mas é trabalho duplicado.
+| Tarefa | A cada | Por quê |
+|---|---|---|
+| drenar o *outbox* | 5 s | entrega os eventos de domínio aos handlers |
+| expirar missões vencidas | 30 s | missão fora da validade não pode seguir para o robô |
+| recalcular a conectividade | 60 s | robô sem contato vira `offline` mesmo que ninguém consulte |
+| retenção | 6 h | agrega telemetria antiga, apaga nonces vencidos e eventos entregues |
 
-O caminho: mover para um worker separado. **Nada no código muda**, só onde ele
-roda:
+`--once` roda um ciclo e sai — serve para cron e para depurar.
 
-```python
-# worker.py
-from valtexa.db import session_scope
-from valtexa.services import events
-
-while True:
-    with session_scope() as session:
-        events.drain(session)
-    time.sleep(5)
-```
-
-E remova o `threading.Thread` do `lifespan` da API.
+Em desenvolvimento, o mesmo worker roda numa thread dentro da API, para tudo
+caber num processo. Em produção, use `EVENT_WORKER_IN_API=false` na API e o
+serviço `worker` à parte, como no `docker-compose.yml`. Com várias réplicas da
+API drenando a mesma fila, a entrega continua correta — é ao-menos-uma-vez e os
+handlers são idempotentes —, mas é trabalho em dobro.
 
 ---
 
@@ -128,16 +178,19 @@ E remova o `threading.Thread` do `lifespan` da API.
 | Componente | Como cresce |
 |---|---|
 | API | horizontal, sem estado |
-| Drenador | um worker; a fila é do banco |
+| Worker | um processo; a fila é do banco |
 | Postgres | vertical primeiro; particionar `telemetry_sample` depois |
-| Armazenamento | S3 quando o disco local incomodar |
+| Armazenamento | `STORAGE_BACKEND=s3` quando o disco local incomodar |
 | Inferência | separado, com GPU; é o gargalo de custo |
 
-O que cresce primeiro é `telemetry_sample`. Plano em
+O que cresce primeiro é `telemetry_sample`. A retenção já agrega o que passa de
+`TELEMETRY_RETENTION_DAYS`; o resto do plano está em
 [`TELEMETRY.md`](TELEMETRY.md).
 
-**Sessões colam nada.** Toda a autenticação é por token e assinatura, então o
-balanceador não precisa de afinidade.
+**Sessões não colam em nada.** Toda a autenticação é por token e assinatura,
+então o balanceador não precisa de afinidade. O `/v1/stream` (SSE) é uma conexão
+longa, mas sem estado no servidor: o cliente reconecta com o cursor `after` em
+qualquer réplica.
 
 ---
 
@@ -155,7 +208,7 @@ O que vale alertar:
 
 | Sinal | Por quê |
 |---|---|
-| `pending_events` crescendo | o drenador parou ou um handler quebrou |
+| `pending_events` crescendo | o worker parou ou um handler quebrou |
 | `warnings` não vazio | configuração inadequada |
 | dispositivos em `offline` | frota sem contato |
 | `application.out_of_bounds` | **incidente**: calda fora da área autorizada |
@@ -186,11 +239,12 @@ inclui o corpo das requisições e **não deve ir para produção**.
 - [ ] `ENVIRONMENT=production`
 - [ ] segredos gerados, diferentes entre si, num gerenciador de segredos
 - [ ] Postgres, com backup automático testado (restaurar, não só gerar)
-- [ ] `STORAGE_DIR` em volume persistente
+- [ ] `STORAGE_DIR` em volume persistente, ou `STORAGE_BACKEND=s3`
 - [ ] `CORS_ORIGINS` com as origens reais
 - [ ] TLS terminado antes da aplicação
 - [ ] `INFERENCE_URL` apontando para o `VALTEXA-B`
+- [ ] `EVENT_WORKER_IN_API=false` na API e o `worker` no ar
 - [ ] `/health` monitorado, com alerta em `pending_events` e `warnings`
-- [ ] Alembic no lugar de `create_all()`
+- [ ] depois do deploy, `alembic current` igual a `alembic heads`
 - [ ] catálogo de `device_model` conferido
 - [ ] **nenhum dado de demonstração** (`seed_demo` só roda no simulador e nos testes)

@@ -44,6 +44,15 @@ class Settings(BaseSettings):
         description="Raiz do armazenamento de objetos (imagens, nuvens de pontos, mapas).",
     )
     max_asset_mb: int = Field(default=64, ge=1, description="Limite por arquivo enviado.")
+    storage_backend: str = Field(
+        default="local", description="'local' (disco em STORAGE_DIR) ou 's3' (S3, MinIO, R2)."
+    )
+    s3_bucket: str | None = Field(default=None, description="Bucket, quando STORAGE_BACKEND=s3.")
+    s3_prefix: str = Field(default="valtexa", description="Prefixo dentro do bucket.")
+    s3_endpoint_url: str | None = Field(
+        default=None, description="Endpoint compatível com S3 (MinIO, R2). Vazio usa a AWS."
+    )
+    s3_region: str | None = None
 
     # --- segredos --------------------------------------------------------------
     session_secret: str = Field(
@@ -137,6 +146,21 @@ class Settings(BaseSettings):
         ),
     )
 
+    secondary_models: str = Field(
+        default="",
+        description=(
+            "Segundo analisador por cultura, 'cultura:modelo' separados por vírgula. "
+            "Ex.: 'corn:leaf-foliar-b'. Cultura fora da lista fica com um analisador só."
+        ),
+    )
+    secondary_model_independent: bool = Field(
+        default=False,
+        description=(
+            "Se a concordância com o segundo modelo conta como validação independente. "
+            "Falso por padrão: ver a medição em docs/AI_PIPELINE.md antes de ligar."
+        ),
+    )
+
     # --- regras agronômicas e de segurança -------------------------------------
     decision_min_confidence_for_application: float = Field(
         default=0.85,
@@ -173,6 +197,21 @@ class Settings(BaseSettings):
         default=10.0, ge=0.0, le=100.0, description="Abaixo disso o robô pousa onde estiver."
     )
 
+    # --- processos -------------------------------------------------------------
+    event_worker_in_api: bool = Field(
+        default=True,
+        description=(
+            "Roda o worker de fundo como thread da API. Com várias réplicas, desligue "
+            "e rode 'python -m valtexa.worker' num processo único."
+        ),
+    )
+    telemetry_retention_days: int = Field(
+        default=90, ge=1, description="Depois disso a telemetria crua vira agregado por minuto."
+    )
+    serve_web: bool = Field(
+        default=True, description="Serve o console (web/dist) na raiz quando o build existir."
+    )
+
     # --- HTTP ------------------------------------------------------------------
     cors_origins: str = Field(
         default="http://localhost:5173,http://127.0.0.1:5173",
@@ -200,9 +239,28 @@ class Settings(BaseSettings):
         """``*`` com credenciais é recusado pelos navegadores — e é um erro de segurança."""
         return "*" not in self.cors_origin_list
 
+    @field_validator("storage_backend")
+    @classmethod
+    def _known_backend(cls, value: str) -> str:
+        if value not in {"local", "s3"}:
+            raise ValueError(f"storage_backend deve ser 'local' ou 's3', não {value!r}")
+        return value
+
     @property
     def max_asset_bytes(self) -> int:
         return self.max_asset_mb * 1024 * 1024
+
+    @property
+    def secondary_model_map(self) -> dict[str, str]:
+        """``SECONDARY_MODELS`` como dicionário ``{cultura: modelo}``."""
+        pairs: dict[str, str] = {}
+        for item in self.secondary_models.split(","):
+            if ":" not in item:
+                continue
+            crop, model = (part.strip() for part in item.split(":", 1))
+            if crop and model:
+                pairs[crop.lower()] = model
+        return pairs
 
     def production_problems(self) -> list[str]:
         """Lista o que impede este processo de ser considerado produção.
@@ -224,6 +282,8 @@ class Settings(BaseSettings):
             problems.append("SQLite não suporta a escrita concorrente da ingestão de telemetria.")
         if "*" in self.cors_origin_list:
             problems.append("CORS_ORIGINS com '*' expõe a API a qualquer origem.")
+        if self.storage_backend == "s3" and not self.s3_bucket:
+            problems.append("STORAGE_BACKEND=s3 sem S3_BUCKET.")
         if self.simulated_inference:
             problems.append(
                 "SIMULATED_INFERENCE está ligado: os diagnósticos são inventados."

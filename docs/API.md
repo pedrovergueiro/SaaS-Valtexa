@@ -47,6 +47,7 @@ interface precisa tratar, não um estado impossível.
 ```
 GET  /v1/farms                       POST /v1/farms
 GET  /v1/farms/{id}/fields           POST /v1/farms/{id}/fields
+GET  /v1/fields                      # todos os talhões do cliente
 GET  /v1/fields/{id}
 GET  /v1/fields/{id}/zones           POST /v1/fields/{id}/zones
 ```
@@ -60,7 +61,12 @@ POST  /v1/provisioning-tokens        # token em claro aparece UMA vez
 GET   /v1/devices                    GET /v1/devices/{id}
 PATCH /v1/devices/{id}/status
 POST  /v1/devices/{id}/revoke-credentials
+GET   /v1/devices/{id}/telemetry?minutes=60      # amostras cruas
+GET   /v1/devices/{id}/telemetry/rollup?days=30  # agregado por minuto
+GET   /v1/devices/{id}/events
 ```
+A amostra crua só existe dentro de `TELEMETRY_RETENTION_DAYS`; para janelas mais
+velhas, use `/rollup`.
 
 ### Missões
 ```
@@ -70,7 +76,10 @@ POST /v1/missions/{id}/approve       POST /v1/missions/{id}/authorize
 POST /v1/missions/{id}/dispatch      POST /v1/missions/{id}/resume
 POST /v1/missions/{id}/abort
 GET  /v1/missions/{id}/safety        POST /v1/missions/{id}/safety/preview
+GET  /v1/missions/{id}/history       GET  /v1/missions/{id}/checkpoints
 ```
+`history` é a linha do tempo da missão — cada transição, com quem e por quê —,
+legível por quem opera, sem precisar da permissão de auditoria.
 
 ### Percepção
 ```
@@ -95,6 +104,21 @@ GET /v1/fields/{id}/snapshot         GET /v1/fields/{id}/timeline
 GET /v1/fields/{id}/anomalies
 GET /v1/audit                        GET /v1/events
 ```
+
+### Painel, alertas e pessoas
+```
+GET    /v1/dashboard                 GET  /v1/alerts?days=7
+GET    /v1/stream                    # SSE, ver *Tempo real*
+GET    /v1/auth/memberships          # clientes a que a pessoa tem acesso
+GET    /v1/users                     POST /v1/users
+PATCH  /v1/users/{id}                DELETE /v1/users/{id}
+```
+Alerta é **derivado do estado**, não uma caixa de entrada: some quando a causa é
+resolvida — o robô voltou, a fila esvaziou. Não há "marcar como lido"; um alerta
+que se dispensa sem resolver vira alerta ignorado.
+
+Ninguém muda o próprio papel nem remove a si mesmo (`409`): é o caminho mais
+curto para um cliente ficar sem administrador.
 
 ---
 
@@ -186,7 +210,32 @@ novidade falha, e cada item é um convite a inspeção presencial. Ver
 
 ## Tempo real
 
-Não há WebSocket ainda. Para acompanhar uma missão em curso, faça *polling*:
+`GET /v1/stream` entrega os eventos de domínio do cliente por *Server-Sent
+Events*:
+
+```
+retry: 3000
+
+id: 7f3c…
+event: mission.completed
+data: {"id": "7f3c…", "name": "mission.completed", "subject_type": "mission",
+       "subject_id": "…", "payload": {…}, "created_at": "2026-09-10T21:00:00+00:00"}
+```
+
+- **Conexão com prazo.** Depois de `timeout` (padrão 300 s) o servidor manda
+  `event: stream.end` com `{"after": "<cursor>"}` e fecha; o cliente reconecta
+  passando `after`. Uma conexão eterna sobreviveria a um token vencido e a um
+  deploy.
+- **Autorização por cabeçalho**, então `EventSource` não serve — ele não aceita
+  cabeçalho. Leia com `fetch` e `ReadableStream`, como faz
+  `web/src/lib/stream.ts`.
+- `: keepalive` a cada 15 s impede que um proxy corte a conexão ociosa.
+
+O evento é aviso, não dado: ao receber `mission.completed`, invalide a consulta
+da missão e busque de novo. Assim, uma reconexão que perdeu um evento deixa a
+tela no máximo desatualizada até o próximo *refetch* — nunca errada.
+
+Onde o SSE não passa (alguns proxies corporativos), o *polling* resolve:
 
 | O quê | Intervalo |
 |---|---|

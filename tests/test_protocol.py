@@ -11,25 +11,16 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
 from valtexa.models import (
-    Device,
     DeviceEvent,
-    DeviceKind,
-    DeviceModel,
-    DeviceStatus,
-    Farm,
-    Field,
     Mission,
     MissionKind,
     MissionState,
     TelemetrySample,
-    Tenant,
 )
 from valtexa.security import signing
 from valtexa.services import ingestion, mission_manager
-from valtexa.services.hal import REFERENCE_MODELS
 
 CAMPO = [[-45.4530, -22.4120], [-45.4500, -22.4120], [-45.4500, -22.4140], [-45.4530, -22.4140]]
 
@@ -105,48 +96,6 @@ class TestProvisioning:
             },
         )
         assert response.status_code == 422
-
-
-@pytest.fixture
-def frota(session: Session) -> dict:
-    """Um tenant com rover e talhão, sem passar pela API."""
-    tenant = Tenant(name="C", slug="c")
-    session.add(tenant)
-    session.flush()
-
-    modelo = DeviceModel(**next(m for m in REFERENCE_MODELS if m["code"] == "ROVER_SCOUT_V1"))
-    session.add(modelo)
-    session.flush()
-
-    farm = Farm(
-        tenant_id=tenant.id, name="F", center_lat=-22.413, center_lon=-45.4515,
-        base_lat=-22.4145, base_lon=-45.4515,
-    )
-    session.add(farm)
-    session.flush()
-
-    field_row = Field(
-        tenant_id=tenant.id, farm_id=farm.id, name="T", crop="corn", boundary=CAMPO
-    )
-    device = Device(
-        tenant_id=tenant.id,
-        serial_number="R-1",
-        name="Rover",
-        kind=DeviceKind.ROVER,
-        device_model_id=modelo.id,
-        farm_id=farm.id,
-        status=DeviceStatus.ACTIVE,
-        battery_percent=95.0,
-    )
-    session.add_all([field_row, device])
-    session.commit()
-    return {
-        "session": session,
-        "tenant": tenant,
-        "farm": farm,
-        "field": field_row,
-        "device": device,
-    }
 
 
 class TestIngestion:

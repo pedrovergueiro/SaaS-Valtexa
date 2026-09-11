@@ -64,13 +64,15 @@ plataforma faz é não deixar esse erro chegar sozinho a um bico aberto:
 
 | Camada | Onde | Estado |
 |---|---|---|
-| Modelo de domínio (29 tabelas) | `valtexa/models/` | completo |
+| Modelo de domínio (30 tabelas) | `valtexa/models/` | completo |
+| Migrações | `migrations/` (Alembic) | aplicadas no start |
 | Autenticação, assinatura, RBAC | `valtexa/security/` | completo |
 | Motor de decisão, safety engine, gêmeo digital | `valtexa/services/` | completo |
-| API HTTP (68 rotas) | `valtexa/api/` | completa |
+| API HTTP, com SSE | `valtexa/api/` | completa |
+| Worker: eventos, expiração, conectividade, retenção | `valtexa/worker.py` | completo |
+| Console — o SaaS visual | `web/` | completo (ver *Console*) |
 | Frota simulada (rover, drone, dock) | `simulator/` | completa |
-| Testes (130, com ênfase em segurança) | `tests/` | completos |
-| SaaS visual | — | **não construído** (ver *Frontend*) |
+| Testes (188, em SQLite e Postgres) | `tests/` | completos |
 | Firmware | — | **não construído** (ver `docs/*_INTEGRATION.md`) |
 
 ### Dois repositórios, um produto
@@ -112,11 +114,25 @@ uvicorn valtexa.main:app --reload
 Para conectar aos modelos reais, suba o `VALTEXA-B` em `:8000` e aponte
 `INFERENCE_URL`.
 
+### Console
+
+```bash
+cd web
+npm install
+npm run dev         # http://127.0.0.1:5173, com proxy de /v1 para :8000
+```
+
+Em produção a própria API serve o console compilado (`npm run build` gera
+`web/dist`). Para abrir o console com dados, rode o simulador com `--keep` — o
+passo a passo está em `docs/SIMULATOR.md`.
+
 ### Testes e qualidade
 
 ```bash
-pytest              # 130 testes
-ruff check .        # PEP 8, importações, simplificações
+pytest                                            # 188 testes, em SQLite
+TEST_DATABASE_URL=postgresql+psycopg://... pytest # os mesmos, em Postgres
+ruff check .                                      # PEP 8, importações, simplificações
+cd web && npm run build                           # tipos do console e build
 ```
 
 ---
@@ -220,23 +236,38 @@ então todo handler é idempotente. → `docs/EVENTS.md`
 
 ---
 
-## Frontend
+## Console
 
-O SaaS visual **ainda não foi construído**, e isso é intencional: primeiro o
-backend, para que a tela não precise inventar regra nenhuma.
+O SaaS visual fica em `web/`: React 19, TypeScript, Vite, Tailwind, React Query,
+Leaflet e Recharts. Ele consome exatamente as rotas de `/v1/**` — as mesmas que
+os robôs e o simulador usam. Não há rota privada de frontend. Os tipos são
+gerados do `openapi.json` (`npm run api:types`), então uma mudança de contrato
+quebra o build do console, e não a tela em produção.
 
-Quando for feito, ele consome exatamente as rotas de `/v1/**` — as mesmas que os
-robôs e o simulador usam. Não há rota privada de frontend, e
-`simulator/operator.py` é a prova executável disso: ele faz, por HTTP, tudo que
-uma tela faria.
+| Tela | Para quê |
+|---|---|
+| Painel | o que pede uma pessoa agora: alertas derivados do estado, frota, fila, volume aplicado |
+| Mapa | talhões, frota e cada foto do rover sobre satélite, por janela de tempo |
+| Missões | criar, aprovar, autorizar, despachar; o parecer da segurança verificação por verificação; a linha do tempo |
+| Frota | provisionar robô; bateria, conectividade, telemetria e eventos |
+| Fila do agrônomo | a foto, o palpite das duas análises, a novidade; diagnóstico em texto livre |
+| Talhões | o gêmeo digital: observações no mapa, evolução, desvios, recomendações; desenho de talhão e zona |
+| Aplicações | o comprovante de cada aplicação e o antes e depois da verificação |
+| Insumos | produtos, lotes com validade, carga de tanque |
+| Auditoria | quem fez o quê, quando e por quê |
+| Configurações | pessoas e papéis; o estado da plataforma |
+
+Tempo real por SSE (`/v1/stream`): cada evento de domínio invalida só as
+consultas que afeta, e os incidentes — calda fora da área, falha de robô,
+bloqueio de segurança — viram aviso na tela.
 
 `GET /v1/auth/me` devolve `capabilities`; a interface usa a lista para esconder o
 que o papel não permite. **Esconder é conveniência, não segurança** — cada rota
 confere de novo, no servidor.
 
-O repositório `VALTEXA FRONT` é o site institucional (React + Vite + Tailwind).
-O SaaS é outra aplicação: pode nascer lá dentro ou como projeto próprio,
-consumindo o `openapi.json` gerado aqui.
+Tema claro e escuro, seguindo o sistema, e layout de celular com barra inferior:
+o agrônomo revisa a fila no campo. O `VALTEXA FRONT` continua sendo o site
+institucional; o console é outra aplicação.
 
 ---
 
@@ -244,10 +275,13 @@ consumindo o `openapi.json` gerado aqui.
 
 O que **não** está pronto, e por quê:
 
-1. **Não há segundo analisador independente.** Só existe um modelo por cultura.
-   A consequência foi construída no código: sem par independente, nada chega a
+1. **O segundo analisador não conta como independente.** Um segundo modelo
+   entra por `SECONDARY_MODELS`, mas com `SECONDARY_MODEL_INDEPENDENT=false` — o
+   padrão — o combinador não conta o par: concordância entre modelos
+   correlacionados não é evidência. Sem par independente, nada chega a
    `AI_VALIDATED` e tudo vai para a fila do agrônomo. A fila crescer é o
-   comportamento correto, não uma falha. → `docs/AI_PIPELINE.md`
+   comportamento correto, não uma falha; ligar a marca é decisão tomada sobre
+   medida. → `docs/AI_PIPELINE.md`
 2. **A severidade não é estimada.** Os modelos classificam, não quantificam.
    `Diagnosis.severity` existe no esquema e fica nulo.
 3. **`SIMULATED_INFERENCE`** troca os modelos por analisadores falsos, para o
@@ -255,11 +289,7 @@ O que **não** está pronto, e por quê:
    produtor seria pior do que não ter diagnóstico.
 4. **SQLite é o padrão** e não aguenta a escrita concorrente da telemetria.
    Produção é Postgres; `/health` avisa. → `docs/DEPLOYMENT.md`
-5. **Sem Alembic.** O esquema é criado por `create_all`. Antes do primeiro dado
-   real em produção, migrações precisam entrar.
-6. **O planejamento de cobertura varre leste-oeste**, sem alinhar às linhas de
-   plantio — falta coletar o azimute da linha.
-7. **Nada foi testado com hardware.** Tudo que existe roda contra o simulador. As
+5. **Nada foi testado com hardware.** Tudo que existe roda contra o simulador. As
    lacunas que dependem de robô físico estão listadas em cada
    `docs/*_INTEGRATION.md`.
 

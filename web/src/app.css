@@ -1,0 +1,249 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens do console.
+ *
+ * A marca é a do site (grafite esverdeado + verde-sinal), mas o console tem uma
+ * exigência que o site não tem: ser lido **no campo, sob sol**. Por isso o tema
+ * claro é de primeira classe, não uma inversão automática — e o padrão segue o
+ * sistema do aparelho.
+ *
+ * As cores de status (bom/atenção/sério/crítico) são reservadas: nunca viram
+ * cor de série num gráfico, e sempre aparecem com ícone e rótulo.
+ */
+
+@theme inline {
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  --color-info: var(--info);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f1f5f2;
+  --surface: #ffffff;
+  --raised: #f7faf8;
+  --sunken: #e9efeb;
+  --line: #d5e0da;
+  --line-soft: #e5ece8;
+  --ink: #0c1a15;
+  --ink-2: #3b5248;
+  --muted: #647a70;
+  --accent: #0b8750;
+  --accent-ink: #ffffff;
+  --accent-soft: rgb(11 135 80 / 0.1);
+
+  /* status — mesmos passos nos dois temas */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --info: #2a78d6;
+
+  /* séries categóricas (validadas contra #ffffff) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --series-other: #8a9690;
+
+  --grid: #e3eae6;
+  --axis: #b9c7c0;
+  --shadow: 0 1px 2px rgb(12 26 21 / 0.06), 0 4px 16px rgb(12 26 21 / 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) {
+    color-scheme: dark;
+    --bg: #07110e;
+    --surface: #0b1815;
+    --raised: #0f211c;
+    --sunken: #06100c;
+    --line: #1a3129;
+    --line-soft: #14261f;
+    --ink: #e9f2ed;
+    --ink-2: #a9c1b6;
+    --muted: #71897f;
+    --accent: #2fe08b;
+    --accent-ink: #04120b;
+    --accent-soft: rgb(47 224 139 / 0.12);
+    --info: #3987e5;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --series-other: #5f7169;
+    --grid: #15291f;
+    --axis: #2a4238;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #07110e;
+  --surface: #0b1815;
+  --raised: #0f211c;
+  --sunken: #06100c;
+  --line: #1a3129;
+  --line-soft: #14261f;
+  --ink: #e9f2ed;
+  --ink-2: #a9c1b6;
+  --muted: #71897f;
+  --accent: #2fe08b;
+  --accent-ink: #04120b;
+  --accent-soft: rgb(47 224 139 / 0.12);
+  --info: #3987e5;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --series-other: #5f7169;
+  --grid: #15291f;
+  --axis: #2a4238;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.018em;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+}
+
+@layer components {
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+
+  .input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.55rem 0.75rem;
+    color: var(--ink);
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .input::placeholder {
+    color: var(--muted);
+  }
+}
+
+/* Leaflet herda a tipografia e as superfícies do console. */
+.leaflet-container {
+  font: inherit;
+  background: var(--sunken);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 13px;
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+.leaflet-bar a {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

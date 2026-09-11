@@ -54,6 +54,7 @@ from valtexa.models.operations import (
     Mission,
     MissionCheckpoint,
     MissionSegment,
+    TelemetryRollup,
     TelemetrySample,
 )
 from valtexa.models.perception import (
@@ -116,6 +117,7 @@ __all__ = [
     "SubjectType",
     "Tank",
     "TankStatus",
+    "TelemetryRollup",
     "TelemetrySample",
     "Tenant",
     "TenantScoped",

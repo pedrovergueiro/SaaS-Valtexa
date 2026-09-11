@@ -112,17 +112,26 @@ aparece já com poucos robôs em operação.
 Um rover a 1 Hz numa jornada de 4 h: **~14 mil amostras por missão**. Cinco robôs,
 cinco dias por semana: ~1,8 milhão por mês.
 
-Caminho previsto, em ordem:
+A retenção roda no worker a cada 6 h
+([`valtexa/services/retention.py`](../valtexa/services/retention.py)). Amostras
+com mais de `TELEMETRY_RETENTION_DAYS` (padrão 90) viram uma linha por minuto em
+`telemetry_rollup` — mínimo, média e máximo de bateria, velocidade média,
+qualidade de enlace média, fração do tempo com RTK fixo e a última posição — e o
+cru é apagado. O trabalho vai em lotes, para não segurar uma transação longa
+sobre a tabela mais movimentada do banco.
+
+Na API: `GET /v1/devices/{id}/telemetry` devolve o cru e
+`GET /v1/devices/{id}/telemetry/rollup` o agregado.
+
+O que falta, quando o volume pedir:
 
 1. particionar `telemetry_sample` por mês;
-2. agregar amostras com mais de 90 dias em janelas de 1 minuto (média, mínimo,
-   máximo) e descartar o cru;
-3. mover a série para um banco de série temporal, mantendo `device_event` no
+2. mover a série para um banco de série temporal, mantendo `device_event` no
    relacional.
 
-A separação da etapa 3 é o ponto: **evento é o que precisa sobreviver íntegro
+A separação da etapa 2 é o ponto: **evento é o que precisa sobreviver íntegro
 para a auditoria; telemetria é amostragem.** Agregar telemetria antiga é
-aceitável; agregar evento não.
+aceitável; agregar evento não — e a retenção não toca em `device_event`.
 
-Nada disso está implementado. Com SQLite, a ingestão concorrente serializa muito
-antes de o volume virar problema — ver [`DEPLOYMENT.md`](DEPLOYMENT.md).
+Com SQLite, a ingestão concorrente serializa muito antes de o volume virar
+problema — ver [`DEPLOYMENT.md`](DEPLOYMENT.md).

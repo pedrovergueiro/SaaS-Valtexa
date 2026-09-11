@@ -14,8 +14,9 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator
 
+from valtexa.models.base import as_utc
 from valtexa.models.enums import (
     ApplicationState,
     Connectivity,
@@ -35,6 +36,23 @@ from valtexa.models.enums import (
 # todo, então o namespace fica liberado nos esquemas que precisam.
 ALLOW_MODEL_PREFIX = ConfigDict(protected_namespaces=())
 
+
+class ApiModel(BaseModel):
+    """Base de todos os esquemas: horário sempre em UTC, com o fuso explícito.
+
+    O SQLite devolve o horário sem fuso. Serializado assim, o navegador o leria
+    como hora *local* — e o console mostraria três horas de diferença em
+    Itajubá, justamente no carimbo de uma aplicação de defensivo. Na entrada, a
+    mesma regra vale para o robô: horário sem fuso é UTC, como diz o protocolo.
+    """
+
+    @field_validator("*", mode="after")
+    @classmethod
+    def _utc(cls, value: object) -> object:
+        if isinstance(value, datetime):
+            return as_utc(value)
+        return value
+
 Polygon = Annotated[
     list[list[float]],
     Field(
@@ -46,13 +64,13 @@ Slug = Annotated[str, StringConstraints(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")]
 Name = Annotated[str, StringConstraints(min_length=1, max_length=160, strip_whitespace=True)]
 
 
-class Message(BaseModel):
+class Message(ApiModel):
     """Resposta simples de confirmação."""
 
     detail: str
 
 
-class ErrorResponse(BaseModel):
+class ErrorResponse(ApiModel):
     detail: str
 
 
@@ -61,7 +79,7 @@ class ErrorResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(ApiModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=256)
     tenant: Slug | None = Field(
@@ -70,7 +88,7 @@ class LoginRequest(BaseModel):
     )
 
 
-class TokenResponse(BaseModel):
+class TokenResponse(ApiModel):
     access_token: str
     token_type: str = "bearer"
     expires_at: datetime
@@ -79,14 +97,14 @@ class TokenResponse(BaseModel):
     capabilities: list[str]
 
 
-class MembershipOut(BaseModel):
+class MembershipOut(ApiModel):
     tenant_id: str
     tenant_name: str
     tenant_slug: str
     role: Role
 
 
-class MeResponse(BaseModel):
+class MeResponse(ApiModel):
     id: str
     email: str
     full_name: str
@@ -97,13 +115,13 @@ class MeResponse(BaseModel):
     memberships: list[MembershipOut]
 
 
-class TenantCreate(BaseModel):
+class TenantCreate(ApiModel):
     name: Name
     slug: Slug
     document: str | None = Field(default=None, max_length=32)
 
 
-class TenantOut(BaseModel):
+class TenantOut(ApiModel):
     id: str
     name: str
     slug: str
@@ -112,14 +130,14 @@ class TenantOut(BaseModel):
     created_at: datetime
 
 
-class UserInvite(BaseModel):
+class UserInvite(ApiModel):
     email: EmailStr
     full_name: Name
     password: str = Field(min_length=8, max_length=256)
     role: Role
 
 
-class UserOut(BaseModel):
+class UserOut(ApiModel):
     id: str
     email: str
     full_name: str
@@ -132,7 +150,7 @@ class UserOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class FarmCreate(BaseModel):
+class FarmCreate(ApiModel):
     name: Name
     center_lat: float = Field(ge=-90, le=90)
     center_lon: float = Field(ge=-180, le=180)
@@ -142,7 +160,7 @@ class FarmCreate(BaseModel):
     area_ha: float | None = Field(default=None, gt=0)
 
 
-class FarmOut(BaseModel):
+class FarmOut(ApiModel):
     id: str
     name: str
     timezone: str
@@ -154,7 +172,7 @@ class FarmOut(BaseModel):
     fields: int = Field(description="Quantos talhões cadastrados.")
 
 
-class FieldCreate(BaseModel):
+class FieldCreate(ApiModel):
     name: Name
     crop: Annotated[str, StringConstraints(min_length=2, max_length=64)]
     boundary: Polygon
@@ -162,9 +180,15 @@ class FieldCreate(BaseModel):
     crop_stage: str | None = None
     planted_on: date | None = None
     row_spacing_m: float | None = Field(default=None, gt=0)
+    row_azimuth_deg: float | None = Field(
+        default=None,
+        ge=0,
+        lt=180,
+        description="Direção das linhas, graus a partir do norte. 0 = N-S, 90 = L-O.",
+    )
 
 
-class FieldOut(BaseModel):
+class FieldOut(ApiModel):
     id: str
     farm_id: str
     name: str
@@ -173,16 +197,17 @@ class FieldOut(BaseModel):
     crop_stage: str | None
     planted_on: date | None
     row_spacing_m: float | None
+    row_azimuth_deg: float | None = None
     area_ha: float | None
     boundary: list[list[float]]
 
 
-class ZoneCreate(BaseModel):
+class ZoneCreate(ApiModel):
     name: Name
     boundary: Polygon
 
 
-class ZoneOut(BaseModel):
+class ZoneOut(ApiModel):
     id: str
     field_id: str
     name: str
@@ -195,7 +220,7 @@ class ZoneOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class DeviceModelOut(BaseModel):
+class DeviceModelOut(ApiModel):
     id: str
     code: str
     kind: DeviceKind
@@ -205,7 +230,7 @@ class DeviceModelOut(BaseModel):
     capabilities: dict
 
 
-class ProvisioningTokenCreate(BaseModel):
+class ProvisioningTokenCreate(ApiModel):
     device_model_code: str
     farm_id: str | None = None
     serial_number: str | None = Field(
@@ -215,7 +240,7 @@ class ProvisioningTokenCreate(BaseModel):
     ttl_hours: int = Field(default=72, ge=1, le=720)
 
 
-class ProvisioningTokenOut(BaseModel):
+class ProvisioningTokenOut(ApiModel):
     """O token em claro aparece **uma única vez**, nesta resposta."""
 
     id: str
@@ -225,7 +250,7 @@ class ProvisioningTokenOut(BaseModel):
     serial_number: str | None
 
 
-class DeviceProvisionRequest(BaseModel):
+class DeviceProvisionRequest(ApiModel):
     """O que o robô envia no primeiro contato."""
 
     model_config = ALLOW_MODEL_PREFIX
@@ -241,7 +266,7 @@ class DeviceProvisionRequest(BaseModel):
     protocol_version: str = "1.0"
 
 
-class DeviceProvisionResponse(BaseModel):
+class DeviceProvisionResponse(ApiModel):
     """O que o robô guarda para o resto da vida."""
 
     device_id: str
@@ -254,7 +279,7 @@ class DeviceProvisionResponse(BaseModel):
     server_time: datetime
 
 
-class DeviceOut(BaseModel):
+class DeviceOut(ApiModel):
     model_config = ALLOW_MODEL_PREFIX
 
     id: str
@@ -275,7 +300,7 @@ class DeviceOut(BaseModel):
     capabilities: dict
 
 
-class DeviceStatusUpdate(BaseModel):
+class DeviceStatusUpdate(ApiModel):
     status: DeviceStatus
     reason: str | None = None
 
@@ -285,7 +310,7 @@ class DeviceStatusUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class TelemetryIn(BaseModel):
+class TelemetryIn(ApiModel):
     """Uma amostra. Os campos são todos opcionais salvo a sequência."""
 
     sequence_number: int = Field(ge=0)
@@ -310,7 +335,7 @@ class TelemetryIn(BaseModel):
     faults: list[Any] = Field(default_factory=list)
 
 
-class DeviceEventIn(BaseModel):
+class DeviceEventIn(ApiModel):
     sequence_number: int = Field(ge=0)
     type: Annotated[str, StringConstraints(min_length=2, max_length=64)]
     occurred_at: datetime | None = None
@@ -319,19 +344,19 @@ class DeviceEventIn(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
-class TelemetryBatch(BaseModel):
+class TelemetryBatch(ApiModel):
     sync_id: str | None = Field(
         default=None, description="Identificador do lote, para rastrear a sincronização offline."
     )
     samples: list[TelemetryIn] = Field(min_length=1)
 
 
-class EventBatch(BaseModel):
+class EventBatch(ApiModel):
     sync_id: str | None = None
     events: list[DeviceEventIn] = Field(min_length=1)
 
 
-class SyncBatch(BaseModel):
+class SyncBatch(ApiModel):
     """Descarga de um robô que ficou offline."""
 
     sync_id: str
@@ -339,14 +364,14 @@ class SyncBatch(BaseModel):
     events: list[DeviceEventIn] = Field(default_factory=list)
 
 
-class IngestOut(BaseModel):
+class IngestOut(ApiModel):
     accepted: int
     duplicated: int = Field(description="Já conhecidos. Reenvio é esperado, não é erro.")
     rejected: int
     errors: list[str] = Field(default_factory=list)
 
 
-class ObservationIn(BaseModel):
+class ObservationIn(ApiModel):
     """Metadados de uma imagem. A imagem vai no campo ``file`` do multipart."""
 
     sequence_number: int | None = None
@@ -363,7 +388,7 @@ class ObservationIn(BaseModel):
     edge_summary: dict = Field(default_factory=dict)
 
 
-class ObservationOut(BaseModel):
+class ObservationOut(ApiModel):
     id: str
     field_id: str
     zone_id: str | None
@@ -380,7 +405,7 @@ class ObservationOut(BaseModel):
     novelty_score: float | None = None
 
 
-class SignedCommandOut(BaseModel):
+class SignedCommandOut(ApiModel):
     """O envelope assinado que o robô verifica antes de agir."""
 
     payload: dict
@@ -389,7 +414,7 @@ class SignedCommandOut(BaseModel):
     algorithm: str
 
 
-class MissionAck(BaseModel):
+class MissionAck(ApiModel):
     """Confirmação de recebimento pelo robô."""
 
     mission_id: str
@@ -399,14 +424,14 @@ class MissionAck(BaseModel):
     )
 
 
-class SegmentComplete(BaseModel):
+class SegmentComplete(ApiModel):
     segment_index: int = Field(ge=0)
     lat: float | None = None
     lon: float | None = None
     battery_percent: float | None = None
 
 
-class MissionPause(BaseModel):
+class MissionPause(ApiModel):
     reason: str = Field(max_length=120)
     lat: float | None = None
     lon: float | None = None
@@ -418,7 +443,7 @@ class MissionPause(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class MissionCreate(BaseModel):
+class MissionCreate(ApiModel):
     kind: MissionKind
     field_id: str
     device_id: str
@@ -436,14 +461,14 @@ class MissionCreate(BaseModel):
     decision_id: str | None = None
 
 
-class MissionSegmentOut(BaseModel):
+class MissionSegmentOut(ApiModel):
     index: int
     state: str
     path: list[list[float]]
     estimated_energy_percent: float | None
 
 
-class MissionOut(BaseModel):
+class MissionOut(ApiModel):
     id: str
     kind: MissionKind
     state: MissionState
@@ -459,6 +484,13 @@ class MissionOut(BaseModel):
     authorized_quantity_l: float | None
     created_by: str | None
     approved_by: str | None
+    approved_at: datetime | None = None
+    product_batch_id: str | None = None
+    decision_id: str | None = None
+    dispatched_at: datetime | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    abort_reason: str | None = None
     authorized_at: datetime | None
     expires_at: datetime | None
     safety_status: SafetyVerdict | None
@@ -470,7 +502,7 @@ class MissionOut(BaseModel):
     created_at: datetime
 
 
-class MissionApproval(BaseModel):
+class MissionApproval(ApiModel):
     """Assinatura do agrônomo. Sem isto nenhuma pulverização é autorizada."""
 
     confirm: bool = Field(
@@ -479,17 +511,17 @@ class MissionApproval(BaseModel):
     notes: str | None = None
 
 
-class AbortRequest(BaseModel):
+class AbortRequest(ApiModel):
     reason: str = Field(min_length=3, max_length=500)
 
 
-class SafetyCheckOut(BaseModel):
+class SafetyCheckOut(ApiModel):
     code: str
     passed: bool
     detail: str
 
 
-class SafetyEvaluationOut(BaseModel):
+class SafetyEvaluationOut(ApiModel):
     id: str
     subject_type: str
     subject_id: str
@@ -506,7 +538,7 @@ class SafetyEvaluationOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class DetectionOut(BaseModel):
+class DetectionOut(ApiModel):
     model_config = ALLOW_MODEL_PREFIX
 
     id: str
@@ -522,7 +554,7 @@ class DetectionOut(BaseModel):
     error: str | None
 
 
-class DiagnosisOut(BaseModel):
+class DiagnosisOut(ApiModel):
     id: str
     observation_id: str
     field_id: str
@@ -542,7 +574,7 @@ class DiagnosisOut(BaseModel):
     detections: list[DetectionOut] = Field(default_factory=list)
 
 
-class DiagnosisReview(BaseModel):
+class DiagnosisReview(ApiModel):
     """O veredito do agrônomo."""
 
     label: Annotated[str, StringConstraints(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,63}$")] = Field(
@@ -553,12 +585,17 @@ class DiagnosisReview(BaseModel):
         examples=["Gray_Leaf_Spot", "Cigarrinha"],
     )
     confirmed: bool = Field(
-        default=True, description="Falso registra que o palpite da máquina estava errado."
+        default=True,
+        description=(
+            "Verdadeiro registra o diagnóstico do agrônomo — concorde ou não com a IA; "
+            "corrigir o rótulo é confirmar com o rótulo certo. Falso descarta a imagem "
+            "como sem condição de diagnóstico."
+        ),
     )
     notes: str | None = None
 
 
-class DecisionOut(BaseModel):
+class DecisionOut(ApiModel):
     id: str
     diagnosis_id: str | None
     field_id: str
@@ -581,7 +618,7 @@ class DecisionOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class ProductCreate(BaseModel):
+class ProductCreate(ApiModel):
     name: Name
     manufacturer: str | None = None
     active_ingredient: str | None = None
@@ -601,13 +638,13 @@ class ProductOut(ProductCreate):
     status: str
 
 
-class BatchCreate(BaseModel):
+class BatchCreate(ApiModel):
     code: Annotated[str, StringConstraints(min_length=1, max_length=64)]
     expires_on: date | None = None
     quantity_l: float | None = Field(default=None, gt=0)
 
 
-class BatchOut(BaseModel):
+class BatchOut(ApiModel):
     id: str
     product_id: str
     code: str
@@ -615,14 +652,14 @@ class BatchOut(BaseModel):
     quantity_l: float | None
 
 
-class TankCreate(BaseModel):
+class TankCreate(ApiModel):
     device_id: str
     index: int = Field(ge=0)
     capacity_l: float = Field(gt=0)
     label: str | None = None
 
 
-class TankLoad(BaseModel):
+class TankLoad(ApiModel):
     """Carga de um tanque. É o registro que o safety engine confere."""
 
     product_id: str
@@ -630,7 +667,7 @@ class TankLoad(BaseModel):
     volume_l: float = Field(gt=0)
 
 
-class TankOut(BaseModel):
+class TankOut(ApiModel):
     id: str
     device_id: str
     index: int
@@ -643,7 +680,7 @@ class TankOut(BaseModel):
     loaded_at: datetime | None
 
 
-class ApplicationStart(BaseModel):
+class ApplicationStart(ApiModel):
     """Reportado pelo drone quando abre o bico."""
 
     mission_id: str
@@ -651,7 +688,7 @@ class ApplicationStart(BaseModel):
     tank_id: str | None = None
 
 
-class ApplicationStop(BaseModel):
+class ApplicationStop(ApiModel):
     stopped_at: datetime
     amount_used_l: float = Field(ge=0)
     area_ha: float | None = Field(default=None, ge=0)
@@ -661,7 +698,7 @@ class ApplicationStop(BaseModel):
     stop_reason: str | None = None
 
 
-class ApplicationOut(BaseModel):
+class ApplicationOut(ApiModel):
     id: str
     mission_id: str
     device_id: str
@@ -678,7 +715,7 @@ class ApplicationOut(BaseModel):
     verified: bool
 
 
-class VerificationOut(BaseModel):
+class VerificationOut(ApiModel):
     model_config = ALLOW_MODEL_PREFIX
 
     id: str
@@ -700,13 +737,13 @@ class VerificationOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class ClassCountOut(BaseModel):
+class ClassCountOut(ApiModel):
     label: str
     count: int
     ratio: float
 
 
-class FieldSnapshotOut(BaseModel):
+class FieldSnapshotOut(ApiModel):
     field_id: str
     field_name: str
     crop: str
@@ -718,13 +755,13 @@ class FieldSnapshotOut(BaseModel):
     classes: list[ClassCountOut]
 
 
-class TimePointOut(BaseModel):
+class TimePointOut(ApiModel):
     day: date
     total: int
     counts: dict[str, int]
 
 
-class AnomalyOut(BaseModel):
+class AnomalyOut(ApiModel):
     field_id: str
     zone_id: str | None
     label: str
@@ -735,7 +772,7 @@ class AnomalyOut(BaseModel):
     detail: str
 
 
-class AuditOut(BaseModel):
+class AuditOut(ApiModel):
     model_config = ALLOW_MODEL_PREFIX
 
     id: str
@@ -754,7 +791,7 @@ class AuditOut(BaseModel):
     payload: dict
 
 
-class OutboxEventOut(BaseModel):
+class OutboxEventOut(ApiModel):
     id: str
     name: str
     subject_type: str | None
@@ -766,7 +803,7 @@ class OutboxEventOut(BaseModel):
     last_error: str | None
 
 
-class HealthResponse(BaseModel):
+class HealthResponse(ApiModel):
     status: str
     environment: str
     protocol_version: str
@@ -776,3 +813,134 @@ class HealthResponse(BaseModel):
     warnings: list[str] = Field(
         default_factory=list, description="O que impede este processo de ser produção."
     )
+
+
+class UserUpdate(ApiModel):
+    role: Role
+
+
+# ---------------------------------------------------------------------------
+# Console
+# ---------------------------------------------------------------------------
+
+
+class TelemetryOut(ApiModel):
+    sequence_number: int
+    recorded_at: datetime
+    received_at: datetime
+    mission_id: str | None
+    lat: float | None
+    lon: float | None
+    alt_m: float | None
+    heading_deg: float | None
+    speed_ms: float | None
+    rtk_fix: str
+    battery_percent: float | None
+    battery_voltage_v: float | None
+    temperature_c: float | None
+    energy_state: str
+    mission_state: str | None
+    link_quality: float | None
+    sensors: dict
+    faults: list[Any]
+
+
+class TelemetryRollupOut(ApiModel):
+    bucket_start: datetime
+    bucket_seconds: int
+    samples: int
+    battery_min: float | None
+    battery_avg: float | None
+    battery_max: float | None
+    speed_avg_ms: float | None
+    link_quality_avg: float | None
+    rtk_fixed_ratio: float | None
+    last_lat: float | None
+    last_lon: float | None
+
+
+class DeviceEventOut(ApiModel):
+    id: str
+    device_id: str
+    mission_id: str | None
+    type: str
+    severity: str
+    sequence_number: int
+    occurred_at: datetime
+    received_at: datetime
+    payload: dict
+
+
+class MissionHistoryOut(ApiModel):
+    at: datetime
+    action: str
+    old_state: str | None
+    new_state: str | None
+    reason: str | None
+    actor_type: str
+    actor: str | None
+
+
+class CheckpointOut(ApiModel):
+    created_at: datetime
+    last_completed_segment: int
+    remaining_segments: int
+    battery_percent: float | None
+    reason: str | None
+    lat: float | None
+    lon: float | None
+
+
+class AlertOut(ApiModel):
+    """Um alerta derivado do estado do sistema. Some quando a causa é resolvida."""
+
+    id: str
+    kind: str
+    severity: str = Field(description="'critical', 'warning' ou 'info'.")
+    title: str
+    detail: str
+    subject_type: str | None
+    subject_id: str | None
+    at: datetime
+
+
+class DeviceSummary(ApiModel):
+    total: int
+    active: int
+    online: int
+    offline: int
+    low_battery: int
+    by_kind: dict[str, int]
+
+
+class ApplicationSummary(ApiModel):
+    count: int
+    liters: float
+    area_ha: float
+
+
+class MissionBrief(ApiModel):
+    id: str
+    kind: MissionKind
+    state: MissionState
+    device_id: str
+    device_name: str | None
+    field_id: str
+    field_name: str | None
+    created_at: datetime
+    segments_total: int
+    segments_done: int
+
+
+class DashboardOut(ApiModel):
+    generated_at: datetime
+    devices: DeviceSummary
+    missions_by_state: dict[str, int]
+    review_queue: int
+    observations_7d: int
+    labels_7d: dict[str, int]
+    applications_30d: ApplicationSummary
+    verifications_pending: int
+    alert_counts: dict[str, int]
+    alerts: list[AlertOut]
+    recent_missions: list[MissionBrief]
