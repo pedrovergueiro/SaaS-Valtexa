@@ -31,7 +31,7 @@ import { connectivity, crop, deviceKind, diagnosisStatus, disease, HEALTH, healt
 import { usePalette, type Palette } from '@/lib/palette'
 
 type Ring = number[][]
-const DEFAULT_CENTER: [number, number] = [-22.4129, -45.4515]
+const DEFAULT_CENTER: [number, number] = [-12.7240, -55.9075]
 
 export const toLatLng = (point: number[]): [number, number] => [point[1] ?? 0, point[0] ?? 0]
 
@@ -123,7 +123,11 @@ export function FarmMap({
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               attribution="Imagens &copy; Esri"
               maxZoom={20}
-              maxNativeZoom={19}
+              // No interior a Esri costuma ter imagem só até o zoom 17 — além
+              // disso ela devolve um tile escrito "Map data not yet available",
+              // que é 200 e não dá para detectar. Declarando o limite, o Leaflet
+              // amplia a última imagem real em vez de pedir a que não existe.
+              maxNativeZoom={17}
             />
           </LayersControl.BaseLayer>
           <LayersControl.BaseLayer name="Mapa">

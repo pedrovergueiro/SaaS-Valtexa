@@ -127,8 +127,8 @@ def upload_observation(
     zone_id: str | None = None,
     mission_id: str | None = None,
     captured_at: datetime | None = None,
-    lat: float = -22.4128,
-    lon: float = -45.4518,
+    lat: float = -12.7240,
+    lon: float = -55.9075,
 ):
     sequence = device.next_sequence()
     metadata = {

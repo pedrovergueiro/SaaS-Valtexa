@@ -27,10 +27,10 @@ from valtexa.models import MissionState
 from valtexa.security import signing
 
 ZONA = [
-    [-45.4525, -22.4124],
-    [-45.4512, -22.4124],
-    [-45.4512, -22.4133],
-    [-45.4525, -22.4133],
+    [-55.9084, -12.7236],
+    [-55.9071, -12.7236],
+    [-55.9071, -12.7245],
+    [-55.9084, -12.7245],
 ]
 
 
@@ -127,8 +127,8 @@ def test_fluxo_completo_sem_hardware(
                         "field_id": demo["field_id"],
                         "zone_id": demo["zone_id"],
                         "captured_at": datetime.now(UTC).isoformat(),
-                        "lat": -22.4128,
-                        "lon": -45.4518,
+                        "lat": -12.7240,
+                        "lon": -55.9075,
                         "model_input_ok": True,
                     }
                 )
@@ -243,7 +243,7 @@ def test_fluxo_completo_sem_hardware(
             "stopped_at": datetime.now(UTC).isoformat(),
             "amount_used_l": 4.2,
             "area_ha": 1.3,
-            "track": [[-45.4518, -22.4128, 0.02], [-45.4516, -22.4129, 0.02]],
+            "track": [[-55.9075, -12.7240, 0.02], [-55.9073, -12.7241, 0.02]],
         },
     )
     assert stopped.status_code == 200, stopped.text

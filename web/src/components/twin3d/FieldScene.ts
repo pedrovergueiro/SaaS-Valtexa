@@ -132,6 +132,12 @@ export class FieldScene {
     this.controls.addEventListener('start', () => {
       this.tween = null
     })
+    // A roda do mouse muda a câmera dentro do próprio OrbitControls: quando o
+    // quadro seguinte chama update(), não sobrou movimento para relatar. Sem
+    // isto, o zoom acontece e a tela não redesenha.
+    this.controls.addEventListener('change', () => {
+      this.dirty = true
+    })
 
     this.sun.position.set(-120, 180, 90)
     this.scene.add(this.hemisphere, this.sun, this.content, this.clouds)

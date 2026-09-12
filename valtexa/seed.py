@@ -34,18 +34,20 @@ logger = logging.getLogger(__name__)
 
 DEMO_TENANT_SLUG = "fazenda-demo"
 
-# Um retângulo de ~300 x 200 m perto de Itajubá (MG), onde fica a UNIFEI.
+# Um retângulo de ~304 x 200 m dentro de uma lavoura de milho em Sorriso (MT).
+# As coordenadas são de talhão real: no mapa de satélite do console aparece
+# lavoura, com as linhas de plantio e a estrada de terra — e não um bairro.
 DEMO_FIELD_BOUNDARY = [
-    [-45.4530, -22.4120],
-    [-45.4501, -22.4120],
-    [-45.4501, -22.4138],
-    [-45.4530, -22.4138],
+    [-55.9089, -12.7231],
+    [-55.9061, -12.7231],
+    [-55.9061, -12.7249],
+    [-55.9089, -12.7249],
 ]
 DEMO_ZONE_BOUNDARY = [
-    [-45.4525, -22.4124],
-    [-45.4512, -22.4124],
-    [-45.4512, -22.4133],
-    [-45.4525, -22.4133],
+    [-55.9084, -12.7236],
+    [-55.9071, -12.7236],
+    [-55.9071, -12.7245],
+    [-55.9084, -12.7245],
 ]
 
 
@@ -102,10 +104,11 @@ def seed_demo(session: Session, *, admin_password: str = "valtexa-demo-2026") ->
     farm = Farm(
         tenant_id=tenant.id,
         name="Fazenda Santa Rita",
-        center_lat=-22.4129,
-        center_lon=-45.4515,
-        base_lat=-22.4140,
-        base_lon=-45.4515,
+        timezone="America/Cuiaba",
+        center_lat=-12.7240,
+        center_lon=-55.9075,
+        base_lat=-12.7252,
+        base_lon=-55.9075,
         area_ha=120.0,
     )
     session.add(farm)

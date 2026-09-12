@@ -74,8 +74,8 @@ def demo_crop(boundary: list | None = None) -> SimulatedCrop:
         height_m=1.3,
         foci=[
             Focus(
-                lon=-45.45205,
-                lat=-22.41292,
+                lon=-55.9079,
+                lat=-12.72405,
                 radius_m=24.0,
                 drawn="Common_Rust",
                 model_label="Common_Rust",
@@ -85,8 +85,8 @@ def demo_crop(boundary: list | None = None) -> SimulatedCrop:
                 lesion=(150, 70, 28),
             ),
             Focus(
-                lon=-45.45145,
-                lat=-22.41262,
+                lon=-55.90735,
+                lat=-12.72375,
                 radius_m=15.0,
                 drawn="Spodoptera_frugiperda",
                 model_label="Blight",

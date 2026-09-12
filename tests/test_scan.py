@@ -28,17 +28,17 @@ from valtexa.seed import DEMO_FIELD_BOUNDARY
 from valtexa.services import pointcloud
 from valtexa.services.taxonomy import Category, categorize
 
-EIXO = [[-45.4525, -22.4129], [-45.4512, -22.4129]]
-"""Uma rua leste-oeste de ~134 m, no meio do talhão de demonstração."""
+EIXO = [[-55.9081, -12.7240], [-55.9068, -12.7240]]
+"""Uma rua leste-oeste de ~141 m, no meio do talhão de demonstração."""
 
 VIZINHA = [[lon, lat + 3.0 / 111_320] for lon, lat in EIXO]
 """A rua 3 m ao norte."""
 
 ZONA = [
-    [-45.4525, -22.4124],
-    [-45.4512, -22.4124],
-    [-45.4512, -22.4133],
-    [-45.4525, -22.4133],
+    [-55.9084, -12.7236],
+    [-55.9071, -12.7236],
+    [-55.9071, -12.7245],
+    [-55.9084, -12.7245],
 ]
 
 
@@ -140,7 +140,7 @@ class TestPassada:
         assert body["plant_count"] == 3
         assert body["point_count"] == 3
         assert body["has_pointcloud"] is True
-        assert body["length_m"] == pytest.approx(134, abs=2)
+        assert body["length_m"] == pytest.approx(141, abs=2)
 
         cena = _cena(client, demo["field_id"], operator_token)
         assert len(cena["scans"]) == 1
@@ -257,7 +257,7 @@ class TestPassada:
         self, client: TestClient, demo: dict, admin_token: dict, operator_token: dict
     ) -> None:
         rover = provision(client, admin_token, "ROVER_SCOUT_V1", "R3D-6", demo["farm_id"])
-        send_telemetry(rover, battery_percent=95.0, lat=-22.4140, lon=-45.4515)
+        send_telemetry(rover, battery_percent=95.0, lat=-12.7252, lon=-55.9075)
         mission = client.post(
             "/v1/missions",
             json={
@@ -370,8 +370,8 @@ class TestLavouraSimulada:
         plants, cloud = crop.scan(EIXO, 1.5)
         again, _ = crop.scan(EIXO, 1.5)
         assert plants == again
-        # 134 m, seis linhas a 0,5 m, uma planta a cada 0,3 m, ~4% de falha.
-        assert 2_300 < len(plants) < 2_900
+        # 141 m, seis linhas a 0,5 m, uma planta a cada 0,3 m, ~4% de falha.
+        assert 2_400 < len(plants) < 3_100
         assert pointcloud.inspect(cloud).points > 20 * len(plants)
 
     def test_ruas_vizinhas_nao_repetem_planta(self) -> None:

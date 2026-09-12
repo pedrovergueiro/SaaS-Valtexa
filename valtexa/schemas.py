@@ -42,8 +42,8 @@ class ApiModel(BaseModel):
     """Base de todos os esquemas: horário sempre em UTC, com o fuso explícito.
 
     O SQLite devolve o horário sem fuso. Serializado assim, o navegador o leria
-    como hora *local* — e o console mostraria três horas de diferença em
-    Itajubá, justamente no carimbo de uma aplicação de defensivo. Na entrada, a
+    como hora *local* — e o console mostraria quatro horas de diferença em
+    Sorriso, justamente no carimbo de uma aplicação de defensivo. Na entrada, a
     mesma regra vale para o robô: horário sem fuso é UTC, como diz o protocolo.
     """
 

@@ -169,7 +169,9 @@ o `python -m simulator` é a versão que se mostra para uma pessoa.
 | `agronomo@valtexa.dev` | agrônomo |
 | `operador@valtexa.dev` | operador |
 
-Senha: `valtexa-demo-2026`. Fazenda `fazenda-demo`, em Itajubá (MG).
+Senha: `valtexa-demo-2026`. Fazenda `fazenda-demo`, num talhão de milho em
+Sorriso (MT) — coordenadas de lavoura real, para o mapa de satélite do console
+mostrar lavoura.
 
 São dados de demonstração e **não devem existir em produção**. `seed_demo()` só é
 chamado pelo simulador e pelos testes.
