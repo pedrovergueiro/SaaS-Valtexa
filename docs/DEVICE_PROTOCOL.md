@@ -255,6 +255,17 @@ processamento, **nunca para autorizar**.
 Reenviar a mesma `sequence_number` devolve a observação existente, sem duplicar.
 Limite por arquivo: `MAX_ASSET_MB` (64).
 
+### `POST /v1/device/row-scans` — `multipart/form-data`
+
+Uma passada por rua, para a cópia 3D do talhão: `metadata` (JSON) e,
+opcionalmente, `file` com a nuvem de pontos em PLY binário. O formato completo,
+com o layout do PLY, está em
+[`ROVER_INTEGRATION.md`](ROVER_INTEGRATION.md#10-cópia-3d--uma-passada-por-rua).
+
+Idempotente pela `sequence_number`. Recusada com `422` quando não traz planta nem
+nuvem, quando o eixo não cruza o talhão, ou quando a nuvem foge do layout — a
+mensagem diz o que está errado.
+
 ### `GET /v1/device/missions/current`
 
 `204` quando não há nada a fazer. Senão:

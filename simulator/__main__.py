@@ -91,7 +91,12 @@ def _force_utf8_output() -> None:
 def _run_against(url: str) -> int:
     from simulator.scenario import run
     from valtexa.db import session_scope
-    from valtexa.seed import DEMO_ZONE_BOUNDARY, seed_demo, sync_device_models
+    from valtexa.seed import (
+        DEMO_FIELD_BOUNDARY,
+        DEMO_ZONE_BOUNDARY,
+        seed_demo,
+        sync_device_models,
+    )
 
     with session_scope() as session:
         sync_device_models(session)
@@ -108,6 +113,7 @@ def _run_against(url: str) -> int:
         demo["base_lat"] = farm.base_lat
         demo["base_lon"] = farm.base_lon
     demo["zone_boundary"] = DEMO_ZONE_BOUNDARY
+    demo["field_boundary"] = DEMO_FIELD_BOUNDARY
 
     print(f"\nPlataforma: {url}   |   documentação interativa: {url}/docs")
     result = run(url, demo)
@@ -116,6 +122,11 @@ def _run_against(url: str) -> int:
     print(f"  observações coletadas ....... {result.observations}")
     print(f"  missão retomada de checkpoint {'sim' if result.resumed else 'não'}")
     print(f"  registros sincronizados ..... {result.synced}")
+    print(
+        f"  cópia 3D .................... {result.plants} plantas em {result.scans} ruas "
+        f"({result.coverage:.0%} do talhão)"
+    )
+    print(f"  pragas rotuladas pelo agrônomo {result.pests_reviewed}")
     print(f"  bloqueios de segurança ...... {len(result.blocked_reasons)}")
     for reason in result.blocked_reasons:
         print(f"      • {reason}")

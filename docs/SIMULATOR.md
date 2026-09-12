@@ -51,16 +51,29 @@ Três razões, em ordem de importância:
                        novidade separa material para o agrônomo
                        agrônomo rotula uma classe FORA do catálogo
 
-5. Pulverização        BLOQUEADA sem aprovação do agrônomo
+5. Cópia 3D           o rover percorre TODAS as ruas da zona, na faixa do LiDAR
+                       cada rua vira passada: plantas medidas + nuvem PLY
+                       fotografa mais onde o sensor vê sintoma
+                       lagarta-do-cartucho: o modelo não conhece -> fila
+                       o agrônomo rotula a praga -> ela aparece na cópia
+
+6. Pulverização        BLOQUEADA sem aprovação do agrônomo
                        operador tenta aprovar -> 403
                        BLOQUEADA com o tanque errado
                        agrônomo aprova, tanque correto -> liberada
 
-6. Aplicação           cerca virtual bloqueia pontos fora do polígono
+7. Aplicação           cerca virtual bloqueia pontos fora do polígono
                        teto de volume respeitado como teto
 
-7. Gêmeo digital       retrato do talhão, verificação agendada, auditoria
+8. Gêmeo digital       retrato do talhão, verificação agendada, auditoria
 ```
+
+A lavoura do roteiro está em [`simulator/plants.py`](../simulator/plants.py):
+milho em grade (linhas a 0,5 m, uma planta a cada 0,3 m, falhas de plantio) com
+duas reboleiras — ferrugem comum, que o modelo reconhece, e lagarta-do-cartucho,
+que nenhum modelo do catálogo reconhece. As plantas dentro de uma reboleira ficam
+mais baixas e menos verdes, e a nuvem de pontos carrega a lesão ou a folha
+comida. Duas passadas pela mesma rua enxergam as mesmas plantas.
 
 **Os bloqueios são o ponto.** Um simulador que só mostra o caminho feliz não
 prova nada: o valor da plataforma está exatamente no que ela recusa fazer.
@@ -74,6 +87,8 @@ prova nada: o valor da plataforma está exatamente no que ela recusa fazer.
 | `simulator/client.py` | cliente assinado do protocolo — o SDK do firmware |
 | `simulator/operator.py` | cliente do lado humano |
 | `simulator/devices.py` | rover, drone e dock simulados |
+| `simulator/plants.py` | a lavoura que o sensor 3D do rover enxerga |
+| `simulator/leaf.py` | as folhas das fotos, com lesão ou dano de praga |
 | `simulator/scenario.py` | o roteiro |
 | `simulator/__main__.py` | sobe a plataforma e executa |
 
@@ -129,8 +144,9 @@ DATABASE_URL=sqlite:///.simulacao/simulacao.db STORAGE_DIR=.simulacao/storage \
 ```
 
 Abra <http://127.0.0.1:8000> e entre com uma das contas abaixo. O banco guarda o
-que o roteiro produziu: a fila do agrônomo, a aplicação com a trilha, a
-verificação agendada, a auditoria.
+que o roteiro produziu: a cópia 3D da zona em *Lavoura 3D*, com as duas
+reboleiras; a fila do agrônomo; a aplicação com a trilha; a verificação
+agendada; a auditoria.
 
 `--keep` também não limpa ao começar. Para rodar de novo do zero, apague
 `.simulacao/` antes.
@@ -167,4 +183,7 @@ chamado pelo simulador e pelos testes.
 - dois robôs operando ao mesmo tempo no mesmo talhão;
 - a coreografia física de acoplamento e troca de bateria na dock;
 - deriva de posição — o rover simulado navega perfeitamente, o que é justamente
-  o que a margem da cerca virtual existe para cobrir no mundo real.
+  o que a margem da cerca virtual existe para cobrir no mundo real;
+- medir de verdade: as plantas da cópia 3D vêm de uma grade com ruído, e a nuvem
+  de pontos é desenhada, não medida por LiDAR nenhum. Serve para exercitar o
+  protocolo e o console, não para avaliar sensor.

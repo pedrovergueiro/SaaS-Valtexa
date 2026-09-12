@@ -266,7 +266,7 @@ def boustrophedon(
     points = as_points(polygon)
     origin_lon, origin_lat = centroid(points)
     rotation = math.radians(azimuth_deg - 90.0)
-    local = [_rotate(_to_local(point, origin_lon, origin_lat), rotation) for point in points]
+    local = [_rotate(to_local(point, origin_lon, origin_lat), rotation) for point in points]
 
     ys = [point[1] for point in local]
     y_min, y_max = min(ys), max(ys)
@@ -289,12 +289,12 @@ def boustrophedon(
         legs.append([(min(xs), middle), (max(xs), middle)])
 
     return [
-        [_from_local(_rotate(point, -rotation), origin_lon, origin_lat) for point in leg]
+        [from_local(_rotate(point, -rotation), origin_lon, origin_lat) for point in leg]
         for leg in legs
     ]
 
 
-def _to_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
+def to_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
     """Graus para metros a partir de uma origem, na aproximação local."""
     scale_lon = METERS_PER_DEGREE_LAT * math.cos(math.radians(origin_lat))
     return (
@@ -303,7 +303,7 @@ def _to_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
     )
 
 
-def _from_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
+def from_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
     scale_lon = METERS_PER_DEGREE_LAT * math.cos(math.radians(origin_lat))
     return (
         origin_lon + point[0] / scale_lon,

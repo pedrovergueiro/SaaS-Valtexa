@@ -1,12 +1,103 @@
 # Gêmeo digital
 
-O gêmeo aqui **não é um modelo 3D**. É a resposta a duas perguntas que a lavoura
+O gêmeo tem duas camadas, e cada uma responde a uma pergunta que a lavoura
 responderia mal sozinha:
 
-- *o que existe onde* — cada observação amarrada a um ponto e a um instante;
-- *o que mudou desde a última passada* — a série temporal.
+- **a cópia 3D** — *como está cada rua*: o rover monta, passada a passada, uma
+  cópia do talhão com cada planta medida, e as fotos com praga ou doença ficam
+  presas à planta fotografada;
+- **a série** — *o que mudou desde a última passada*: incidência por zona no
+  tempo, e os desvios que nenhuma foto sozinha denuncia.
 
-Código: [`valtexa/services/twin.py`](../valtexa/services/twin.py).
+Código: [`valtexa/services/scene.py`](../valtexa/services/scene.py) (cópia 3D) e
+[`valtexa/services/twin.py`](../valtexa/services/twin.py) (série e anomalias).
+
+---
+
+## Cópia 3D
+
+```
+rover anda pela rua ──► LiDAR/estéreo mede as linhas dos dois lados
+                         │
+                         ├─ plantas: posição, altura, copa, índice de verde
+                         └─ nuvem de pontos da faixa (PLY)
+                                        │
+POST /v1/device/row-scans ──────────────┘   (uma passada por rua)
+                                        │
+GET /v1/fields/{id}/scene  ◄── a cópia: a passada mais nova de cada faixa
+                                + fotos diagnosticadas presas às plantas
+```
+
+### Como a cópia é composta
+
+Cada passada cobre uma faixa — o eixo percorrido mais o alcance do sensor para
+cada lado (`reach_m`). A cópia é a sobreposição das faixas, **a mais recente por
+cima**. Uma passada nova substitui o que havia na faixa dela, inclusive a
+ausência: a planta que foi arrancada, acamou ou foi colhida some da cópia na
+próxima passada, em vez de ficar congelada para sempre.
+
+O que nenhuma passada cobriu **fica vazio**, e `coverage_ratio` diz quanto do
+talhão já tem cópia. É deliberado: preencher o talhão com plantas prováveis
+transformaria a cópia numa ilustração, e o produtor decidiria olhando para algo
+que ninguém mediu.
+
+`?at=` devolve a cópia como ela estava num instante — o console mostra isso como
+"estado em", por dia de passada.
+
+### Praga e doença na cópia
+
+Cada foto diagnosticada vira um marcador preso à **planta fotografada** (a mais
+próxima, até 60 cm), com a categoria que vale:
+
+| Categoria | Quando |
+|---|---|
+| `pest` | rótulo de praga — do modelo (dano do bicho-mineiro) ou do agrônomo |
+| `disease` | rótulo de doença validado pela IA ou confirmado |
+| `review` | a dupla validação não fechou e o agrônomo ainda não olhou |
+| `other` | achado do agrônomo fora das duas listas (deficiência, granizo) |
+| `healthy` | foto sem sintoma |
+
+A lista está em [`services/taxonomy.py`](../valtexa/services/taxonomy.py).
+Enquanto a foto espera o agrônomo, a categoria é `review` mesmo que a máquina
+tenha arriscado um rótulo — mostrar "doença" ali daria ao palpite recusado o
+peso de um diagnóstico.
+
+**Praga que nenhum modelo conhece chega pela fila.** A folha comida pela
+lagarta-do-cartucho sai do modelo de milho como um palpite de doença com
+novidade alta; vai para o agrônomo, que escreve `Spodoptera_frugiperda`, e é
+esse rótulo que põe a praga na cópia. O simulador percorre exatamente esse
+caminho.
+
+**Nada é diagnosticado por vizinhança.** A planta ao lado de uma ferrugem não
+ganha ferrugem na cópia. O que a cópia mostra de *todas* as plantas é o que o
+sensor mediu em todas: altura, copa e o índice de verde, que acusa clorose e
+lesão sem dizer a causa — e é por ele que uma reboleira aparece antes de alguém
+fotografá-la.
+
+### Rotas
+
+```
+POST /v1/device/row-scans            o rover envia uma passada (assinado)
+GET  /v1/fields/{id}/scene?at=&days= a cópia do talhão
+GET  /v1/fields/{id}/row-scans       as passadas, da mais recente
+GET  /v1/row-scans/{id}/pointcloud   a nuvem de pontos da passada, sem conversão
+```
+
+O formato da passada e da nuvem está em
+[`ROVER_INTEGRATION.md`](ROVER_INTEGRATION.md#10-cópia-3d--uma-passada-por-rua).
+Cada passada publica `row_scan.received`; o console atualiza a cópia aberta
+sem recarregar, rua a rua.
+
+### O que a cópia não é
+
+- **Não é fotogrametria.** As plantas no console são símbolos dimensionados pela
+  medida de cada uma; a forma real está na nuvem de pontos, que o console abre
+  por rua.
+- **Não tem identidade de planta entre passadas** além da posição: com RTK, a
+  mesma posição é a mesma planta. Sem RTK a composição ainda funciona, mas duas
+  passadas podem desenhar a mesma planta a alguns centímetros uma da outra.
+- **Não foi calibrada contra medição manual.** Altura e copa são as do sensor;
+  comparar com régua no campo é o primeiro teste do hardware.
 
 ---
 
@@ -16,6 +107,7 @@ Código: [`valtexa/services/twin.py`](../valtexa/services/twin.py).
 Tenant
  └── Farm
       └── Field (talhão: cultura, estágio, limite)
+           ├── RowScan (uma passada por rua: plantas medidas + nuvem de pontos)
            └── Zone (unidade de manejo)
                 └── Observation (ponto + instante + imagem)
                      ├── Detection   (palpite de cada analisador)
@@ -125,11 +217,14 @@ produtor, porque ele vai até o talhão e olha.
 
 ## Limitações
 
-1. **Não há identidade de planta.** `Observation.plant_ref` existe no esquema e
-   fica nulo — falta o rastreamento visual que reconheça a mesma planta entre
-   passadas. Hoje a agregação é por zona.
-2. **Não há severidade.** Os modelos classificam, não quantificam. A série mede
-   *quantas plantas* mostram sintoma, não *quanto* de cada folha está afetado.
+1. **Identidade de planta só por posição.** A cópia 3D prende cada foto à
+   planta medida mais próxima, e com RTK a mesma posição é a mesma planta. Falta
+   o rastreamento visual que reconheça a planta sem RTK; `Observation.plant_ref`
+   continua nulo, e a série agrega por zona.
+2. **A severidade é área no quadro.** O modelo de segmentação mede a fração da
+   foto com lesão — aproxima a folha só quando ela preenche a imagem, e ainda
+   não foi comparada com a escala de um fitopatologista. Por isso fica fora da
+   série e da decisão.
 3. **A anomalia não usa sazonalidade.** Ferrugem aumenta naturalmente em certos
    estágios; a linha de base é do próprio talhão nas semanas anteriores, o que
    absorve parte disso, mas não modela o ciclo da cultura.

@@ -20,20 +20,29 @@ from datetime import UTC, datetime
 
 from simulator.client import DeviceClient
 from simulator.leaf import leaf_png
+from simulator.plants import SimulatedCrop
 from valtexa.models.enums import EnergyState, RtkFix
 from valtexa.services import geo
 from valtexa.services.ai_pipeline import SIMULATION_MARKER
 
 
-def frame_with_label(label: str, novelty: float = 0.4, seed: int = 0) -> bytes:
+def frame_with_label(
+    label: str, novelty: float = 0.4, seed: int = 0, drawn: str | None = None
+) -> bytes:
     """Monta um quadro que carrega a resposta esperada.
 
     PNG ignora bytes depois do ``IEND``, então a etiqueta viaja junto sem
     corromper o arquivo. É andaime de simulação, e o único lugar do sistema que
     o lê é o :class:`~valtexa.services.ai_pipeline.SimulatedAnalyzer`. A folha
     desenhada é só para quem olha a foto no console.
+
+    ``drawn`` separa o que a folha tem do que o modelo responde: uma lagarta
+    desenhada com a etiqueta "Blight" é exatamente o caso de uma praga fora do
+    catálogo — o modelo arrisca uma doença, com novidade alta, e a foto vai para
+    o agrônomo.
     """
-    return leaf_png(label, novelty, seed) + SIMULATION_MARKER + f"{label}:{novelty}".encode("ascii")
+    marker = SIMULATION_MARKER + f"{label}:{novelty}".encode("ascii")
+    return leaf_png(drawn or label, novelty, seed) + marker
 
 
 @dataclass
@@ -179,6 +188,26 @@ class SimulatedRover(SimulatedDevice):
     field_id: str = ""
     seed: int = 7
 
+    crop: SimulatedCrop | None = None
+    """A lavoura que o sensor 3D enxerga.
+
+    Com ela, cada rua percorrida vira uma passada da cópia 3D, e as fotos
+    seguem os focos da lavoura em vez do sorteio de ``disease_ratio``.
+    """
+
+    scan_reach_m: float = 1.5
+    """Alcance lateral do LiDAR, a partir do eixo. Metade da faixa do hardware."""
+
+    photo_every_m: float = 12.0
+    """Com a lavoura: uma foto de rotina a cada tantos metros."""
+
+    symptom_every_m: float = 3.0
+    """E uma a cada tantos metros onde o sensor vê sintoma — o robô prioriza o que destoa."""
+
+    max_photos_per_segment: int = 12
+    frames: list[tuple[str, dict]] = field(default_factory=list)
+    """``(o que a folha mostrava, resposta da plataforma)`` de cada foto enviada."""
+
     def run_mission(self, payload: dict, base: tuple[float, float]) -> str:
         """Executa a missão até o fim ou até a bateria mandar voltar.
 
@@ -196,9 +225,7 @@ class SimulatedRover(SimulatedDevice):
                     f"bateria em {self.battery.percent:.0f}% ({state.value}): "
                     f"retornando à base antes do segmento {segment['index']}"
                 )
-                self.push_event(
-                    "return_to_base", severity="warning", battery=self.battery.percent
-                )
+                self.push_event("return_to_base", severity="warning", battery=self.battery.percent)
                 self.move_to(*base)
                 self.client.pause_mission(
                     mission_id,
@@ -217,18 +244,14 @@ class SimulatedRover(SimulatedDevice):
 
     def _walk_segment(self, mission_id: str, segment: dict, rng: random.Random) -> None:
         path = segment["path"]
+        started = datetime.now(UTC)
         for lon, lat in path:
             self.move_to(lon, lat)
             self.push_telemetry(mission_id=mission_id, mission_state="running", speed_ms=1.2)
 
-        for index in range(self.photos_per_segment):
-            fraction = (index + 0.5) / self.photos_per_segment
-            lon, lat = _interpolate(path, fraction)
-            label = (
-                self.disease_label if rng.random() < self.disease_ratio else "Healthy"
-            )
-            novelty = 1.4 if rng.random() < self.novelty_ratio else 0.4
-            self.client.upload_observation(
+        photos = 0
+        for index, (lon, lat, label, drawn, novelty) in enumerate(self._shots(path, rng)):
+            response = self.client.upload_observation(
                 metadata={
                     "sequence_number": self.client.next_sequence(),
                     "mission_id": mission_id,
@@ -239,9 +262,18 @@ class SimulatedRover(SimulatedDevice):
                     "model_input_ok": True,
                     "edge_summary": {"blur": 0.1, "leaf_fill": 0.8},
                 },
-                image=frame_with_label(label, novelty, seed=segment["index"] * 100 + index),
+                image=frame_with_label(
+                    label, novelty, seed=segment["index"] * 100 + index, drawn=drawn
+                ),
                 filename=f"seg{segment['index']}_{index}.png",
             )
+            self.frames.append((drawn, response))
+            photos += 1
+
+        scanned = ""
+        if self.crop is not None:
+            plants = self._scan(mission_id, segment, started)
+            scanned = f", {plants} plantas na cópia 3D"
 
         self.client.complete_segment(
             mission_id,
@@ -252,8 +284,65 @@ class SimulatedRover(SimulatedDevice):
         )
         self.say(
             f"segmento {segment['index']} concluído "
-            f"({self.photos_per_segment} imagens, bateria {self.battery.percent:.0f}%)"
+            f"({photos} imagens{scanned}, bateria {self.battery.percent:.0f}%)"
         )
+
+    def _shots(self, path: list, rng: random.Random):
+        """Onde fotografar e o que cada foto mostra: ``(lon, lat, rótulo, desenho, novidade)``.
+
+        Sem a lavoura, fotos igualmente espaçadas e doença por sorteio. Com ela,
+        uma foto de rotina a cada ``photo_every_m`` e uma a cada
+        ``symptom_every_m`` onde o sensor enxerga sintoma — o que o firmware de
+        verdade faz para gastar enlace com o que importa.
+        """
+        if self.crop is None:
+            for index in range(self.photos_per_segment):
+                lon, lat = _interpolate(path, (index + 0.5) / self.photos_per_segment)
+                label = self.disease_label if rng.random() < self.disease_ratio else "Healthy"
+                novelty = 1.4 if rng.random() < self.novelty_ratio else 0.4
+                yield lon, lat, label, label, novelty
+            return
+
+        length = geo.path_length_m(path)
+        routine = max(1, round(self.photo_every_m / self.symptom_every_m))
+        taken = 0
+        step = 0
+        while (step + 0.5) * self.symptom_every_m < length and taken < self.max_photos_per_segment:
+            lon, lat = _interpolate(path, (step + 0.5) * self.symptom_every_m / length)
+            intensity, focus = self.crop.intensity_at(lon, lat)
+            step += 1
+            if (step - 1) % routine and intensity < 0.3:
+                continue
+            taken += 1
+            if focus is not None and rng.random() < min(1.0, intensity * 1.4):
+                yield lon, lat, focus.model_label, focus.drawn, focus.novelty
+            else:
+                novelty = 1.4 if rng.random() < self.novelty_ratio else 0.4
+                yield lon, lat, "Healthy", "Healthy", novelty
+
+    def _scan(self, mission_id: str, segment: dict, started: datetime) -> int:
+        """Envia a passada pela rua: as plantas medidas e a nuvem de pontos."""
+        assert self.crop is not None
+        path = segment["path"]
+        plants, cloud = self.crop.scan(path, self.scan_reach_m)
+        self.client.upload_row_scan(
+            {
+                "sequence_number": self.client.next_sequence(),
+                "mission_id": mission_id,
+                "field_id": self.field_id,
+                "segment_index": segment["index"],
+                "started_at": started.isoformat(),
+                "captured_at": datetime.now(UTC).isoformat(),
+                "sensor": "lidar",
+                "origin_lon": path[0][0],
+                "origin_lat": path[0][1],
+                "path": path,
+                "reach_m": self.scan_reach_m,
+                "plants": plants,
+            },
+            cloud,
+        )
+        return len(plants)
 
 
 @dataclass

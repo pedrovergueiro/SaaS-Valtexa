@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import TypeVar
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
@@ -38,6 +39,7 @@ from valtexa.models import (
     MissionKind,
     MissionState,
     Observation,
+    RowScan,
     SubjectType,
     Tank,
     as_utc,
@@ -54,6 +56,8 @@ from valtexa.schemas import (
     MissionPause,
     ObservationIn,
     ObservationOut,
+    RowScanIn,
+    RowScanOut,
     SegmentComplete,
     SignedCommandOut,
     SyncBatch,
@@ -68,11 +72,15 @@ from valtexa.services import (
     geo,
     ingestion,
     mission_manager,
+    pointcloud,
+    scene,
     storage,
     verification,
 )
 
 router = APIRouter(prefix="/device", tags=["protocolo do dispositivo"])
+
+_Metadata = TypeVar("_Metadata", ObservationIn, RowScanIn)
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
@@ -234,30 +242,9 @@ def post_observation(
         return _observation_out(session, existing)
 
     data = file.file.read()
-    try:
-        stored = storage.store.put(data, file.content_type, namespace=caller.tenant_id)
-    except storage.AssetTooLargeError as exc:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, str(exc)) from exc
-
-    # O mesmo conteúdo já enviado reaproveita a linha. Acontece de verdade: um
-    # reenvio depois de queda de enlace, ou o rover parado fotografando o mesmo
-    # ponto. Duas linhas para os mesmos bytes só criariam divergência.
-    asset = session.scalars(
-        select(Asset).where(Asset.tenant_id == caller.tenant_id, Asset.sha256 == stored.sha256)
-    ).first()
-    if asset is None:
-        asset = Asset(
-            tenant_id=caller.tenant_id,
-            kind=AssetKind.IMAGE,
-            content_type=stored.content_type,
-            size_bytes=stored.size_bytes,
-            sha256=stored.sha256,
-            storage_key=stored.key,
-            device_id=caller.device_id,
-            captured_at=payload.captured_at,
-        )
-        session.add(asset)
-        session.flush()
+    asset = _store_asset(
+        session, caller, data, file.content_type, AssetKind.IMAGE, payload.captured_at
+    )
 
     observation = Observation(
         tenant_id=caller.tenant_id,
@@ -284,6 +271,125 @@ def post_observation(
     _run_pipeline(session, observation, data, file.filename or "frame.jpg", field_row.crop)
     session.commit()
     return _observation_out(session, observation)
+
+
+# ---------------------------------------------------------------------------
+# Cópia 3D
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/row-scans",
+    response_model=RowScanOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Envia a varredura 3D de uma rua",
+)
+def post_row_scan(
+    metadata: str = Form(description="JSON conforme o esquema RowScanIn."),
+    file: UploadFile | None = File(
+        default=None, description="Nuvem de pontos em PLY binário. Opcional."
+    ),
+    caller: DeviceCaller = Depends(current_device),
+    session: Session = Depends(get_session),
+) -> RowScanOut:
+    """Recebe uma passada por uma rua: as plantas medidas e a nuvem de pontos.
+
+    Cada passada substitui, na cópia 3D do talhão, a faixa que o sensor
+    enxergou. A nuvem é opcional — um rover só com câmera manda as plantas que
+    mediu por estéreo — mas uma passada sem planta e sem nuvem não diz nada e é
+    recusada.
+
+    Idempotente pela sequência: o upload é pesado e o enlace cai, então reenviar
+    a mesma passada devolve a que já entrou.
+    """
+    payload = _parse_metadata(metadata, RowScanIn)
+    field_row = session.get(Field, payload.field_id)
+    if field_row is None or field_row.tenant_id != caller.tenant_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Talhão não encontrado.")
+
+    existing = session.scalars(
+        select(RowScan).where(
+            RowScan.device_id == caller.device_id,
+            RowScan.sequence_number == payload.sequence_number,
+        )
+    ).first()
+    if existing is not None:
+        return RowScanOut(**scene.scan_summary(existing))
+
+    if not payload.plants and file is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "Passada sem plantas e sem nuvem de pontos."
+        )
+    # Um talhão trocado no firmware colaria a rua de um talhão na cópia do outro.
+    if not any(
+        geo.contains_point(field_row.boundary, point[0], point[1], include_boundary=True)
+        for point in payload.path
+    ):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "O eixo da passada não cruza o talhão informado."
+        )
+
+    asset_id: str | None = None
+    point_count: int | None = None
+    if file is not None:
+        data = file.file.read()
+        try:
+            info = pointcloud.inspect(data)
+        except pointcloud.PointCloudError as exc:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, f"Nuvem de pontos recusada: {exc}"
+            ) from exc
+        asset = _store_asset(
+            session, caller, data, "application/x-ply", AssetKind.POINTCLOUD, payload.captured_at
+        )
+        asset_id, point_count = asset.id, info.points
+
+    heights = [plant[2] for plant in payload.plants]
+    scan_row = RowScan(
+        tenant_id=caller.tenant_id,
+        farm_id=field_row.farm_id,
+        field_id=field_row.id,
+        mission_id=_mission_of(session, caller.device, payload.mission_id),
+        device_id=caller.device_id,
+        sequence_number=payload.sequence_number,
+        segment_index=payload.segment_index,
+        row_index=payload.row_index,
+        started_at=payload.started_at,
+        captured_at=payload.captured_at,
+        sensor=payload.sensor,
+        origin_lat=payload.origin_lat,
+        origin_lon=payload.origin_lon,
+        origin_alt_m=payload.origin_alt_m,
+        path=payload.path,
+        reach_m=payload.reach_m,
+        length_m=geo.path_length_m(payload.path),
+        plants=payload.plants,
+        plant_count=len(payload.plants),
+        mean_height_m=round(sum(heights) / len(heights), 3) if heights else None,
+        max_height_m=round(max(heights), 3) if heights else None,
+        pointcloud_asset_id=asset_id,
+        point_count=point_count,
+    )
+    session.add(scan_row)
+    session.flush()
+    ingestion.bump_watermark(caller.device, payload.sequence_number)
+
+    events.publish(
+        session,
+        events.ROW_SCAN_RECEIVED,
+        tenant_id=caller.tenant_id,
+        subject_type=SubjectType.FIELD,
+        subject_id=field_row.id,
+        payload={
+            "row_scan_id": scan_row.id,
+            "mission_id": scan_row.mission_id,
+            "segment_index": scan_row.segment_index,
+            "plants": scan_row.plant_count,
+            "points": point_count,
+        },
+    )
+    session.commit()
+    return RowScanOut(**scene.scan_summary(scan_row))
 
 
 # ---------------------------------------------------------------------------
@@ -483,9 +589,7 @@ def start_application(
     """
     mission = _mission_for(session, caller, payload.mission_id)
     if mission.kind is not MissionKind.SPRAY:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "Esta missão não é de pulverização."
-        )
+        raise HTTPException(status.HTTP_409_CONFLICT, "Esta missão não é de pulverização.")
     if mission.state is not MissionState.RUNNING:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
@@ -698,13 +802,47 @@ def _mission_of(session: Session, device: Device, mission_id: str | None) -> str
     return mission_id if mission is not None and mission.device_id == device.id else None
 
 
-def _parse_metadata(raw: str) -> ObservationIn:
+def _parse_metadata(raw: str, schema: type[_Metadata] = ObservationIn) -> _Metadata:
     try:
-        return ObservationIn(**json.loads(raw))
+        return schema(**json.loads(raw))
     except (ValueError, TypeError) as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, f"Campo 'metadata' inválido: {exc}"
         ) from exc
+
+
+def _store_asset(
+    session: Session,
+    caller: DeviceCaller,
+    data: bytes,
+    content_type: str,
+    kind: AssetKind,
+    captured_at: datetime,
+) -> Asset:
+    """Guarda o arquivo e devolve a linha de ``Asset``.
+
+    O mesmo conteúdo já enviado reaproveita a linha. Acontece de verdade: um
+    reenvio depois de queda de enlace, ou o rover parado fotografando o mesmo
+    ponto. Duas linhas para os mesmos bytes só criariam divergência.
+    """
+    stored = storage.store.put(data, content_type, namespace=caller.tenant_id)
+    asset = session.scalars(
+        select(Asset).where(Asset.tenant_id == caller.tenant_id, Asset.sha256 == stored.sha256)
+    ).first()
+    if asset is None:
+        asset = Asset(
+            tenant_id=caller.tenant_id,
+            kind=kind,
+            content_type=stored.content_type,
+            size_bytes=stored.size_bytes,
+            sha256=stored.sha256,
+            storage_key=stored.key,
+            device_id=caller.device_id,
+            captured_at=captured_at,
+        )
+        session.add(asset)
+        session.flush()
+    return asset
 
 
 def _check_batch(size: int, limit: int, noun: str) -> None:

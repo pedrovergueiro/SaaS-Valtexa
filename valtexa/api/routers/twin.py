@@ -2,25 +2,118 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from valtexa.api.deps import Principal, get_scoped, require
 from valtexa.db import get_session
-from valtexa.models import AuditEntry, Field, OutboxEvent
+from valtexa.models import Asset, AuditEntry, Field, OutboxEvent, RowScan
 from valtexa.schemas import (
     AnomalyOut,
     AuditOut,
     ClassCountOut,
+    FieldSceneOut,
     FieldSnapshotOut,
     OutboxEventOut,
+    RowScanOut,
     TimePointOut,
 )
 from valtexa.security import rbac
-from valtexa.services import twin
+from valtexa.services import scene, storage, twin
 
 router = APIRouter(tags=["gêmeo digital"])
+
+
+@router.get(
+    "/fields/{field_id}/scene",
+    response_model=FieldSceneOut,
+    summary="Cópia 3D do talhão",
+)
+def field_scene(
+    field_id: str,
+    at: datetime | None = Query(
+        default=None, description="Estado da cópia neste instante. Sem ele, agora."
+    ),
+    days: int = Query(default=30, ge=1, le=365, description="Janela das observações."),
+    principal: Principal = Depends(require(rbac.FARM_READ)),
+    session: Session = Depends(get_session),
+) -> FieldSceneOut:
+    """A cópia 3D do talhão, montada rua a rua pelas passadas do rover.
+
+    Cada rua mostra a passada mais recente que a cobriu; o que o rover ainda não
+    percorreu fica vazio, e ``coverage_ratio`` diz quanto do talhão já tem
+    cópia. As fotos diagnosticadas vêm como marcadores presos à planta
+    fotografada, com a categoria — saudável, doença, praga, aguardando agrônomo
+    ou outro achado.
+
+    Quem não pode ler diagnóstico recebe a cópia sem os marcadores.
+    """
+    field_row = get_scoped(session, Field, field_id, principal)
+    data = scene.build(
+        session,
+        principal.tenant_id,
+        field_row,
+        at=at,
+        days=days,
+        include_diagnoses=principal.can(rbac.DIAGNOSIS_READ),
+    )
+    return FieldSceneOut.model_validate(data)
+
+
+@router.get(
+    "/fields/{field_id}/row-scans",
+    response_model=list[RowScanOut],
+    summary="Passadas do rover no talhão",
+)
+def row_scans(
+    field_id: str,
+    limit: int = Query(default=100, ge=1, le=1000),
+    principal: Principal = Depends(require(rbac.FARM_READ)),
+    session: Session = Depends(get_session),
+) -> list[RowScanOut]:
+    """As passadas, da mais recente à mais antiga."""
+    get_scoped(session, Field, field_id, principal)
+    rows = session.scalars(
+        select(RowScan)
+        .where(RowScan.tenant_id == principal.tenant_id, RowScan.field_id == field_id)
+        .order_by(RowScan.captured_at.desc())
+        .limit(limit)
+    )
+    return [RowScanOut(**scene.scan_summary(row)) for row in rows]
+
+
+@router.get(
+    "/row-scans/{scan_id}/pointcloud",
+    response_class=Response,
+    summary="Nuvem de pontos de uma passada",
+)
+def row_scan_pointcloud(
+    scan_id: str,
+    principal: Principal = Depends(require(rbac.FARM_READ)),
+    session: Session = Depends(get_session),
+) -> Response:
+    """O PLY que o rover enviou, sem conversão.
+
+    Servido por aqui, e não por link direto ao armazenamento, pelo mesmo motivo
+    da imagem: o acesso passa pelo escopo do cliente. O arquivo nunca muda
+    depois de gravado, então o navegador pode guardá-lo.
+    """
+    scan_row = get_scoped(session, RowScan, scan_id, principal)
+    if not scan_row.pointcloud_asset_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Passada sem nuvem de pontos.")
+    asset = get_scoped(session, Asset, scan_row.pointcloud_asset_id, principal)
+    try:
+        data = storage.store.read(asset.storage_key)
+    except storage.UnknownAssetError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Arquivo ausente no armazenamento.") from exc
+    return Response(
+        content=data,
+        media_type=asset.content_type,
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
 
 
 @router.get(
@@ -208,4 +301,3 @@ def list_events(
         )
         for row in session.scalars(statement)
     ]
-

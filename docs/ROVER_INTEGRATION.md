@@ -81,6 +81,7 @@ para cada waypoint do segmento:
 
 fotografar N pontos ao longo da faixa
 POST /v1/device/observations   (uma por imagem)
+POST /v1/device/row-scans      (a passada: plantas medidas + nuvem PLY, seção 10)
 POST /v1/device/missions/{id}/segments/complete
 ```
 
@@ -207,10 +208,80 @@ detecções locais) — serve para priorizar, nunca para autorizar.
 
 ---
 
-## 10. O que ainda depende de hardware
+## 10. Cópia 3D — uma passada por rua
+
+Ao terminar cada rua, o rover envia o que o sensor lateral (LiDAR ou câmera
+estéreo) mediu das linhas dos dois lados. É isso que monta a cópia 3D que o
+produtor vê no console — ver [`DIGITAL_TWIN.md`](DIGITAL_TWIN.md#cópia-3d).
+
+`POST /v1/device/row-scans` — `multipart/form-data`, assinado como as demais:
+
+| Campo | Conteúdo |
+|---|---|
+| `metadata` | JSON conforme `RowScanIn` (abaixo) |
+| `file` | nuvem de pontos em PLY — opcional |
+
+```json
+{
+  "sequence_number": 2210,
+  "mission_id": "…", "field_id": "…", "segment_index": 7, "row_index": 18,
+  "started_at": "2026-09-11T13:02:10+00:00",
+  "captured_at": "2026-09-11T13:04:02+00:00",
+  "sensor": "lidar",
+  "origin_lon": -45.4525, "origin_lat": -22.41296,
+  "path": [[-45.4525, -22.41296], [-45.4512, -22.41296]],
+  "reach_m": 1.5,
+  "plants": [[1.02, 0.26, 1.31, 0.62, 0.78], [1.33, 0.24, 1.28, 0.60, 0.74]]
+}
+```
+
+- `origin_*` é a origem do plano local da passada: x para leste, y para norte,
+  z para cima, em metros. Plantas e nuvem usam o mesmo plano.
+- `reach_m` é o alcance lateral do sensor a partir do eixo, e **define a faixa
+  que a passada substitui na cópia**: o que estava ali antes e não apareceu
+  agora deixa de existir. Declare o alcance real, não o do catálogo.
+- `plants`: uma entrada por planta segmentada — `[x, y, altura_m, copa_m]`, ou
+  com um quinto valor, o índice de verde em [0, 1], quando a nuvem tem cor
+  (excesso de verde do RGB da planta). Até 30 000 por passada.
+- Passada sem plantas e sem nuvem é recusada; eixo que não cruza o talhão
+  também — é o sintoma de `field_id` trocado no firmware.
+
+### A nuvem de pontos
+
+PLY binário, **um layout só**:
+
+```
+ply
+format binary_little_endian 1.0
+element vertex N
+property float x
+property float y
+property float z
+property uchar red
+property uchar green
+property uchar blue
+end_header
+<N × 15 bytes>
+```
+
+Até 500 000 pontos: reduza no robô com grade de voxels (3 cm dá conta de uma rua
+de 300 m). Fora do layout, a resposta é `422` com o motivo — ordem das
+propriedades, tamanho do corpo, coordenada `NaN` ou a mais de 2 km da origem.
+Referência: `valtexa/services/pointcloud.py`, cujo `encode` monta exatamente o
+que o servidor aceita.
+
+Reenviar a mesma `sequence_number` devolve a passada existente. O upload é
+pesado e o enlace cai: guarde a passada até receber `201`.
+
+---
+
+## 11. O que ainda depende de hardware
 
 - calibração real de consumo (`drain_per_meter`) — hoje é estimativa
 - detecção e desvio de obstáculo: a plataforma só recebe o evento
 - contagem de linha de plantio (`row_index`) — o campo existe e fica nulo
 - alinhamento do plano às linhas reais: falta coletar o azimute da linha
-- captura 3D: `pointcloud_asset_id` existe no esquema e não há produtor
+- captura 3D: o protocolo, a composição da cópia e o console estão prontos e
+  rodam contra plantas simuladas; falta o driver do LiDAR produzir o PLY e a
+  segmentação de plantas embarcada que gera `plants`
+- altura e copa medidas contra régua no campo — a cópia ainda não foi calibrada

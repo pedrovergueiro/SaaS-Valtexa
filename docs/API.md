@@ -102,6 +102,8 @@ POST     /v1/verifications/{id}/conclude
 ```
 GET /v1/fields/{id}/snapshot         GET /v1/fields/{id}/timeline
 GET /v1/fields/{id}/anomalies
+GET /v1/fields/{id}/scene            GET /v1/fields/{id}/row-scans
+GET /v1/row-scans/{id}/pointcloud
 GET /v1/audit                        GET /v1/events
 ```
 
@@ -177,11 +179,21 @@ Ver [`SAFETY.md`](SAFETY.md) para a lista completa de códigos.
 GET /v1/fields/{id}/snapshot?days=7       retrato
 GET /v1/fields/{id}/timeline?days=30      série diária
 GET /v1/fields/{id}/anomalies             desvios estatísticos
+GET /v1/fields/{id}/scene?at=&days=30     a cópia 3D
+GET /v1/row-scans/{id}/pointcloud         a nuvem de pontos de uma rua (PLY)
 ```
 
 `anomalies` merece destaque na interface: é a detecção que funciona quando a de
 novidade falha, e cada item é um convite a inspeção presencial. Ver
 [`AI_PIPELINE.md`](AI_PIPELINE.md) para o porquê.
+
+`scene` é a cópia 3D montada rua a rua pelo rover. É pesada — uma entrada por
+planta, em colunas (`plants.x[]`, `plants.y[]`, `plants.height[]`...) para
+caber —, então o console só a busca de novo quando o stream traz
+`row_scan.received`. Coordenadas em metros no plano do talhão (origem no centro
+do limite, x leste, y norte). Cada marcador traz `category` (`pest`, `disease`,
+`review`, `other`, `healthy`) e `plant`, o índice da planta fotografada. Ver
+[`DIGITAL_TWIN.md`](DIGITAL_TWIN.md#cópia-3d).
 
 ---
 

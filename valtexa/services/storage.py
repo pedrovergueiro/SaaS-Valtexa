@@ -36,6 +36,7 @@ EXTENSIONS = {
     "application/json": ".json",
     "text/plain": ".txt",
     "application/vnd.laszip": ".laz",
+    "application/x-ply": ".ply",
 }
 DEFAULT_EXTENSION = ".bin"
 

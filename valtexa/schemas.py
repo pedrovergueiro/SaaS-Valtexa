@@ -11,6 +11,7 @@ regra que só exista na tela.
 
 from __future__ import annotations
 
+import math
 from datetime import date, datetime
 from typing import Annotated, Any
 
@@ -781,6 +782,216 @@ class AnomalyOut(ApiModel):
     baseline_sample: int
     current_sample: int
     detail: str
+
+
+# --- cópia 3D -------------------------------------------------------------------
+
+MAX_PLANTS_PER_SCAN = 30_000
+"""Plantas por passada. Uma rua de 300 m com seis linhas à vista tem ~9 000."""
+
+
+class RowScanIn(ApiModel):
+    """Metadados de uma passada. A nuvem de pontos, quando houver, vai no ``file``.
+
+    Posições em metros no plano local com origem em ``origin_lon``/``origin_lat``:
+    x para leste, y para norte, z para cima — o mesmo plano da nuvem de pontos.
+    """
+
+    sequence_number: int = Field(description="Sequência do robô; reenviar a mesma é seguro.")
+    mission_id: str | None = None
+    field_id: str
+    segment_index: int | None = None
+    row_index: int | None = None
+    started_at: datetime | None = None
+    captured_at: datetime = Field(description="Fim da passada.")
+    sensor: str = Field(default="lidar", pattern="^(lidar|stereo|camera)$")
+    origin_lat: float = Field(ge=-90, le=90)
+    origin_lon: float = Field(ge=-180, le=180)
+    origin_alt_m: float | None = None
+    path: list[list[float]] = Field(
+        min_length=2, max_length=5_000, description="Eixo percorrido, [[lon, lat], ...]."
+    )
+    reach_m: float = Field(
+        gt=0, le=10, description="Alcance lateral do sensor a partir do eixo, em metros."
+    )
+    plants: list[list[float]] = Field(
+        default_factory=list,
+        max_length=MAX_PLANTS_PER_SCAN,
+        description=(
+            "Uma entrada por planta: [x, y, altura_m, copa_m] ou [x, y, altura_m, "
+            "copa_m, verde], com verde em [0, 1] (índice de excesso de verde do RGB "
+            "da planta)."
+        ),
+    )
+
+    @field_validator("path")
+    @classmethod
+    def _check_path(cls, value: list[list[float]]) -> list[list[float]]:
+        for point in value:
+            if len(point) < 2 or not (-180 <= point[0] <= 180 and -90 <= point[1] <= 90):
+                raise ValueError(f"Ponto do eixo inválido: {point!r}. Esperado [lon, lat].")
+        return value
+
+    @field_validator("plants")
+    @classmethod
+    def _check_plants(cls, value: list[list[float]]) -> list[list[float]]:
+        for plant in value:
+            if len(plant) not in (4, 5) or not all(math.isfinite(item) for item in plant):
+                raise ValueError(
+                    f"Planta inválida: {plant!r}. Esperado [x, y, altura, copa(, verde)]."
+                )
+            x, y, height, canopy = plant[:4]
+            if abs(x) > 2_000 or abs(y) > 2_000:
+                raise ValueError(f"Planta a mais de 2 km da origem da passada: {plant!r}.")
+            if not 0 <= height <= 8 or not 0 <= canopy <= 6:
+                raise ValueError(f"Altura ou copa fora do plausível: {plant!r}.")
+            if len(plant) == 5 and not 0 <= plant[4] <= 1:
+                raise ValueError(f"Índice de verde fora de [0, 1]: {plant!r}.")
+        return value
+
+
+class RowScanOut(ApiModel):
+    id: str
+    field_id: str
+    mission_id: str | None
+    device_id: str
+    sequence_number: int
+    segment_index: int | None
+    row_index: int | None
+    captured_at: datetime
+    sensor: str
+    reach_m: float
+    length_m: float
+    plant_count: int
+    mean_height_m: float | None
+    max_height_m: float | None
+    point_count: int | None
+    has_pointcloud: bool
+
+
+class SceneZoneOut(ApiModel):
+    id: str
+    name: str
+    boundary: list[list[float]]
+
+
+class SceneScanOut(ApiModel):
+    """Uma rua na cópia: onde o rover passou, quando, e o que mediu."""
+
+    id: str
+    captured_at: datetime
+    device_id: str
+    device_name: str | None
+    mission_id: str | None
+    segment_index: int | None
+    row_index: int | None
+    sensor: str
+    reach_m: float
+    length_m: float
+    origin: list[float] = Field(description="Origem da passada no plano do talhão, [x, y].")
+    path: list[list[float]]
+    plant_count: int
+    visible_plants: int = Field(
+        description=(
+            "Quantas plantas desta passada estão na cópia — as outras foram "
+            "cobertas por uma passada mais nova."
+        )
+    )
+    mean_height_m: float | None
+    max_height_m: float | None
+    point_count: int | None
+    has_pointcloud: bool
+    markers: dict[str, int] = Field(description="Observações nesta rua, por categoria.")
+
+
+class ScenePlantsOut(ApiModel):
+    """Plantas da cópia em colunas. Cada índice é uma planta."""
+
+    x: list[float]
+    y: list[float]
+    height: list[float]
+    canopy: list[float]
+    greenness: list[float | None]
+    scan: list[int] = Field(description="Índice em ``scans`` da passada que mediu a planta.")
+
+
+class SceneMarkerOut(ApiModel):
+    """Uma foto diagnosticada, presa à planta fotografada."""
+
+    observation_id: str
+    diagnosis_id: str | None
+    x: float
+    y: float
+    z: float
+    label: str | None
+    category: str = Field(description="healthy, disease, pest, review ou other.")
+    status: DiagnosisStatus | None
+    confidence: float | None
+    novelty_score: float | None
+    severity: float | None
+    captured_at: datetime
+    plant: int | None = Field(
+        description="Índice da planta em ``plants``, quando há uma a até 60 cm."
+    )
+    scan: int | None
+
+
+class SceneDeviceOut(ApiModel):
+    id: str
+    name: str
+    kind: DeviceKind
+    x: float
+    y: float
+    battery_percent: float | None
+    last_seen_at: datetime | None
+    active_mission_id: str | None
+
+
+class SceneMissionOut(ApiModel):
+    """Uma varredura em andamento: as ruas que faltam aparecem na cópia."""
+
+    mission_id: str
+    state: MissionState
+    segments: int
+    done: int
+    pending: list[list[list[float]]]
+
+
+class ScenePassOut(ApiModel):
+    day: date
+    scans: int
+
+
+class FieldSceneOut(ApiModel):
+    """A cópia 3D do talhão.
+
+    Coordenadas em metros no plano local do talhão: origem no centro do limite,
+    x para leste, y para norte, z para cima.
+    """
+
+    field_id: str
+    field_name: str
+    crop: str
+    crop_stage: str | None
+    row_azimuth_deg: float | None
+    row_spacing_m: float | None
+    origin_lon: float
+    origin_lat: float
+    at: datetime
+    since: datetime
+    live: bool
+    boundary: list[list[float]]
+    zones: list[SceneZoneOut]
+    field_area_m2: float
+    scanned_area_m2: float
+    coverage_ratio: float
+    scans: list[SceneScanOut]
+    plants: ScenePlantsOut
+    markers: list[SceneMarkerOut]
+    counts: dict[str, int]
+    devices: list[SceneDeviceOut]
+    missions: list[SceneMissionOut]
+    passes: list[ScenePassOut]
 
 
 class AuditOut(ApiModel):

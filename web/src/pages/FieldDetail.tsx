@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Box, Plus, TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -64,6 +64,9 @@ export default function FieldDetail() {
                 { value: '90', label: '90 dias' },
               ]}
             />
+            <Link to={`/lavoura-3d/${id}`}>
+              <Button icon={<Box className="size-4" />}>Cópia 3D</Button>
+            </Link>
             {can('mission:create') && (
               <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setMission({ fieldId: id })}>
                 Nova missão

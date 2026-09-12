@@ -33,6 +33,7 @@ export const keys = {
   snapshot: (id: string, days: number) => ['twin', 'snapshot', id, days] as const,
   timeline: (id: string, days: number) => ['twin', 'timeline', id, days] as const,
   anomalies: (id: string) => ['twin', 'anomalies', id] as const,
+  scene: (id: string, at: string | null, days: number) => ['scene', id, at ?? 'agora', days] as const,
   missions: (query: Query = {}) => ['missions', query] as const,
   mission: (id: string) => ['missions', 'one', id] as const,
   segments: (id: string) => ['missions', 'segments', id] as const,
@@ -133,6 +134,19 @@ export const useAnomalies = (id: string) =>
   useQuery({
     queryKey: keys.anomalies(id),
     queryFn: () => api<T.AnomalyOut[]>(`/v1/fields/${id}/anomalies`),
+  })
+
+/**
+ * A cópia 3D do talhão. Pesada (uma entrada por planta), então só volta ao
+ * servidor quando o stream avisa que o rover escaneou uma rua nova.
+ */
+export const useScene = (id: string | undefined, at: string | null, days: number) =>
+  useQuery({
+    queryKey: keys.scene(id ?? '', at, days),
+    queryFn: () => api<T.FieldSceneOut>(`/v1/fields/${id}/scene`, { query: { at, days } }),
+    enabled: Boolean(id),
+    placeholderData: keepPreviousData,
+    staleTime: 20_000,
   })
 
 export const useMissions = (query: Query = {}) =>

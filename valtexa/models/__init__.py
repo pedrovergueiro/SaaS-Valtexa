@@ -66,6 +66,7 @@ from valtexa.models.perception import (
     SafetyEvaluation,
 )
 from valtexa.models.platform_ import AuditEntry, OutboxEvent, UsedNonce
+from valtexa.models.scan import RowScan
 from valtexa.models.tenancy import Membership, Tenant, User
 
 __all__ = [
@@ -110,6 +111,7 @@ __all__ = [
     "ProductStatus",
     "ProvisioningToken",
     "Role",
+    "RowScan",
     "RtkFix",
     "SafetyEvaluation",
     "SafetyVerdict",

@@ -203,6 +203,16 @@ class DeviceClient:
             data={"metadata": _compact_json(metadata)},
         ).json()
 
+    def upload_row_scan(self, metadata: dict, cloud: bytes | None = None) -> dict:
+        """Envia uma passada por uma rua: plantas medidas e, se houver, a nuvem PLY."""
+        files = {"file": ("rua.ply", cloud, "application/x-ply")} if cloud else None
+        return self.request(
+            "POST",
+            "/v1/device/row-scans",
+            files=files,
+            data={"metadata": _compact_json(metadata)},
+        ).json()
+
     def fetch_mission(self) -> dict | None:
         """Busca a missão pendente e **verifica a assinatura antes de devolver**.
 

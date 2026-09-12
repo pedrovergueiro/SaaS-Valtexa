@@ -1,9 +1,10 @@
 """Gêmeo digital da lavoura.
 
-O gêmeo aqui não é um modelo 3D: é a resposta a duas perguntas que a lavoura
-responderia mal sozinha — *o que existe onde* e *o que mudou desde a última
-passada*. Cada observação está amarrada a um ponto e a um instante, então o
-histórico de um talhão é uma consulta, não um relatório montado à mão.
+O gêmeo tem duas camadas. A cópia 3D — as plantas medidas rua a rua pelo rover,
+com as fotos presas a elas — está em :mod:`valtexa.services.scene`. Aqui fica a
+outra: a resposta a *o que mudou desde a última passada*. Cada observação está
+amarrada a um ponto e a um instante, então o histórico de um talhão é uma
+consulta, não um relatório montado à mão.
 
 A série temporal é o que dá valor. Uma foto de hoje diz que há ferrugem; a série
 diz que a incidência saiu de 4% para 31% em nove dias — e essa é a informação

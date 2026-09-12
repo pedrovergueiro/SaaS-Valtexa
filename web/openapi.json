@@ -1948,6 +1948,48 @@
     }
    }
   },
+  "/v1/device/row-scans": {
+   "post": {
+    "tags": [
+     "protocolo do dispositivo"
+    ],
+    "summary": "Envia a varredura 3D de uma rua",
+    "description": "Recebe uma passada por uma rua: as plantas medidas e a nuvem de pontos.\n\nCada passada substitui, na cópia 3D do talhão, a faixa que o sensor\nenxergou. A nuvem é opcional — um rover só com câmera manda as plantas que\nmediu por estéreo — mas uma passada sem planta e sem nuvem não diz nada e é\nrecusada.\n\nIdempotente pela sequência: o upload é pesado e o enlace cai, então reenviar\na mesma passada devolve a que já entrou.",
+    "operationId": "post_row_scan_v1_device_row_scans_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_post_row_scan_v1_device_row_scans_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RowScanOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/v1/device/missions/current": {
    "get": {
     "tags": [
@@ -4800,6 +4842,273 @@
     }
    }
   },
+  "/v1/fields/{field_id}/scene": {
+   "get": {
+    "tags": [
+     "gêmeo digital"
+    ],
+    "summary": "Cópia 3D do talhão",
+    "description": "A cópia 3D do talhão, montada rua a rua pelas passadas do rover.\n\nCada rua mostra a passada mais recente que a cobriu; o que o rover ainda não\npercorreu fica vazio, e ``coverage_ratio`` diz quanto do talhão já tem\ncópia. As fotos diagnosticadas vêm como marcadores presos à planta\nfotografada, com a categoria — saudável, doença, praga, aguardando agrônomo\nou outro achado.\n\nQuem não pode ler diagnóstico recebe a cópia sem os marcadores.",
+    "operationId": "field_scene_v1_fields__field_id__scene_get",
+    "parameters": [
+     {
+      "name": "field_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Field Id"
+      }
+     },
+     {
+      "name": "at",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Estado da cópia neste instante. Sem ele, agora.",
+       "title": "At"
+      },
+      "description": "Estado da cópia neste instante. Sem ele, agora."
+     },
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 365,
+       "minimum": 1,
+       "description": "Janela das observações.",
+       "default": 30,
+       "title": "Days"
+      },
+      "description": "Janela das observações."
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     },
+     {
+      "name": "x-tenant-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Tenant-Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FieldSceneOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/fields/{field_id}/row-scans": {
+   "get": {
+    "tags": [
+     "gêmeo digital"
+    ],
+    "summary": "Passadas do rover no talhão",
+    "description": "As passadas, da mais recente à mais antiga.",
+    "operationId": "row_scans_v1_fields__field_id__row_scans_get",
+    "parameters": [
+     {
+      "name": "field_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Field Id"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 1000,
+       "minimum": 1,
+       "default": 100,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     },
+     {
+      "name": "x-tenant-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Tenant-Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/RowScanOut"
+         },
+         "title": "Response Row Scans V1 Fields  Field Id  Row Scans Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/row-scans/{scan_id}/pointcloud": {
+   "get": {
+    "tags": [
+     "gêmeo digital"
+    ],
+    "summary": "Nuvem de pontos de uma passada",
+    "description": "O PLY que o rover enviou, sem conversão.\n\nServido por aqui, e não por link direto ao armazenamento, pelo mesmo motivo\nda imagem: o acesso passa pelo escopo do cliente. O arquivo nunca muda\ndepois de gravado, então o navegador pode guardá-lo.",
+    "operationId": "row_scan_pointcloud_v1_row_scans__scan_id__pointcloud_get",
+    "parameters": [
+     {
+      "name": "scan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Scan Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     },
+     {
+      "name": "x-tenant-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Tenant-Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/v1/fields/{field_id}/snapshot": {
    "get": {
     "tags": [
@@ -6629,6 +6938,33 @@
     ],
     "title": "Body_post_observation_v1_device_observations_post"
    },
+   "Body_post_row_scan_v1_device_row_scans_post": {
+    "properties": {
+     "metadata": {
+      "type": "string",
+      "title": "Metadata",
+      "description": "JSON conforme o esquema RowScanIn."
+     },
+     "file": {
+      "anyOf": [
+       {
+        "type": "string",
+        "contentMediaType": "application/octet-stream"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File",
+      "description": "Nuvem de pontos em PLY binário. Opcional."
+     }
+    },
+    "type": "object",
+    "required": [
+     "metadata"
+    ],
+    "title": "Body_post_row_scan_v1_device_row_scans_post"
+   },
    "CheckpointOut": {
     "properties": {
      "created_at": {
@@ -8163,6 +8499,179 @@
      "boundary"
     ],
     "title": "FieldOut"
+   },
+   "FieldSceneOut": {
+    "properties": {
+     "field_id": {
+      "type": "string",
+      "title": "Field Id"
+     },
+     "field_name": {
+      "type": "string",
+      "title": "Field Name"
+     },
+     "crop": {
+      "type": "string",
+      "title": "Crop"
+     },
+     "crop_stage": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Crop Stage"
+     },
+     "row_azimuth_deg": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Azimuth Deg"
+     },
+     "row_spacing_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Spacing M"
+     },
+     "origin_lon": {
+      "type": "number",
+      "title": "Origin Lon"
+     },
+     "origin_lat": {
+      "type": "number",
+      "title": "Origin Lat"
+     },
+     "at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "At"
+     },
+     "since": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Since"
+     },
+     "live": {
+      "type": "boolean",
+      "title": "Live"
+     },
+     "boundary": {
+      "items": {
+       "items": {
+        "type": "number"
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Boundary"
+     },
+     "zones": {
+      "items": {
+       "$ref": "#/components/schemas/SceneZoneOut"
+      },
+      "type": "array",
+      "title": "Zones"
+     },
+     "field_area_m2": {
+      "type": "number",
+      "title": "Field Area M2"
+     },
+     "scanned_area_m2": {
+      "type": "number",
+      "title": "Scanned Area M2"
+     },
+     "coverage_ratio": {
+      "type": "number",
+      "title": "Coverage Ratio"
+     },
+     "scans": {
+      "items": {
+       "$ref": "#/components/schemas/SceneScanOut"
+      },
+      "type": "array",
+      "title": "Scans"
+     },
+     "plants": {
+      "$ref": "#/components/schemas/ScenePlantsOut"
+     },
+     "markers": {
+      "items": {
+       "$ref": "#/components/schemas/SceneMarkerOut"
+      },
+      "type": "array",
+      "title": "Markers"
+     },
+     "counts": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Counts"
+     },
+     "devices": {
+      "items": {
+       "$ref": "#/components/schemas/SceneDeviceOut"
+      },
+      "type": "array",
+      "title": "Devices"
+     },
+     "missions": {
+      "items": {
+       "$ref": "#/components/schemas/SceneMissionOut"
+      },
+      "type": "array",
+      "title": "Missions"
+     },
+     "passes": {
+      "items": {
+       "$ref": "#/components/schemas/ScenePassOut"
+      },
+      "type": "array",
+      "title": "Passes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "field_id",
+     "field_name",
+     "crop",
+     "crop_stage",
+     "row_azimuth_deg",
+     "row_spacing_m",
+     "origin_lon",
+     "origin_lat",
+     "at",
+     "since",
+     "live",
+     "boundary",
+     "zones",
+     "field_area_m2",
+     "scanned_area_m2",
+     "coverage_ratio",
+     "scans",
+     "plants",
+     "markers",
+     "counts",
+     "devices",
+     "missions",
+     "passes"
+    ],
+    "title": "FieldSceneOut",
+    "description": "A cópia 3D do talhão.\n\nCoordenadas em metros no plano local do talhão: origem no centro do limite,\nx para leste, y para norte, z para cima."
    },
    "FieldSnapshotOut": {
     "properties": {
@@ -9780,6 +10289,137 @@
     "title": "Role",
     "description": "Papéis dentro de um tenant. A ordem da lista é a ordem de privilégio."
    },
+   "RowScanOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "field_id": {
+      "type": "string",
+      "title": "Field Id"
+     },
+     "mission_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mission Id"
+     },
+     "device_id": {
+      "type": "string",
+      "title": "Device Id"
+     },
+     "sequence_number": {
+      "type": "integer",
+      "title": "Sequence Number"
+     },
+     "segment_index": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Segment Index"
+     },
+     "row_index": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Index"
+     },
+     "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Captured At"
+     },
+     "sensor": {
+      "type": "string",
+      "title": "Sensor"
+     },
+     "reach_m": {
+      "type": "number",
+      "title": "Reach M"
+     },
+     "length_m": {
+      "type": "number",
+      "title": "Length M"
+     },
+     "plant_count": {
+      "type": "integer",
+      "title": "Plant Count"
+     },
+     "mean_height_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mean Height M"
+     },
+     "max_height_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Height M"
+     },
+     "point_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Point Count"
+     },
+     "has_pointcloud": {
+      "type": "boolean",
+      "title": "Has Pointcloud"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "field_id",
+     "mission_id",
+     "device_id",
+     "sequence_number",
+     "segment_index",
+     "row_index",
+     "captured_at",
+     "sensor",
+     "reach_m",
+     "length_m",
+     "plant_count",
+     "mean_height_m",
+     "max_height_m",
+     "point_count",
+     "has_pointcloud"
+    ],
+    "title": "RowScanOut"
+   },
    "RtkFix": {
     "type": "string",
     "enum": [
@@ -9890,6 +10530,536 @@
      "blocked"
     ],
     "title": "SafetyVerdict"
+   },
+   "SceneDeviceOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "kind": {
+      "$ref": "#/components/schemas/DeviceKind"
+     },
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "battery_percent": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Battery Percent"
+     },
+     "last_seen_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Seen At"
+     },
+     "active_mission_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Active Mission Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "kind",
+     "x",
+     "y",
+     "battery_percent",
+     "last_seen_at",
+     "active_mission_id"
+    ],
+    "title": "SceneDeviceOut"
+   },
+   "SceneMarkerOut": {
+    "properties": {
+     "observation_id": {
+      "type": "string",
+      "title": "Observation Id"
+     },
+     "diagnosis_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Diagnosis Id"
+     },
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "z": {
+      "type": "number",
+      "title": "Z"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "category": {
+      "type": "string",
+      "title": "Category",
+      "description": "healthy, disease, pest, review ou other."
+     },
+     "status": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/DiagnosisStatus"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "confidence": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Confidence"
+     },
+     "novelty_score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Novelty Score"
+     },
+     "severity": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Severity"
+     },
+     "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Captured At"
+     },
+     "plant": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plant",
+      "description": "Índice da planta em ``plants``, quando há uma a até 60 cm."
+     },
+     "scan": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Scan"
+     }
+    },
+    "type": "object",
+    "required": [
+     "observation_id",
+     "diagnosis_id",
+     "x",
+     "y",
+     "z",
+     "label",
+     "category",
+     "status",
+     "confidence",
+     "novelty_score",
+     "severity",
+     "captured_at",
+     "plant",
+     "scan"
+    ],
+    "title": "SceneMarkerOut",
+    "description": "Uma foto diagnosticada, presa à planta fotografada."
+   },
+   "SceneMissionOut": {
+    "properties": {
+     "mission_id": {
+      "type": "string",
+      "title": "Mission Id"
+     },
+     "state": {
+      "$ref": "#/components/schemas/MissionState"
+     },
+     "segments": {
+      "type": "integer",
+      "title": "Segments"
+     },
+     "done": {
+      "type": "integer",
+      "title": "Done"
+     },
+     "pending": {
+      "items": {
+       "items": {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Pending"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission_id",
+     "state",
+     "segments",
+     "done",
+     "pending"
+    ],
+    "title": "SceneMissionOut",
+    "description": "Uma varredura em andamento: as ruas que faltam aparecem na cópia."
+   },
+   "ScenePassOut": {
+    "properties": {
+     "day": {
+      "type": "string",
+      "format": "date",
+      "title": "Day"
+     },
+     "scans": {
+      "type": "integer",
+      "title": "Scans"
+     }
+    },
+    "type": "object",
+    "required": [
+     "day",
+     "scans"
+    ],
+    "title": "ScenePassOut"
+   },
+   "ScenePlantsOut": {
+    "properties": {
+     "x": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "X"
+     },
+     "y": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Y"
+     },
+     "height": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Height"
+     },
+     "canopy": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Canopy"
+     },
+     "greenness": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Greenness"
+     },
+     "scan": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Scan",
+      "description": "Índice em ``scans`` da passada que mediu a planta."
+     }
+    },
+    "type": "object",
+    "required": [
+     "x",
+     "y",
+     "height",
+     "canopy",
+     "greenness",
+     "scan"
+    ],
+    "title": "ScenePlantsOut",
+    "description": "Plantas da cópia em colunas. Cada índice é uma planta."
+   },
+   "SceneScanOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Captured At"
+     },
+     "device_id": {
+      "type": "string",
+      "title": "Device Id"
+     },
+     "device_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Device Name"
+     },
+     "mission_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mission Id"
+     },
+     "segment_index": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Segment Index"
+     },
+     "row_index": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Index"
+     },
+     "sensor": {
+      "type": "string",
+      "title": "Sensor"
+     },
+     "reach_m": {
+      "type": "number",
+      "title": "Reach M"
+     },
+     "length_m": {
+      "type": "number",
+      "title": "Length M"
+     },
+     "origin": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Origin",
+      "description": "Origem da passada no plano do talhão, [x, y]."
+     },
+     "path": {
+      "items": {
+       "items": {
+        "type": "number"
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Path"
+     },
+     "plant_count": {
+      "type": "integer",
+      "title": "Plant Count"
+     },
+     "visible_plants": {
+      "type": "integer",
+      "title": "Visible Plants",
+      "description": "Quantas plantas desta passada estão na cópia — as outras foram cobertas por uma passada mais nova."
+     },
+     "mean_height_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mean Height M"
+     },
+     "max_height_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Height M"
+     },
+     "point_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Point Count"
+     },
+     "has_pointcloud": {
+      "type": "boolean",
+      "title": "Has Pointcloud"
+     },
+     "markers": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Markers",
+      "description": "Observações nesta rua, por categoria."
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "captured_at",
+     "device_id",
+     "device_name",
+     "mission_id",
+     "segment_index",
+     "row_index",
+     "sensor",
+     "reach_m",
+     "length_m",
+     "origin",
+     "path",
+     "plant_count",
+     "visible_plants",
+     "mean_height_m",
+     "max_height_m",
+     "point_count",
+     "has_pointcloud",
+     "markers"
+    ],
+    "title": "SceneScanOut",
+    "description": "Uma rua na cópia: onde o rover passou, quando, e o que mediu."
+   },
+   "SceneZoneOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "boundary": {
+      "items": {
+       "items": {
+        "type": "number"
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Boundary"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "boundary"
+    ],
+    "title": "SceneZoneOut"
    },
    "SegmentComplete": {
     "properties": {

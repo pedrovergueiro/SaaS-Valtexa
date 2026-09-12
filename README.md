@@ -67,12 +67,12 @@ plataforma faz é não deixar esse erro chegar sozinho a um bico aberto:
 | Modelo de domínio (30 tabelas) | `valtexa/models/` | completo |
 | Migrações | `migrations/` (Alembic) | aplicadas no start |
 | Autenticação, assinatura, RBAC | `valtexa/security/` | completo |
-| Motor de decisão, safety engine, gêmeo digital | `valtexa/services/` | completo |
+| Motor de decisão, safety engine, gêmeo digital e cópia 3D | `valtexa/services/` | completo |
 | API HTTP, com SSE | `valtexa/api/` | completa |
 | Worker: eventos, expiração, conectividade, retenção | `valtexa/worker.py` | completo |
 | Console — o SaaS visual | `web/` | completo (ver *Console*) |
 | Frota simulada (rover, drone, dock) | `simulator/` | completa |
-| Testes (188, em SQLite e Postgres) | `tests/` | completos |
+| Testes (227, em SQLite e Postgres) | `tests/` | completos |
 | Firmware | — | **não construído** (ver `docs/*_INTEGRATION.md`) |
 
 ### Dois repositórios, um produto
@@ -129,7 +129,7 @@ passo a passo está em `docs/SIMULATOR.md`.
 ### Testes e qualidade
 
 ```bash
-pytest                                            # 188 testes, em SQLite
+pytest                                            # 227 testes, em SQLite
 TEST_DATABASE_URL=postgresql+psycopg://... pytest # os mesmos, em Postgres
 ruff check .                                      # PEP 8, importações, simplificações
 cd web && npm run build                           # tipos do console e build
@@ -228,7 +228,7 @@ então todo handler é idempotente. → `docs/EVENTS.md`
 | `docs/MISSIONS.md` | máquina de estados e retomada |
 | `docs/SAFETY.md` | todas as verificações e o que cada bloqueio significa |
 | `docs/AI_PIPELINE.md` | dupla validação e os limites medidos |
-| `docs/DIGITAL_TWIN.md` | séries temporais e detecção de anomalia |
+| `docs/DIGITAL_TWIN.md` | a cópia 3D rua a rua, séries temporais e detecção de anomalia |
 | `docs/OFFLINE_MODE.md` | o que o robô faz sem nuvem |
 | `docs/EVENTS.md` | vocabulário de eventos |
 | `docs/SIMULATOR.md` | como rodar e o que observar |
@@ -239,7 +239,7 @@ então todo handler é idempotente. → `docs/EVENTS.md`
 ## Console
 
 O SaaS visual fica em `web/`: React 19, TypeScript, Vite, Tailwind, React Query,
-Leaflet e Recharts. Ele consome exatamente as rotas de `/v1/**` — as mesmas que
+Leaflet, Recharts e three.js. Ele consome exatamente as rotas de `/v1/**` — as mesmas que
 os robôs e o simulador usam. Não há rota privada de frontend. Os tipos são
 gerados do `openapi.json` (`npm run api:types`), então uma mudança de contrato
 quebra o build do console, e não a tela em produção.
@@ -252,6 +252,7 @@ quebra o build do console, e não a tela em produção.
 | Frota | provisionar robô; bateria, conectividade, telemetria e eventos |
 | Fila do agrônomo | a foto, o palpite das duas análises, a novidade; diagnóstico em texto livre |
 | Talhões | o gêmeo digital: observações no mapa, evolução, desvios, recomendações; desenho de talhão e zona |
+| Lavoura 3D | a cópia do talhão montada rua a rua pelo rover: cada planta medida, praga e doença presas à planta fotografada, a nuvem de pontos de cada rua, andar na rua, o estado em cada dia de passada |
 | Aplicações | o comprovante de cada aplicação e o antes e depois da verificação |
 | Insumos | produtos, lotes com validade, carga de tanque |
 | Auditoria | quem fez o quê, quando e por quê |
@@ -296,6 +297,10 @@ O que **não** está pronto, e por quê:
 5. **Nada foi testado com hardware.** Tudo que existe roda contra o simulador. As
    lacunas que dependem de robô físico estão listadas em cada
    `docs/*_INTEGRATION.md`.
+6. **A cópia 3D roda hoje sobre plantas simuladas.** O protocolo da passada, a
+   composição rua a rua e o console estão prontos; falta o driver do LiDAR gerar
+   o PLY e a segmentação embarcada que transforma a nuvem em plantas medidas — e
+   comparar altura e copa com régua no campo. → `docs/ROVER_INTEGRATION.md`
 
 ---
 

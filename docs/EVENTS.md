@@ -54,6 +54,7 @@ handler não idempotente aqui vira aplicação duplicada no campo.
 | `device.provisioned` | robô entrou na frota |
 | `device.offline` | passou de 5 min sem contato |
 | `device.fault` | evento crítico do dispositivo |
+| `row_scan.received` | o rover enviou uma passada por rua; a cópia 3D mudou |
 
 Um nome novo entra em `valtexa/services/events.py` **e aqui**, nunca só na
 chamada.

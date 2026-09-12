@@ -26,6 +26,10 @@ export type Palette = {
   critical: string
   info: string
   health: { healthy: string; disease: string; review: string }
+  /** Praga na cópia 3D. Validada contra doença e revisão (ver app.css). */
+  pest: string
+  skyTop: string
+  skyHorizon: string
 }
 
 export function usePalette(): Palette {
@@ -51,6 +55,9 @@ export function usePalette(): Palette {
       critical: get('--critical'),
       info: get('--info'),
       health: { healthy: series[2] ?? '', disease: series[1] ?? '', review: series[0] ?? '' },
+      pest: get('--cat-pest'),
+      skyTop: get('--sky-top'),
+      skyHorizon: get('--sky-horizon'),
     }
     // `resolved` é a dependência real: o CSS muda com ele.
     // eslint-disable-next-line react-hooks/exhaustive-deps

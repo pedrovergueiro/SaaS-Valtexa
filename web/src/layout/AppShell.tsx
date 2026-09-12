@@ -1,6 +1,7 @@
 import {
   Bell,
   Bot,
+  Box,
   Building2,
   ChevronDown,
   Droplets,
@@ -58,6 +59,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { to: '/revisao', label: 'Fila do agrônomo', icon: ScanSearch, badge: 'review' },
       { to: '/talhoes', label: 'Talhões', icon: Sprout },
+      { to: '/lavoura-3d', label: 'Lavoura 3D', icon: Box },
     ],
   },
   {
@@ -76,7 +78,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
   },
 ]
 
-const MOBILE_TABS = ['/', '/mapa', '/missoes', '/revisao', '/frota']
+const MOBILE_TABS = ['/', '/mapa', '/lavoura-3d', '/revisao', '/missoes']
+const MOBILE_LABEL: Record<string, string> = { 'Fila do agrônomo': 'Revisão', 'Lavoura 3D': '3D' }
 
 export function alertLink(alert: AlertOut): string {
   switch (alert.subject_type) {
@@ -205,7 +208,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               }
             >
               <item.icon className="size-5" aria-hidden />
-              <span>{item.label === 'Fila do agrônomo' ? 'Revisão' : item.label}</span>
+              <span>{MOBILE_LABEL[item.label] ?? item.label}</span>
               {item.badge === 'review' && reviewCount > 0 && (
                 <span className="absolute top-1 right-[calc(50%-18px)] size-2 rounded-full bg-warning" />
               )}

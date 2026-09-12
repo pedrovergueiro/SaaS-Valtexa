@@ -552,6 +552,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/device/row-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Envia a varredura 3D de uma rua
+         * @description Recebe uma passada por uma rua: as plantas medidas e a nuvem de pontos.
+         *
+         *     Cada passada substitui, na cópia 3D do talhão, a faixa que o sensor
+         *     enxergou. A nuvem é opcional — um rover só com câmera manda as plantas que
+         *     mediu por estéreo — mas uma passada sem planta e sem nuvem não diz nada e é
+         *     recusada.
+         *
+         *     Idempotente pela sequência: o upload é pesado e o enlace cai, então reenviar
+         *     a mesma passada devolve a que já entrou.
+         */
+        post: operations["post_row_scan_v1_device_row_scans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/device/missions/current": {
         parameters: {
             query?: never;
@@ -1290,6 +1318,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fields/{field_id}/scene": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cópia 3D do talhão
+         * @description A cópia 3D do talhão, montada rua a rua pelas passadas do rover.
+         *
+         *     Cada rua mostra a passada mais recente que a cobriu; o que o rover ainda não
+         *     percorreu fica vazio, e ``coverage_ratio`` diz quanto do talhão já tem
+         *     cópia. As fotos diagnosticadas vêm como marcadores presos à planta
+         *     fotografada, com a categoria — saudável, doença, praga, aguardando agrônomo
+         *     ou outro achado.
+         *
+         *     Quem não pode ler diagnóstico recebe a cópia sem os marcadores.
+         */
+        get: operations["field_scene_v1_fields__field_id__scene_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/row-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Passadas do rover no talhão
+         * @description As passadas, da mais recente à mais antiga.
+         */
+        get: operations["row_scans_v1_fields__field_id__row_scans_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/row-scans/{scan_id}/pointcloud": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nuvem de pontos de uma passada
+         * @description O PLY que o rover enviou, sem conversão.
+         *
+         *     Servido por aqui, e não por link direto ao armazenamento, pelo mesmo motivo
+         *     da imagem: o acesso passa pelo escopo do cliente. O arquivo nunca muda
+         *     depois de gravado, então o navegador pode guardá-lo.
+         */
+        get: operations["row_scan_pointcloud_v1_row_scans__scan_id__pointcloud_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fields/{field_id}/snapshot": {
         parameters: {
             query?: never;
@@ -1809,6 +1909,19 @@ export interface components {
              */
             file: string;
         };
+        /** Body_post_row_scan_v1_device_row_scans_post */
+        Body_post_row_scan_v1_device_row_scans_post: {
+            /**
+             * Metadata
+             * @description JSON conforme o esquema RowScanIn.
+             */
+            metadata: string;
+            /**
+             * File
+             * @description Nuvem de pontos em PLY binário. Opcional.
+             */
+            file?: string | null;
+        };
         /** CheckpointOut */
         CheckpointOut: {
             /**
@@ -2299,6 +2412,68 @@ export interface components {
             /** Boundary */
             boundary: number[][];
         };
+        /**
+         * FieldSceneOut
+         * @description A cópia 3D do talhão.
+         *
+         *     Coordenadas em metros no plano local do talhão: origem no centro do limite,
+         *     x para leste, y para norte, z para cima.
+         */
+        FieldSceneOut: {
+            /** Field Id */
+            field_id: string;
+            /** Field Name */
+            field_name: string;
+            /** Crop */
+            crop: string;
+            /** Crop Stage */
+            crop_stage: string | null;
+            /** Row Azimuth Deg */
+            row_azimuth_deg: number | null;
+            /** Row Spacing M */
+            row_spacing_m: number | null;
+            /** Origin Lon */
+            origin_lon: number;
+            /** Origin Lat */
+            origin_lat: number;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Live */
+            live: boolean;
+            /** Boundary */
+            boundary: number[][];
+            /** Zones */
+            zones: components["schemas"]["SceneZoneOut"][];
+            /** Field Area M2 */
+            field_area_m2: number;
+            /** Scanned Area M2 */
+            scanned_area_m2: number;
+            /** Coverage Ratio */
+            coverage_ratio: number;
+            /** Scans */
+            scans: components["schemas"]["SceneScanOut"][];
+            plants: components["schemas"]["ScenePlantsOut"];
+            /** Markers */
+            markers: components["schemas"]["SceneMarkerOut"][];
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Devices */
+            devices: components["schemas"]["SceneDeviceOut"][];
+            /** Missions */
+            missions: components["schemas"]["SceneMissionOut"][];
+            /** Passes */
+            passes: components["schemas"]["ScenePassOut"][];
+        };
         /** FieldSnapshotOut */
         FieldSnapshotOut: {
             /** Field Id */
@@ -2788,6 +2963,44 @@ export interface components {
          * @enum {string}
          */
         Role: "owner" | "admin" | "agronomist" | "operator" | "technician" | "auditor" | "viewer";
+        /** RowScanOut */
+        RowScanOut: {
+            /** Id */
+            id: string;
+            /** Field Id */
+            field_id: string;
+            /** Mission Id */
+            mission_id: string | null;
+            /** Device Id */
+            device_id: string;
+            /** Sequence Number */
+            sequence_number: number;
+            /** Segment Index */
+            segment_index: number | null;
+            /** Row Index */
+            row_index: number | null;
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /** Sensor */
+            sensor: string;
+            /** Reach M */
+            reach_m: number;
+            /** Length M */
+            length_m: number;
+            /** Plant Count */
+            plant_count: number;
+            /** Mean Height M */
+            mean_height_m: number | null;
+            /** Max Height M */
+            max_height_m: number | null;
+            /** Point Count */
+            point_count: number | null;
+            /** Has Pointcloud */
+            has_pointcloud: boolean;
+        };
         /**
          * RtkFix
          * @enum {string}
@@ -2830,6 +3043,179 @@ export interface components {
          * @enum {string}
          */
         SafetyVerdict: "safe_to_execute" | "blocked";
+        /** SceneDeviceOut */
+        SceneDeviceOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            kind: components["schemas"]["DeviceKind"];
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Battery Percent */
+            battery_percent: number | null;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Active Mission Id */
+            active_mission_id: string | null;
+        };
+        /**
+         * SceneMarkerOut
+         * @description Uma foto diagnosticada, presa à planta fotografada.
+         */
+        SceneMarkerOut: {
+            /** Observation Id */
+            observation_id: string;
+            /** Diagnosis Id */
+            diagnosis_id: string | null;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Z */
+            z: number;
+            /** Label */
+            label: string | null;
+            /**
+             * Category
+             * @description healthy, disease, pest, review ou other.
+             */
+            category: string;
+            status: components["schemas"]["DiagnosisStatus"] | null;
+            /** Confidence */
+            confidence: number | null;
+            /** Novelty Score */
+            novelty_score: number | null;
+            /** Severity */
+            severity: number | null;
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /**
+             * Plant
+             * @description Índice da planta em ``plants``, quando há uma a até 60 cm.
+             */
+            plant: number | null;
+            /** Scan */
+            scan: number | null;
+        };
+        /**
+         * SceneMissionOut
+         * @description Uma varredura em andamento: as ruas que faltam aparecem na cópia.
+         */
+        SceneMissionOut: {
+            /** Mission Id */
+            mission_id: string;
+            state: components["schemas"]["MissionState"];
+            /** Segments */
+            segments: number;
+            /** Done */
+            done: number;
+            /** Pending */
+            pending: number[][][];
+        };
+        /** ScenePassOut */
+        ScenePassOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Scans */
+            scans: number;
+        };
+        /**
+         * ScenePlantsOut
+         * @description Plantas da cópia em colunas. Cada índice é uma planta.
+         */
+        ScenePlantsOut: {
+            /** X */
+            x: number[];
+            /** Y */
+            y: number[];
+            /** Height */
+            height: number[];
+            /** Canopy */
+            canopy: number[];
+            /** Greenness */
+            greenness: (number | null)[];
+            /**
+             * Scan
+             * @description Índice em ``scans`` da passada que mediu a planta.
+             */
+            scan: number[];
+        };
+        /**
+         * SceneScanOut
+         * @description Uma rua na cópia: onde o rover passou, quando, e o que mediu.
+         */
+        SceneScanOut: {
+            /** Id */
+            id: string;
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /** Device Id */
+            device_id: string;
+            /** Device Name */
+            device_name: string | null;
+            /** Mission Id */
+            mission_id: string | null;
+            /** Segment Index */
+            segment_index: number | null;
+            /** Row Index */
+            row_index: number | null;
+            /** Sensor */
+            sensor: string;
+            /** Reach M */
+            reach_m: number;
+            /** Length M */
+            length_m: number;
+            /**
+             * Origin
+             * @description Origem da passada no plano do talhão, [x, y].
+             */
+            origin: number[];
+            /** Path */
+            path: number[][];
+            /** Plant Count */
+            plant_count: number;
+            /**
+             * Visible Plants
+             * @description Quantas plantas desta passada estão na cópia — as outras foram cobertas por uma passada mais nova.
+             */
+            visible_plants: number;
+            /** Mean Height M */
+            mean_height_m: number | null;
+            /** Max Height M */
+            max_height_m: number | null;
+            /** Point Count */
+            point_count: number | null;
+            /** Has Pointcloud */
+            has_pointcloud: boolean;
+            /**
+             * Markers
+             * @description Observações nesta rua, por categoria.
+             */
+            markers: {
+                [key: string]: number;
+            };
+        };
+        /** SceneZoneOut */
+        SceneZoneOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Boundary */
+            boundary: number[][];
+        };
         /** SegmentComplete */
         SegmentComplete: {
             /** Segment Index */
@@ -4211,6 +4597,39 @@ export interface operations {
             };
         };
     };
+    post_row_scan_v1_device_row_scans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_post_row_scan_v1_device_row_scans_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RowScanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     current_mission_v1_device_missions_current_get: {
         parameters: {
             query?: never;
@@ -5484,6 +5903,113 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VerificationOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_scene_v1_fields__field_id__scene_get: {
+        parameters: {
+            query?: {
+                /** @description Estado da cópia neste instante. Sem ele, agora. */
+                at?: string | null;
+                /** @description Janela das observações. */
+                days?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldSceneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    row_scans_v1_fields__field_id__row_scans_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RowScanOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    row_scan_pointcloud_v1_row_scans__scan_id__pointcloud_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

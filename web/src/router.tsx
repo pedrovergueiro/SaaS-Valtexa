@@ -19,6 +19,8 @@ const MissionDetail = lazy(() => import('@/pages/MissionDetail'))
 const Review = lazy(() => import('@/pages/Review'))
 const Fields = lazy(() => import('@/pages/Fields'))
 const FieldDetail = lazy(() => import('@/pages/FieldDetail'))
+// three.js é o maior pedaço do console; só baixa quem abre a cópia 3D.
+const Field3D = lazy(() => import('@/pages/Field3D'))
 const Applications = lazy(() => import('@/pages/Applications'))
 const Inputs = lazy(() => import('@/pages/Inputs'))
 const Audit = lazy(() => import('@/pages/Audit'))
@@ -63,6 +65,8 @@ export const router = createBrowserRouter([
       { path: 'revisao', element: <Review /> },
       { path: 'talhoes', element: <Fields /> },
       { path: 'talhoes/:id', element: <FieldDetail /> },
+      { path: 'lavoura-3d', element: <Field3D /> },
+      { path: 'lavoura-3d/:id', element: <Field3D /> },
       { path: 'aplicacoes', element: <Applications /> },
       { path: 'insumos', element: <Inputs /> },
       { path: 'auditoria', element: <Audit /> },

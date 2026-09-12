@@ -69,6 +69,12 @@
   --series-8: #e34948;
   --series-other: #8a9690;
 
+  /* praga na cópia 3D — validada contra doença (series-2) e revisão (series-1):
+     ΔE sob daltonismo ≥ 9,8 e ≥ 21 em visão normal, nos dois temas */
+  --cat-pest: #b0369e;
+  --sky-top: #c8def0;
+  --sky-horizon: #e5ede3;
+
   --grid: #e3eae6;
   --axis: #b9c7c0;
   --shadow: 0 1px 2px rgb(12 26 21 / 0.06), 0 4px 16px rgb(12 26 21 / 0.05);
@@ -99,6 +105,9 @@
     --series-7: #9085e9;
     --series-8: #e66767;
     --series-other: #5f7169;
+    --cat-pest: #bf4fb0;
+    --sky-top: #040b09;
+    --sky-horizon: #0f1e18;
     --grid: #15291f;
     --axis: #2a4238;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
@@ -129,6 +138,9 @@
   --series-7: #9085e9;
   --series-8: #e66767;
   --series-other: #5f7169;
+  --cat-pest: #bf4fb0;
+  --sky-top: #040b09;
+  --sky-horizon: #0f1e18;
   --grid: #15291f;
   --axis: #2a4238;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
@@ -237,6 +249,31 @@
   background: var(--surface);
   color: var(--ink);
   border-color: var(--line);
+}
+
+/* Cópia 3D: o céu atrás do canvas e os rótulos que o CSS2DRenderer posiciona. */
+.scene-sky {
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-horizon) 58%);
+}
+.scene-label {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in oklab, var(--surface) 90%, transparent);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+.scene-label--zone {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-2);
+  font-weight: 600;
+  text-shadow: 0 0 4px var(--surface), 0 0 2px var(--surface);
 }
 
 @media (prefers-reduced-motion: reduce) {

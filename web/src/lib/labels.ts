@@ -153,6 +153,18 @@ const DISEASE: Record<string, string> = {
   Cercospora_Leaf_Spot: 'Cercosporiose (café)',
   Phoma_Leaf_Spot: 'Mancha de phoma',
   Leaf_Miner_Damage: 'Bicho-mineiro',
+  Northern_Leaf_Blight: 'Helmintosporiose',
+  Southern_Rust: 'Ferrugem-polissora',
+  Tar_Spot: 'Mancha de alcatrão',
+  Spodoptera_frugiperda: 'Lagarta-do-cartucho',
+  Dalbulus_maidis: 'Cigarrinha-do-milho',
+  Helicoverpa_armigera: 'Helicoverpa',
+  Diabrotica_speciosa: 'Vaquinha',
+  Dichelops_melacanthus: 'Percevejo barriga-verde',
+  Euschistus_heros: 'Percevejo-marrom',
+  Anticarsia_gemmatalis: 'Lagarta-da-soja',
+  Leucoptera_coffeella: 'Bicho-mineiro',
+  Hypothenemus_hampei: 'Broca-do-café',
   Other: 'Outros',
 }
 export const disease = (value: string | null | undefined) => {
@@ -170,7 +182,27 @@ export const KNOWN_LABELS = [
   'Cercospora_Leaf_Spot',
   'Phoma_Leaf_Spot',
   'Leaf_Miner_Damage',
+  'Spodoptera_frugiperda',
+  'Dalbulus_maidis',
+  'Diabrotica_speciosa',
+  'Euschistus_heros',
+  'Hypothenemus_hampei',
 ]
+
+// --- cópia 3D: categoria de cada achado --------------------------------------------
+
+/**
+ * O que o produtor procura primeiro na cópia: "tem praga ali?" vem antes de
+ * "qual praga?". A categoria vem do servidor (`services/taxonomy.py`).
+ */
+export const CATEGORY: Record<string, string> = {
+  pest: 'Praga',
+  disease: 'Doença',
+  review: 'Aguardando agrônomo',
+  other: 'Outro achado',
+  healthy: 'Saudável',
+}
+export const category = (value: string) => lookup(CATEGORY, value)
 
 // --- cores de série -------------------------------------------------------------
 
@@ -333,5 +365,6 @@ const EVENT: Record<string, string> = {
   'device.provisioned': 'Dispositivo provisionado',
   'device.offline': 'Dispositivo sem contato',
   'device.fault': 'Falha em dispositivo',
+  'row_scan.received': 'Rua escaneada pelo rover',
 }
 export const eventName = (value: string) => EVENT[value] ?? value

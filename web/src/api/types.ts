@@ -56,6 +56,11 @@ export type TimePointOut = S['TimePointOut']
 export type AnomalyOut = S['AnomalyOut']
 export type AuditOut = S['AuditOut']
 
+export type FieldSceneOut = S['FieldSceneOut']
+export type SceneMarkerOut = S['SceneMarkerOut']
+export type SceneScanOut = S['SceneScanOut']
+export type RowScanOut = S['RowScanOut']
+
 export type AlertOut = S['AlertOut']
 export type DashboardOut = S['DashboardOut']
 export type MissionBrief = S['MissionBrief']

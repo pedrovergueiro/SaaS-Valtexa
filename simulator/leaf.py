@@ -32,10 +32,12 @@ LESIONS: dict[str, tuple[tuple[float, float], Color, Color | None, tuple[int, in
 }
 GENERIC = ((4.0, 3.2), (112, 72, 40), (200, 186, 92), (8, 14))
 HEALTHY = {"Healthy", "healthy"}
+CHEWED = {"Spodoptera_frugiperda"}
+"""Pragas que comem a folha: furos de borda escura, raspagem e excremento."""
 
 
 def leaf_png(label: str, novelty: float = 0.4, seed: int = 0) -> bytes:
-    """Folha de milho em close, com a lesão típica do rótulo."""
+    """Folha de milho em close, com a lesão ou o dano típico do rótulo."""
     rng = random.Random(f"{label}:{seed}")
     angle = math.radians(rng.uniform(-14.0, 14.0))
     cos_a, sin_a = math.cos(angle), math.sin(angle)
@@ -45,7 +47,7 @@ def leaf_png(label: str, novelty: float = 0.4, seed: int = 0) -> bytes:
     wave = rng.uniform(0.0, math.tau)
     # Novidade alta costuma ser o que o catálogo não cobre — aqui, clorose
     # entre as nervuras, com cara de deficiência nutricional.
-    chlorosis = novelty > 1.0
+    chlorosis = novelty > 1.0 and label not in CHEWED
 
     pixels = bytearray(WIDTH * HEIGHT * 3)
     inside = bytearray(WIDTH * HEIGHT)
@@ -70,11 +72,12 @@ def leaf_png(label: str, novelty: float = 0.4, seed: int = 0) -> bytes:
                 if abs(v) < 2.4:
                     color = _mix(color, (180, 200, 130), 0.7)
             else:
-                t = y / HEIGHT
-                color = (34 + 14 * t + grain, 46 + 10 * t + grain, 30 + 6 * t + grain)
+                color = _background(x, y)
             _put(pixels, x, y, color)
 
-    if label not in HEALTHY:
+    if label in CHEWED:
+        _chew(pixels, inside, rng, origin=(cx, cy), rotation=(cos_a, sin_a), half_width=half_width)
+    elif label not in HEALTHY:
         (a, b), core, halo, (low, high) = LESIONS.get(label, GENERIC)
         for _ in range(rng.randint(low, high)):
             scale = rng.uniform(0.7, 1.3)
@@ -124,6 +127,63 @@ def _lesion(
                 _put(pixels, x, y, _mix(current, darker, 0.9))  # type: ignore[arg-type]
             elif halo is not None and distance <= 1.7:
                 _put(pixels, x, y, _mix(current, halo, 0.55 * (1.7 - distance) / 0.7))
+
+
+def _chew(
+    pixels: bytearray,
+    inside: bytearray,
+    rng: random.Random,
+    *,
+    origin: tuple[float, float],
+    rotation: tuple[float, float],
+    half_width: float,
+) -> None:
+    """Dano de lagarta: furos irregulares, janelas raspadas e excremento.
+
+    O furo mostra o fundo através da folha, com a borda escurecida onde o
+    tecido secou; a janela é a epiderme raspada que ficou translúcida.
+    """
+    (cx, cy), (cos_a, sin_a) = origin, rotation
+    holes = [(rng.uniform(8.0, 19.0), rng.uniform(5.0, 11.0), 0) for _ in range(rng.randint(4, 7))]
+    windows = [(rng.uniform(6.0, 12.0), rng.uniform(2.5, 4.5), 1) for _ in range(rng.randint(3, 6))]
+    for a, b, kind in holes + windows:
+        u0 = rng.uniform(-WIDTH * 0.42, WIDTH * 0.42)
+        v0 = rng.uniform(-half_width * 0.75, half_width * 0.75)
+        phase = rng.uniform(0.0, math.tau)
+        px = cx + u0 * cos_a - v0 * sin_a
+        py = cy + u0 * sin_a + v0 * cos_a
+        reach = math.ceil(max(a, b) * 1.5)
+        for y in range(max(0, int(py) - reach), min(HEIGHT, int(py) + reach + 1)):
+            for x in range(max(0, int(px) - reach), min(WIDTH, int(px) + reach + 1)):
+                if not inside[y * WIDTH + x]:
+                    continue
+                du = (x - px) * cos_a + (y - py) * sin_a
+                dv = -(x - px) * sin_a + (y - py) * cos_a
+                wobble = 1 + 0.2 * math.sin(math.atan2(dv, du) * 5 + phase)
+                distance = math.hypot(du / a, dv / b) * wobble
+                current = _get(pixels, x, y)
+                if kind == 0 and distance <= 1.0:
+                    _put(pixels, x, y, _background(x, y))
+                elif kind == 0 and distance <= 1.3:
+                    _put(pixels, x, y, _mix(current, (118, 92, 50), 0.7))
+                elif kind == 1 and distance <= 1.0:
+                    _put(pixels, x, y, _mix(current, (214, 216, 172), 0.6))
+
+    for _ in range(rng.randint(12, 22)):
+        px = cx + rng.uniform(-WIDTH * 0.45, WIDTH * 0.45)
+        py = cy + rng.uniform(-half_width * 0.8, half_width * 0.8)
+        radius = rng.uniform(1.3, 2.6)
+        for y in range(max(0, int(py - radius)), min(HEIGHT, int(py + radius) + 1)):
+            for x in range(max(0, int(px - radius)), min(WIDTH, int(px + radius) + 1)):
+                if inside[y * WIDTH + x] and math.hypot(x - px, y - py) <= radius:
+                    _put(pixels, x, y, (72, 58, 34))
+
+
+def _background(x: int, y: int) -> Color:
+    """O fundo atrás da folha: solo e palha, escurecendo para baixo."""
+    grain = _grain(x, y)
+    t = y / HEIGHT
+    return (34 + 14 * t + grain, 46 + 10 * t + grain, 30 + 6 * t + grain)
 
 
 def _grain(x: int, y: int) -> int:
