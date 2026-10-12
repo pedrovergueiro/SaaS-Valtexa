@@ -1,0 +1,18 @@
+﻿Dimensão;Valor citado;Valor calculado;Fonte;Situação
+Comprimento externo (com carenagens);1050.0;1050.0;modelo · L_EXT;confere
+Largura externa (com carenagens);600.0;600.0;modelo · W_EXT;confere
+Comprimento do quadro;1046.0;1046.0;modelo · L_Q = L_EXT − 2×2;confere
+Largura do quadro;596.0;596.0;modelo · W_Q;confere
+Entre-eixos;700.0;700.0;modelo · ENTRE_EIXOS;confere
+Bitola;530.0;530.0;modelo · BITOLA (Rev G: era 470 — ver suspensao.py);confere
+Diâmetro da roda;200.0;200.0;FONTE · datasheet MPW86;confere
+Centro da roda (Z);100.0;100.0;modelo · D_RODA/2;confere
+Deck inferior (Z);250.0;250.0;modelo · Z_QUADRO;confere
+Deck superior (Z);340.0;340.0;modelo · Z_DECK;confere
+Topo do corpo (Z);400.0;400.0;modelo · Z_PROT;confere
+Altura total (topo do mastro);;1782.0;modelo · Z_TOTAL;sem valor citado
+Vão livre (mínimo, ajustável a 180);150.0;150.0;modelo · VAO_LIVRE;confere
+Envelope medido das peças (X);;1050.0;modelo · envelope() sobre todas as peças;calculado
+Envelope medido das peças (Y);;600.0;modelo · envelope();calculado
+Envelope medido das peças (Z);;488.0;modelo · envelope();calculado
+Massa nominal recalculada;97.8;118.61;modelo · comparacao_baseline();DIVERGE (+20.81 kg) — pendência P-02

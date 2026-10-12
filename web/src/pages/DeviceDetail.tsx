@@ -9,6 +9,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { TimeSeries } from '@/components/charts'
 import { FarmMap } from '@/components/FarmMap'
 import { Badge, Button, Card, CardHeader, Empty, ErrorBox, FormField, Meter, Modal, PageHeader, Spinner, Tabs } from '@/components/ui'
+import { faultText, fleetStateTone, modelInUse, modelStatus, storageText, storageTone } from '@/lib/fleet'
 import { fmt } from '@/lib/format'
 import { connectivity, connectivityTone, deviceKind, deviceStatus, deviceStatusTone, severity, severityTone, tankStatus } from '@/lib/labels'
 import { batteryTone } from '@/pages/Fleet'
@@ -59,6 +60,9 @@ export default function DeviceDetail() {
         }
         actions={
           <>
+            <span title={data.fleet_state_reason}>
+              <Badge tone={fleetStateTone(data.fleet_state)}>{data.fleet_state_label}</Badge>
+            </span>
             <Badge tone={connectivityTone(data.connectivity)} pulse={data.connectivity === 'ok'}>
               {connectivity(data.connectivity)}
             </Badge>
@@ -127,6 +131,7 @@ export default function DeviceDetail() {
         </div>
 
         <div className="flex flex-col gap-4">
+          <FleetHealthCard device={data} />
           <Card>
             <CardHeader title="Estado" />
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 px-5 pb-5 text-[13px]">
@@ -145,6 +150,25 @@ export default function DeviceDetail() {
               <dd className="num">{data.protocol_version ?? '—'}</dd>
               <dt className="text-muted">Energia</dt>
               <dd>{last?.energy_state ?? '—'}</dd>
+              <dt className="text-muted">Enlace</dt>
+              <dd>
+                {/* O robô relata a qualidade do rádio e a plataforma guardava
+                    sem mostrar. É o número que separa "parou" de "sumiu": um
+                    rover silencioso com último enlace em 12% estava saindo de
+                    alcance; em 90%, desligou. */}
+                {last?.link_quality != null ? (
+                  <div className="flex items-center gap-2">
+                    <Meter
+                      value={Math.min(1, Math.max(0, last.link_quality))}
+                      tone={last.link_quality < 0.3 ? 'critical' : last.link_quality < 0.6 ? 'warning' : 'good'}
+                      label="Enlace"
+                    />
+                    <span className="num w-10 text-right">{fmt.percent(last.link_quality)}</span>
+                  </div>
+                ) : (
+                  '—'
+                )}
+              </dd>
               <dt className="text-muted">Missão ativa</dt>
               <dd>
                 {data.active_mission_id ? (
@@ -212,6 +236,73 @@ export default function DeviceDetail() {
         </div>
       </div>
     </>
+  )
+}
+
+/**
+ * O que o robô informa de si pelo protocolo (brief, seções 22 e 25): estado de frota
+ * com o motivo, versões do software e do modelo, e a saúde. "sem dado" é o que o
+ * robô ainda não informou — nunca um valor de exemplo.
+ */
+function FleetHealthCard({ device }: { device: DeviceOut }) {
+  const designados = device.designated_models ?? []
+  const falhas = device.active_faults ?? []
+  const situacao = modelStatus(device.model_status)
+  const semDado = <span className="text-muted">sem dado</span>
+  return (
+    <Card>
+      <CardHeader title={`Frota: ${device.fleet_state_label}`} subtitle={device.fleet_state_reason} />
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 px-5 pb-4 text-[13px]">
+        <dt className="text-muted">Modelo de IA</dt>
+        <dd className="flex flex-wrap items-center gap-2">
+          <span className="num">{modelInUse(device.ai_model_key, device.ai_model_version)}</span>
+          <Badge tone={situacao.tone}>{situacao.label}</Badge>
+        </dd>
+        {designados.length > 0 && (
+          <>
+            <dt className="text-muted">Designado</dt>
+            <dd className="num">{designados.join(', ').replaceAll('@', ' ')}</dd>
+          </>
+        )}
+        <dt className="text-muted">Rover Runtime</dt>
+        <dd className="num">{device.runtime_version ?? semDado}</dd>
+        <dt className="text-muted">Edge AI</dt>
+        <dd className="num">{device.edge_ai_version ?? semDado}</dd>
+        <dt className="text-muted">dNATY</dt>
+        <dd className="num">{device.dnaty_version ?? semDado}</dd>
+        <dt className="text-muted">Hardware</dt>
+        <dd className="num">{device.hardware_version ?? semDado}</dd>
+        <dt className="text-muted">Temperatura</dt>
+        <dd className="num">{device.temperature_c != null ? `${fmt.number(device.temperature_c, 1)} °C` : semDado}</dd>
+        <dt className="text-muted">Armazenamento</dt>
+        <dd>
+          <Badge tone={storageTone(device.storage_total_bytes, device.storage_free_bytes)}>
+            {storageText(device.storage_total_bytes, device.storage_free_bytes)}
+          </Badge>
+        </dd>
+        <dt className="text-muted">Horas de operação</dt>
+        <dd className="num">{device.operating_hours != null ? `${fmt.number(device.operating_hours, 1)} h` : semDado}</dd>
+        <dt className="text-muted">Última sincronização</dt>
+        <dd>
+          {device.last_sync_at ? fmt.dateTime(device.last_sync_at) : semDado}
+          {(device.sync_pending ?? 0) > 0 && <span className="ml-2 text-info">({device.sync_pending} pendentes)</span>}
+        </dd>
+        <dt className="text-muted">Última manutenção</dt>
+        <dd>{device.last_maintenance_at ? fmt.dateTime(device.last_maintenance_at) : semDado}</dd>
+        {falhas.length > 0 && (
+          <>
+            <dt className="text-muted">Falhas ativas</dt>
+            <dd>
+              <ul className="flex flex-col gap-1 text-serious">
+                {falhas.map((falha, index) => (
+                  <li key={index}>{faultText(falha)}</li>
+                ))}
+              </ul>
+            </dd>
+          </>
+        )}
+      </dl>
+    </Card>
   )
 }
 

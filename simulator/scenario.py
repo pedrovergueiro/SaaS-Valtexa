@@ -22,7 +22,29 @@ from simulator.devices import Battery, SimulatedDock, SimulatedDrone, SimulatedR
 from simulator.operator import ApiError, OperatorClient
 from simulator.plants import Focus, SimulatedCrop
 from valtexa.seed import DEMO_FIELD_BOUNDARY
+from valtexa.services.hal import REFERENCE_MODELS, Capabilities
+from valtexa.services.planner import PerfilDeAutonomia
 from valtexa.services.taxonomy import PEST_LABELS
+
+PERFIL_ROVER = PerfilDeAutonomia.from_capabilities(
+    Capabilities(
+        raw=next(m for m in REFERENCE_MODELS if m["code"] == "ROVER_V3")["capabilities"]
+    )
+)
+"""Autonomia do Rover V3, a mesma que o planejador usa para dizer onde falta poste."""
+
+MAX_RECARGAS = 0
+"""Ciclos de recarga que o roteiro encena depois da primeira carga.
+
+Varrer 24 ha de café rua a rua são 79 km e seis cargas — mais do que cabe numa
+demonstração. Com zero, o rover sai com a bateria cheia, anda até a política
+embarcada mandar voltar, e o roteiro para ali, com o robô no dock.
+
+A cobertura parcial que sobra **é o resultado que a demonstração precisa
+mostrar**: a cópia 3D tem exatamente as ruas que o rover mediu, e o resto do
+talhão aparece como não visitado. Uma cópia cheia depois de meia varredura seria
+lavoura inventada.
+"""
 
 ADMIN = ("admin@valtexa.dev", "valtexa-demo-2026")
 AGRONOMIST = ("agronomo@valtexa.dev", "valtexa-demo-2026")
@@ -59,42 +81,50 @@ class ScenarioResult:
 
 
 def demo_crop(boundary: list | None = None) -> SimulatedCrop:
-    """O milho do talhão de demonstração, com duas reboleiras.
+    """O cafezal do talhão de demonstração, com duas reboleiras.
 
-    Uma de ferrugem comum — que o modelo conhece e acerta — e uma de
-    lagarta-do-cartucho, que nenhum modelo do catálogo reconhece: a folha
-    comida sai com um palpite de doença e novidade alta, e é o agrônomo quem diz
-    o que é. É o caminho real de uma praga até a cópia 3D.
+    Uma de ferrugem — que o ``coffee-foliar`` conhece e acerta — e uma de
+    bicho-mineiro, que sai do modelo como mancha foliar qualquer e com novidade
+    alta: é o agrônomo quem diz que é praga, não doença. É o caminho real de um
+    ataque até a cópia 3D, e a razão de o fungicida da demonstração **não**
+    listar bicho-mineiro entre os alvos autorizados.
+
+    Espaçamento 3,5 m entre ruas e 0,7 m entre plantas, porte de 2,2 m: lavoura
+    formada, como a da foto.
     """
     return SimulatedCrop(
         boundary=boundary or DEMO_FIELD_BOUNDARY,
-        row_spacing_m=0.5,
-        plant_spacing_m=0.3,
-        row_azimuth_deg=90.0,
-        height_m=1.3,
+        row_spacing_m=3.5,
+        plant_spacing_m=0.7,
+        # As ruas da foto seguem o contorno do terreno; 25° é a direção média do
+        # bloco norte, que é por onde o rover entra.
+        row_azimuth_deg=25.0,
+        height_m=2.2,
+        # Café adulto fecha a rua: a copa chega perto da metade do espaçamento.
+        canopy_m=1.7,
         foci=[
             Focus(
-                lon=-55.9079,
-                lat=-12.72405,
-                radius_m=24.0,
-                drawn="Common_Rust",
-                model_label="Common_Rust",
+                lon=-45.86300,
+                lat=-21.90250,
+                radius_m=90.0,
+                drawn="Rust",
+                model_label="Rust",
                 novelty=0.4,
                 stunting=0.12,
-                yellowing=0.32,
-                lesion=(150, 70, 28),
+                yellowing=0.34,
+                lesion=(178, 96, 30),
             ),
             Focus(
-                lon=-55.90735,
-                lat=-12.72375,
-                radius_m=15.0,
-                drawn="Spodoptera_frugiperda",
-                model_label="Blight",
+                lon=-45.86100,
+                lat=-21.90240,
+                radius_m=60.0,
+                drawn="Leaf_Miner_Damage",
+                model_label="Cercospora_Leaf_Spot",
                 novelty=1.6,
-                stunting=0.3,
-                yellowing=0.18,
-                lesion=(104, 84, 50),
-                defoliation=0.45,
+                stunting=0.22,
+                yellowing=0.20,
+                lesion=(150, 132, 84),
+                defoliation=0.40,
             ),
         ],
     )
@@ -122,7 +152,7 @@ def run(base_url: str, demo: dict) -> ScenarioResult:
     step(f"admin autenticado como {admin.role} ({len(admin.capabilities)} capacidades)")
 
     tokens = {
-        "rover": _token(admin, "ROVER_SCOUT_V1", ROVER_SERIAL, demo["farm_id"]),
+        "rover": _token(admin, "ROVER_V3", ROVER_SERIAL, demo["farm_id"]),
         "drone": _token(admin, "DRONE_ACTION_V1", DRONE_SERIAL, demo["farm_id"]),
         "dock": _token(admin, "DOCK_BASE_V1", DOCK_SERIAL, demo["farm_id"]),
     }
@@ -145,9 +175,10 @@ def run(base_url: str, demo: dict) -> ScenarioResult:
     rover = SimulatedRover(
         client=rover_client,
         name="Rover 01",
-        # Bateria calibrada para acabar no meio: é a situação que a plataforma
-        # precisa saber atravessar, e o único jeito de provar a retomada.
-        battery=Battery(percent=48.0, drain_per_meter=0.06),
+        # Consumo do perfil real do Rover V3 — o mesmo do planejador. A carga
+        # inicial fica logo acima do mínimo de segurança: a plataforma autoriza,
+        # e é durante a varredura que a política embarcada manda voltar.
+        battery=Battery.do_perfil(PERFIL_ROVER, percent=38.0),
         lat=base_point[1],
         lon=base_point[0],
         field_id=field_id,
@@ -175,10 +206,13 @@ def run(base_url: str, demo: dict) -> ScenarioResult:
             "kind": "scout",
             "field_id": field_id,
             "device_id": rover_client.identity.device_id,
-            "zone_id": zone_id,
-            "target_polygon": demo["zone_boundary"],
-            # Faixa larga de propósito: o roteiro precisa caber num minuto. Em
-            # campo isto vem do descritor do hardware.
+            # Reconhecimento do talhão inteiro, com faixa larga: é a passada
+            # rápida que situa o agrônomo antes da varredura detalhada. Sem
+            # polígono, create_mission usa o talhão menos a margem da cerca.
+            #
+            # São 24 ha: mais do que o rover faz com a carga que ele tem, e é
+            # justamente aí que a política embarcada manda voltar no meio do
+            # caminho — o que a plataforma precisa saber atravessar.
             "plan": {"swath_m": 25.0},
         },
     )
@@ -254,7 +288,11 @@ def run(base_url: str, demo: dict) -> ScenarioResult:
     if queue:
         reviewed = agronomist.post(
             f"/v1/diagnoses/{queue[0]['id']}/review",
-            {"label": "Gray_Leaf_Spot", "confirmed": True, "notes": "Cercosporiose confirmada."},
+            {
+                "label": "Cercospora_Leaf_Spot",
+                "confirmed": True,
+                "notes": "Cercosporiose confirmada: olho pardo com halo amarelado.",
+            },
         )
         step(
             f"agrônomo rotulou {reviewed['reviewed_label']!r} "
@@ -263,7 +301,7 @@ def run(base_url: str, demo: dict) -> ScenarioResult:
         result.steps.append("agronomist_review")
 
     # ---------------------------------------------------------------- 5
-    banner("5. Cópia 3D — o rover percorre cada rua da zona")
+    banner("5. Cópia 3D — o rover percorre o talhão rua a rua")
     _survey(result, operator, agronomist, admin, rover, rover_client, dock, demo, base_point)
 
     # ---------------------------------------------------------------- 6
@@ -394,14 +432,24 @@ def _survey(
     """Varredura rua a rua, na faixa real do sensor: é o que monta a cópia 3D.
 
     A primeira varredura do roteiro passa a cada 25 m para caber no tempo; esta
-    anda em todas as ruas, com a faixa de 3 m do LiDAR. Cada rua que termina
-    aparece na cópia do console na hora — e quando a bateria acaba, o rover
-    volta, recarrega e continua da rua seguinte.
+    anda em todas as ruas, com a faixa de 3 m do LiDAR, e sobre o **talhão
+    inteiro** — 24 ha de café, não só o bloco norte. É aí que a autonomia
+    aparece: o percurso é de dezenas de quilômetros, e o rover volta, recarrega
+    e continua da rua seguinte, várias vezes.
+
+    A cópia 3D cresce rua a rua. Ela **não** representa o talhão inteiro: ela
+    representa exatamente o que o rover já mediu. Um talhão varrido pela metade
+    tem metade da cópia, e o console mostra o resto como não visitado — inventar
+    as ruas que faltam seria inventar lavoura.
+
+    O roteiro tem orçamento de tempo: ``MAX_RECARGAS`` limita quantos ciclos de
+    recarga ele encena. A varredura para onde parou, e a cobertura parcial que
+    sobra é o resultado honesto, não uma falha da demonstração.
     """
     field_id = demo["field_id"]
     dock.recharge(rover)
     rover.push_telemetry(mission_state="idle")
-    rover.battery = Battery(percent=100.0, drain_per_meter=0.015)
+    rover.battery = Battery.do_perfil(PERFIL_ROVER, percent=100.0)
     rover.novelty_ratio = 0.06
     rover.photo_every_m = 40.0
     rover.symptom_every_m = 5.0
@@ -412,8 +460,8 @@ def _survey(
             "kind": "scout",
             "field_id": field_id,
             "device_id": rover_client.identity.device_id,
-            "zone_id": demo["zone_id"],
-            "target_polygon": demo["zone_boundary"],
+            # Sem polígono: create_mission usa o talhão inteiro menos a
+            # margem da cerca virtual. É a varredura completa dos 24 ha.
             "plan": {"swath_m": 2 * rover.scan_reach_m},
         },
     )
@@ -429,7 +477,16 @@ def _survey(
     payload = rover_client.fetch_mission()
     rover_client.ack_mission(payload["mission_id"], accepted=True)
 
+    recargas = 0
     while rover.run_mission(payload, base_point) == "paused":
+        recargas += 1
+        if recargas > MAX_RECARGAS:
+            step(
+                "varredura interrompida na parada para recarga — o roteiro tem "
+                "orçamento de tempo. A cópia 3D fica com as ruas que o rover "
+                "realmente mediu; o resto do talhão segue não visitado."
+            )
+            break
         dock.recharge(rover)
         rover_client.report_recharged(payload["mission_id"])
         operator.post(f"/v1/missions/{survey['id']}/resume")
@@ -447,14 +504,14 @@ def _survey(
             {
                 "label": drawn,
                 "confirmed": True,
-                "notes": "Lagarta-do-cartucho: raspagem, furos e excremento no cartucho.",
+                "notes": "Bicho-mineiro: galerias e manchas secas irregulares na folha.",
             },
         )
         if not reviewed.get("error"):
             result.pests_reviewed += 1
     if pests:
         step(
-            f"agrônomo identificou lagarta-do-cartucho em {result.pests_reviewed} foto(s) — "
+            f"agrônomo identificou bicho-mineiro em {result.pests_reviewed} foto(s) — "
             "o modelo não conhece a praga; o rótulo dele é o que a põe na cópia 3D"
         )
 
@@ -465,7 +522,8 @@ def _survey(
     counts = ", ".join(f"{name} {count}" for name, count in sorted(scene["counts"].items()))
     step(
         f"cópia 3D: {result.plants} plantas medidas em {result.scans} ruas, "
-        f"{result.coverage:.0%} do talhão"
+        f"{result.coverage:.0%} do talhão — o resto continua não visitado, "
+        f"e a cópia não inventa o que ninguém mediu"
     )
     step(f"marcadores na cópia: {counts}")
     result.steps.append("digital_copy_3d")

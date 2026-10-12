@@ -36,8 +36,8 @@ def frame_with_label(
     o lê é o :class:`~valtexa.services.ai_pipeline.SimulatedAnalyzer`. A folha
     desenhada é só para quem olha a foto no console.
 
-    ``drawn`` separa o que a folha tem do que o modelo responde: uma lagarta
-    desenhada com a etiqueta "Blight" é exatamente o caso de uma praga fora do
+    ``drawn`` separa o que a folha tem do que o modelo responde: bicho-mineiro
+    desenhado com a etiqueta "Cercospora_Leaf_Spot" é exatamente o caso de uma praga fora do
     catálogo — o modelo arrisca uma doença, com novidade alta, e a foto vai para
     o agrônomo.
     """
@@ -61,6 +61,22 @@ class Battery:
     def travel(self, meters: float, seconds: float = 0.0) -> None:
         self.percent = max(
             0.0, self.percent - meters * self.drain_per_meter - seconds * self.drain_per_second
+        )
+
+    @classmethod
+    def do_perfil(cls, perfil, percent: float = 100.0) -> Battery:
+        """Bateria com o consumo do perfil de autonomia do rover.
+
+        Os dois coeficientes saem do mesmo lugar que o planejador usa — ver
+        ``valtexa/services/planner.py``. Manter um número inventado aqui faria o
+        simulador contradizer o plano que a própria plataforma calcula, e a
+        demonstração mostraria um rover parando onde o painel promete que ele
+        chega.
+        """
+        return cls(
+            percent=percent,
+            drain_per_meter=100.0 * perfil.wh_per_m / perfil.battery_wh,
+            drain_per_second=100.0 * (perfil.wh_per_h / 3600.0) / perfil.battery_wh,
         )
 
     def recharge(self) -> None:
@@ -175,7 +191,7 @@ class SimulatedRover(SimulatedDevice):
     disease_ratio: float = 0.0
     """Fração de quadros com doença. Do cenário, não do modelo."""
 
-    disease_label: str = "Common_Rust"
+    disease_label: str = "Rust"
     novelty_ratio: float = 0.2
     """Fração de quadros que destoam do que os modelos conhecem.
 

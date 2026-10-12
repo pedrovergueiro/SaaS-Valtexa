@@ -1,0 +1,75 @@
+# Regras do Prometheus — a "segunda linha" de alerta.
+#
+# A primeira linha são os alertas da própria plataforma (services/alertas.py), que
+# chegam ao console e por e-mail. Estas regras existem para o caso que a
+# plataforma não consegue avisar sozinha: ela própria fora do ar, ou o worker
+# parado. Mande-as para o Alertmanager (fora deste exemplo).
+
+groups:
+  - name: valtexa-plataforma
+    rules:
+      - alert: ValtexaApiForaDoAr
+        expr: up{job="valtexa-saas"} == 0
+        for: 2m
+        labels: {severity: critico}
+        annotations:
+          summary: "API da plataforma não responde ao /metrics há 2 min"
+
+      - alert: ValtexaIaForaDoAr
+        expr: up{job="valtexa-ia"} == 0
+        for: 5m
+        labels: {severity: critico}
+        annotations:
+          summary: "Serviço de IA não responde ao /metrics há 5 min"
+
+      - alert: ValtexaTaxaDeErro5xx
+        expr: |
+          sum(rate(valtexa_http_server_errors_total[5m]))
+            / clamp_min(sum(rate(valtexa_http_requests_total[5m])), 1e-9) > 0.05
+          and sum(rate(valtexa_http_requests_total[5m])) * 300 > 20
+        for: 5m
+        labels: {severity: critico}
+        annotations:
+          summary: "Mais de 5% de respostas 5xx na API"
+
+      - alert: ValtexaLatenciaP95Alta
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(valtexa_http_request_duration_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels: {severity: aviso}
+        annotations:
+          summary: "p95 da API acima de 2 s"
+
+      - alert: ValtexaEventosParados
+        expr: max(valtexa_outbox_oldest_pending_seconds) > 600
+        for: 5m
+        labels: {severity: critico}
+        annotations:
+          summary: "Evento de domínio sem entrega há mais de 10 min (worker parado?)"
+
+      - alert: ValtexaAlertaCriticoSemDono
+        expr: max(valtexa_alerts_open{state="disparado"}) > 0
+        for: 30m
+        labels: {severity: aviso}
+        annotations:
+          summary: "Alerta da plataforma disparado há 30 min sem ninguém reconhecer"
+
+  - name: valtexa-ia
+    rules:
+      - alert: ValtexaIaErrosDeInferencia
+        expr: |
+          sum by (model) (rate(valtexa_ia_inference_errors_total[15m]))
+            / clamp_min(sum by (model) (rate(valtexa_ia_inference_calls_total[15m])), 1e-9)
+            > 0.2
+        for: 15m
+        labels: {severity: critico}
+        annotations:
+          summary: "Mais de 20% das chamadas de inferência de {{ $labels.model }} falhando"
+
+      - alert: ValtexaDriftDeClasses
+        expr: max by (source, model) (valtexa_ai_class_drift) > 0.25
+        for: 1h
+        labels: {severity: aviso}
+        annotations:
+          summary: "Distribuição de classes de {{ $labels.model }} mudou mais de 25%"

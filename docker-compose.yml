@@ -1,3 +1,8 @@
+# AMBIENTE DE ENSAIO LOCAL. Para produção, use ../deploy/producao/ (Parte 9): segredos
+# por arquivo, S3/MinIO, Redis, réplicas da API, IA e Prometheus — docs/DEPLOY.md.
+# Este arquivo exige também OTA_SIGNING_SECRET e INFERENCE_SERVICE_TOKEN (≥ 32
+# caracteres, distintos) e REDIS_URL, senão a API recusa subir em produção.
+#
 # Ambiente completo: API (com o console), worker e Postgres.
 #
 # O serviço de inferência (VALTEXA-B) fica de fora de propósito: ele precisa de
@@ -10,6 +15,9 @@ x-platform-env: &platform-env
   # Obrigatórios e diferentes entre si: ver .env.example.
   SESSION_SECRET: ${SESSION_SECRET:?defina SESSION_SECRET}
   COMMAND_SIGNING_SECRET: ${COMMAND_SIGNING_SECRET:?defina COMMAND_SIGNING_SECRET}
+  OTA_SIGNING_SECRET: ${OTA_SIGNING_SECRET:?defina OTA_SIGNING_SECRET}
+  INFERENCE_SERVICE_TOKEN: ${INFERENCE_SERVICE_TOKEN:?defina INFERENCE_SERVICE_TOKEN}
+  REDIS_URL: ${REDIS_URL:?defina REDIS_URL}
   CORS_ORIGINS: ${CORS_ORIGINS:-https://app.valtexa.com.br}
   INFERENCE_URL: ${INFERENCE_URL:-http://host.docker.internal:8000}
   STORAGE_DIR: /app/storage

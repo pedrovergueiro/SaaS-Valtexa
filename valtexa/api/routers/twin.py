@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from valtexa.api.arquivos import resposta_de_arquivo
 from valtexa.api.deps import Principal, get_scoped, require
 from valtexa.db import get_session
 from valtexa.models import Asset, AuditEntry, Field, OutboxEvent, RowScan
@@ -22,7 +23,7 @@ from valtexa.schemas import (
     TimePointOut,
 )
 from valtexa.security import rbac
-from valtexa.services import scene, storage, twin
+from valtexa.services import plans, scene, storage, twin, visao_operacional
 
 router = APIRouter(tags=["gêmeo digital"])
 
@@ -52,6 +53,7 @@ def field_scene(
     Quem não pode ler diagnóstico recebe a cópia sem os marcadores.
     """
     field_row = get_scoped(session, Field, field_id, principal)
+    plans.exigir_recurso(session, principal.tenant_id, "lavoura_3d")
     data = scene.build(
         session,
         principal.tenant_id,
@@ -76,6 +78,7 @@ def row_scans(
 ) -> list[RowScanOut]:
     """As passadas, da mais recente à mais antiga."""
     get_scoped(session, Field, field_id, principal)
+    plans.exigir_recurso(session, principal.tenant_id, "lavoura_3d")
     rows = session.scalars(
         select(RowScan)
         .where(RowScan.tenant_id == principal.tenant_id, RowScan.field_id == field_id)
@@ -102,6 +105,7 @@ def row_scan_pointcloud(
     depois de gravado, então o navegador pode guardá-lo.
     """
     scan_row = get_scoped(session, RowScan, scan_id, principal)
+    plans.exigir_recurso(session, principal.tenant_id, "lavoura_3d")
     if not scan_row.pointcloud_asset_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Passada sem nuvem de pontos.")
     asset = get_scoped(session, Asset, scan_row.pointcloud_asset_id, principal)
@@ -109,11 +113,8 @@ def row_scan_pointcloud(
         data = storage.store.read(asset.storage_key)
     except storage.UnknownAssetError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Arquivo ausente no armazenamento.") from exc
-    return Response(
-        content=data,
-        media_type=asset.content_type,
-        headers={"Cache-Control": "private, max-age=86400"},
-    )
+    return resposta_de_arquivo(data, asset.content_type, cache="private, max-age=86400",
+                               nome=f"passada-{scan_id}.ply")
 
 
 @router.get(
@@ -165,6 +166,22 @@ def timeline(
     get_scoped(session, Field, field_id, principal)
     points = twin.timeline(session, principal.tenant_id, field_id, days=days)
     return [TimePointOut(day=p.day, total=p.total, counts=p.counts) for p in points]
+
+
+@router.get("/fields/{field_id}/history", summary="Linha do tempo do talhão (ciclo completo)")
+def field_history(
+    field_id: str,
+    missions: int = Query(default=30, ge=1, le=200, description="Quantas missões, das mais novas."),
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
+    session: Session = Depends(get_session),
+) -> list[dict]:
+    """Missão → ocorrências → prescrição → aprovação → aplicação → verificação.
+
+    Do mais recente ao mais antigo; cada passo traz os IDs que ligam um ao outro.
+    """
+    get_scoped(session, Field, field_id, principal)
+    return visao_operacional.linha_do_tempo(session, principal.tenant_id, field_id,
+                                            limite_missoes=missions)
 
 
 @router.get(
@@ -261,6 +278,8 @@ def audit_log(
             rule_version=row.rule_version,
             model_version=row.model_version,
             payload=row.payload,
+            tenant_id=row.tenant_id,
+            support_session_id=row.support_session_id,
         )
         for row in session.scalars(statement)
     ]

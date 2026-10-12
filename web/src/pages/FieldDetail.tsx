@@ -1,4 +1,4 @@
-import { ArrowLeft, Box, Plus, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Box, Pencil, Plus, TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -8,12 +8,14 @@ import type { DecisionOut, ObservationOut, ZoneOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { DistributionBars, LabelsTimeline } from '@/components/charts'
 import { FarmMap, HealthLegend } from '@/components/FarmMap'
+import { AiModelCard, PlantsCard, PrevalenceCard } from '@/components/FieldAi'
+import { FieldSetupCard } from '@/components/FieldSetupCard'
 import { NewMissionModal, type MissionDefaults } from '@/components/NewMissionModal'
 import { ObservationModal } from '@/components/ObservationModal'
 import { PolygonDraw } from '@/components/PolygonDraw'
 import { Badge, Button, Card, CardHeader, Empty, ErrorBox, FormField, Modal, PageHeader, Spinner, Stat, Tabs } from '@/components/ui'
 import { fmt } from '@/lib/format'
-import { crop, decisionOutcome, decisionTone, disease, healthClass, type HealthClass } from '@/lib/labels'
+import { crop, decisionOutcome, decisionTone, disease, healthClass, isRoverFrameCrop, type HealthClass } from '@/lib/labels'
 
 type Window = '7' | '30' | '90'
 
@@ -64,9 +66,22 @@ export default function FieldDetail() {
                 { value: '90', label: '90 dias' },
               ]}
             />
+            <Link to={`/talhoes/${id}/historico`}>
+              <Button>Linha do tempo</Button>
+            </Link>
+            <Link to={`/mapa?modo=missao&talhao=${id}`}>
+              <Button>Mapa por missão</Button>
+            </Link>
             <Link to={`/lavoura-3d/${id}`}>
               <Button icon={<Box className="size-4" />}>Cópia 3D</Button>
             </Link>
+            {can('farm:manage') && (
+              <Link to={`/talhoes/${id}/contorno`}>
+                <Button variant="secondary" icon={<Pencil className="size-4" />}>
+                  Contorno
+                </Button>
+              </Link>
+            )}
             {can('mission:create') && (
               <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setMission({ fieldId: id })}>
                 Nova missão
@@ -86,6 +101,8 @@ export default function FieldDetail() {
           hint={snap?.classes[0] ? fmt.percent(snap.classes[0].ratio) : undefined}
         />
       </div>
+
+      <FieldSetupCard field={data} canManage={can('farm:manage')} />
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <Card className="overflow-hidden">
@@ -203,6 +220,16 @@ export default function FieldDetail() {
             </div>
           )}
         </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <PlantsCard fieldId={id} roverCrop={isRoverFrameCrop(data.crop)} />
+        </div>
+        <div className="flex flex-col gap-4">
+          <AiModelCard fieldId={id} canManage={can('farm:manage')} />
+          <PrevalenceCard fieldId={id} />
+        </div>
       </div>
 
       <ObservationModal observation={selected} onClose={() => setSelected(null)} showFieldLink={false} />

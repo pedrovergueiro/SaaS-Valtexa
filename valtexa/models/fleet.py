@@ -15,7 +15,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from valtexa.models.base import Base, TenantScoped, Timestamped, UUIDPrimaryKey, enum_column
@@ -115,6 +125,80 @@ class Device(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
             "idempotente sem perder nada."
         ),
     )
+
+    # --- Frota (brief, seções 22 e 25) -------------------------------------
+    # Tudo aqui é o que o próprio robô informa pelo protocolo — na abertura da
+    # sessão (versões), na telemetria (saúde) e na sincronização (pendência).
+    # Ninguém digita estes campos: o estado da frota é derivado deles por
+    # :func:`valtexa.services.fleet_state.derive`.
+    runtime_version: Mapped[str | None] = mapped_column(
+        String(32), doc="Versão do Rover Runtime (o software do robô)."
+    )
+    edge_ai_version: Mapped[str | None] = mapped_column(
+        String(32), doc="Versão do motor de IA embarcada."
+    )
+    ai_model_key: Mapped[str | None] = mapped_column(
+        String(64), doc="Modelo que o robô diz estar usando — chave do registry."
+    )
+    ai_model_version: Mapped[str | None] = mapped_column(String(32))
+    dnaty_version: Mapped[str | None] = mapped_column(
+        String(32), doc="Versão do dNATY que otimizou o modelo embarcado, se houver."
+    )
+    versions_reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    temperature_c: Mapped[float | None] = mapped_column(Float)
+    storage_total_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    storage_free_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    link_quality: Mapped[float | None] = mapped_column(Float)
+    operating_hours: Mapped[float | None] = mapped_column(
+        Float, doc="Horímetro do robô. Só sobe: um valor menor recebido é ignorado."
+    )
+    active_faults: Mapped[list] = mapped_column(
+        default=list,
+        nullable=False,
+        doc="Falhas da amostra de telemetria mais recente. Vazio = sem falha ativa.",
+    )
+    sync_pending: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+        doc="Registros que o robô disse ainda ter para descarregar no último /sync.",
+    )
+    last_sync_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), doc="Fim da última descarga completa (nada pendente)."
+    )
+    last_maintenance_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), doc="Quando o robô saiu da manutenção pela última vez."
+    )
+    maintenance_note: Mapped[str | None] = mapped_column(Text)
+    health: Mapped[dict | None] = mapped_column(
+        doc="Saúde padronizada da amostra mais recente (CPU, memória, acelerador, câmeras, "
+            "sensores, rede, sincronização). Ver services/saude_rover.py."
+    )
+    health_reported_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), doc="Quando o robô mediu a saúde guardada em ``health``."
+    )
+    # Rádio da fazenda (valtexa.services.chave_de_enlace): a pública X25519 do enlace
+    # assinada pela identidade do robô. A base busca daqui, conferindo a assinatura.
+    enlace_chave: Mapped[dict | None] = mapped_column(
+        doc="{nome, enlace_pub, assinatura, ed25519_pub} publicado pelo próprio robô."
+    )
+    enlace_chave_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Centro de comando (valtexa.services.comando_rover).
+    pinned_model_key: Mapped[str | None] = mapped_column(
+        String(64), doc="Modelo fixado neste robô pela equipe (sobrepõe o do talhão)."
+    )
+    pinned_model_version: Mapped[str | None] = mapped_column(String(32))
+    control_mode: Mapped[str | None] = mapped_column(
+        String(16), doc="Último modo pedido: autonomo, manual, pausado ou parado."
+    )
+    teleop_v: Mapped[float | None] = mapped_column(Float, doc="m/s pedido no controle remoto.")
+    teleop_w: Mapped[float | None] = mapped_column(Float, doc="rad/s pedido no controle remoto.")
+    teleop_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), doc="Validade do ponto de ajuste (homem-morto: ~1 s)."
+    )
+    teleop_seq: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    teleop_by: Mapped[str | None] = mapped_column(String(32))
 
     model: Mapped[DeviceModel] = relationship(back_populates="devices")
     credentials: Mapped[list[DeviceCredential]] = relationship(

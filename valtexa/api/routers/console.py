@@ -1,4 +1,6 @@
-"""Rotas de leitura para o console: telemetria, eventos, alertas, painel e stream.
+"""Rotas de leitura para o console: telemetria, eventos, alertas e painel.
+
+O fluxo ao vivo (SSE) mora em :mod:`valtexa.api.routers.stream`.
 
 Tudo aqui é leitura agregada que a tela precisaria montar com dezenas de
 chamadas. Nenhuma regra nova mora aqui — os alertas são o que outras partes do
@@ -8,19 +10,13 @@ lugar só.
 
 from __future__ import annotations
 
-import asyncio
-import json
-import time
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
-from starlette.concurrency import run_in_threadpool
 
-from valtexa import db
 from valtexa.api.deps import Principal, get_scoped, require, scoped
 from valtexa.config import settings
 from valtexa.db import get_session
@@ -40,7 +36,6 @@ from valtexa.models import (
     MissionSegment,
     MissionState,
     Observation,
-    OutboxEvent,
     SegmentState,
     SubjectType,
     TelemetryRollup,
@@ -54,6 +49,7 @@ from valtexa.schemas import (
     ApplicationSummary,
     CheckpointOut,
     DashboardOut,
+    DashboardOverviewOut,
     DeviceEventOut,
     DeviceSummary,
     MissionBrief,
@@ -62,7 +58,7 @@ from valtexa.schemas import (
     TelemetryRollupOut,
 )
 from valtexa.security import rbac
-from valtexa.services import twin, verification
+from valtexa.services import twin, verification, visao_operacional
 from valtexa.services.ingestion import OFFLINE_AFTER
 
 router = APIRouter(tags=["console"])
@@ -375,6 +371,7 @@ def dashboard(
         alert_counts={key: alert_counts.get(key, 0) for key in SEVERITY_RANK},
         alerts=current_alerts[:8],
         recent_missions=_recent_missions(session, tenant_id),
+        overview=DashboardOverviewOut(**visao_operacional.painel(session, tenant_id, now)),
     )
 
 
@@ -565,106 +562,6 @@ def collect_alerts(session: Session, tenant_id: str, *, days: int = 7) -> list[A
 
     found.sort(key=lambda alert: (SEVERITY_RANK[alert.severity], -as_utc(alert.at).timestamp()))
     return found
-
-
-# ---------------------------------------------------------------------------
-# Stream de eventos (SSE)
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "/stream",
-    summary="Eventos do cliente em tempo real (Server-Sent Events)",
-    response_class=StreamingResponse,
-)
-async def stream(
-    request: Request,
-    after: datetime | None = Query(
-        default=None,
-        description="Retoma a partir deste instante (o `created_at` do último evento).",
-    ),
-    timeout: float = Query(
-        default=300.0,
-        ge=0.5,
-        le=3600.0,
-        description="Duração da conexão. O cliente reconecta com `after`.",
-    ),
-    poll: float = Query(default=2.0, ge=0.05, le=30.0),
-    principal: Principal = Depends(require(rbac.TENANT_READ)),
-) -> StreamingResponse:
-    """Os eventos de domínio do cliente, conforme acontecem.
-
-    Conexão com prazo: o servidor encerra depois de ``timeout`` e o cliente
-    reconecta passando ``after``. Uma conexão eterna sobreviveria a um token
-    vencido e a um deploy; uma curta revalida as duas coisas a cada ciclo.
-
-    O cliente precisa mandar ``Authorization``, então ``EventSource`` do
-    navegador não serve — ele não aceita cabeçalho. O console lê com ``fetch``.
-    """
-    tenant_id = principal.tenant_id
-    cursor = as_utc(after) or datetime.now(UTC)
-
-    async def events_source():
-        nonlocal cursor
-        seen: set[str] = set()
-        deadline = time.monotonic() + timeout
-        last_beat = time.monotonic()
-        yield "retry: 3000\n\n"
-
-        while time.monotonic() < deadline:
-            if await request.is_disconnected():
-                break
-            rows = await run_in_threadpool(_events_since, tenant_id, cursor)
-            for row in rows:
-                if row["id"] in seen:
-                    continue
-                seen.add(row["id"])
-                created = datetime.fromisoformat(row["created_at"])
-                if created > cursor:
-                    cursor = created
-                    seen = {row["id"]}
-                yield (
-                    f"id: {row['id']}\nevent: {row['name']}\n"
-                    f"data: {json.dumps(row, ensure_ascii=False)}\n\n"
-                )
-            if time.monotonic() - last_beat > 15:
-                yield ": keepalive\n\n"
-                last_beat = time.monotonic()
-            await asyncio.sleep(poll)
-
-        yield f"event: stream.end\ndata: {json.dumps({'after': cursor.isoformat()})}\n\n"
-
-    return StreamingResponse(
-        events_source(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
-
-
-def _events_since(tenant_id: str, cursor: datetime) -> list[dict]:
-    """Eventos a partir do cursor, em sessão curta.
-
-    Sessão própria por consulta: segurar uma sessão pelos minutos da conexão
-    prenderia uma conexão do pool por usuário com o console aberto.
-    """
-    with db.SessionLocal() as session:
-        rows = session.scalars(
-            select(OutboxEvent)
-            .where(OutboxEvent.tenant_id == tenant_id, OutboxEvent.created_at >= cursor)
-            .order_by(OutboxEvent.created_at)
-            .limit(200)
-        )
-        return [
-            {
-                "id": row.id,
-                "name": row.name,
-                "subject_type": row.subject_type.value if row.subject_type else None,
-                "subject_id": row.subject_id,
-                "payload": row.payload,
-                "created_at": as_utc(row.created_at).isoformat(),
-            }
-            for row in rows
-        ]
 
 
 # ---------------------------------------------------------------------------

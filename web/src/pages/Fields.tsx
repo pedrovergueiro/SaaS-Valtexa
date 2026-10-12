@@ -1,4 +1,4 @@
-import { Plus, Sprout } from 'lucide-react'
+import { Building2, ClipboardList, Plus, Sprout } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -7,9 +7,22 @@ import { keys, useApiMutation, useFarms, useFields } from '@/api/queries'
 import type { FarmOut, FieldOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { FarmMap } from '@/components/FarmMap'
+import { FarmRegistryInputs, registryHasErrors } from '@/components/FarmRegistryInputs'
+import { FieldSpacingInputs } from '@/components/FieldSpacingInputs'
 import { PolygonDraw } from '@/components/PolygonDraw'
 import { Button, Card, CardHeader, Empty, ErrorBox, FormField, Modal, PageHeader, Spinner } from '@/components/ui'
 import { fmt } from '@/lib/format'
+import {
+  emptyRegistry,
+  farmRegistryGaps,
+  formatDocument,
+  registryChanges,
+  registryFromFarm,
+  registryPayload,
+  type RegistryKey,
+  type RegistryValues,
+} from '@/lib/farmRegistry'
+import { optionalNumber, parseValidationRows } from '@/lib/fieldSetup'
 import { crop } from '@/lib/labels'
 
 export default function Fields() {
@@ -17,8 +30,9 @@ export default function Fields() {
   const navigate = useNavigate()
   const farms = useFarms()
   const fields = useFields()
-  const [creatingField, setCreatingField] = useState(false)
+  const [creatingField, setCreatingField] = useState<string | null>(null)
   const [creatingFarm, setCreatingFarm] = useState(false)
+  const [editingFarm, setEditingFarm] = useState<FarmOut | null>(null)
 
   const farmName = new Map(farms.data?.map((farm) => [farm.id, farm.name]))
   const canManage = can('farm:manage')
@@ -33,7 +47,7 @@ export default function Fields() {
           canManage && (
             <>
               <Button onClick={() => setCreatingFarm(true)}>Nova fazenda</Button>
-              <Button variant="primary" icon={<Plus className="size-4" />} disabled={!hasFarm} onClick={() => setCreatingField(true)}>
+              <Button variant="primary" icon={<Plus className="size-4" />} disabled={!hasFarm} onClick={() => setCreatingField(farms.data?.[0]?.id ?? '')}>
                 Novo talhão
               </Button>
             </>
@@ -44,10 +58,52 @@ export default function Fields() {
       <ErrorBox error={fields.error ?? farms.error} className="mb-4" />
       {fields.isLoading && <Spinner />}
 
-      {!fields.isLoading && (fields.data?.length ?? 0) === 0 && (
+      {!fields.isLoading && !farms.isLoading && !hasFarm && (
+        <Card>
+          <Empty
+            title="Nenhuma fazenda cadastrada"
+            icon={<Building2 className="size-5" />}
+            action={
+              canManage ? (
+                <Button variant="primary" onClick={() => setCreatingFarm(true)}>
+                  Cadastrar a fazenda
+                </Button>
+              ) : undefined
+            }
+          >
+            {canManage
+              ? 'Tudo começa pela fazenda: o centro dela e a base onde a frota recarrega.'
+              : 'Peça a quem administra a conta para cadastrar a fazenda.'}
+          </Empty>
+        </Card>
+      )}
+
+      {hasFarm && (
+        <div className="mb-4 flex flex-wrap gap-2" aria-label="Fazendas">
+          {farms.data?.map((farm) => (
+            <div key={farm.id} className="card flex items-center gap-3 px-4 py-2.5">
+              <Building2 className="size-4 text-muted" aria-hidden />
+              <span className="font-medium">{farm.name}</span>
+              <span className="text-[12px] text-muted">
+                {farm.fields === 0 ? 'sem talhão' : `${farm.fields} talhão(ões)`}
+              </span>
+              {farm.fields === 0 && canManage && (
+                <Button size="sm" variant="primary" icon={<Plus className="size-4" />} onClick={() => setCreatingField(farm.id)}>
+                  Desenhar o primeiro talhão
+                </Button>
+              )}
+              <FarmRegistryChip farm={farm} canManage={canManage} onEdit={() => setEditingFarm(farm)} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!fields.isLoading && hasFarm && (fields.data?.length ?? 0) === 0 && (
         <Card>
           <Empty title="Nenhum talhão cadastrado" icon={<Sprout className="size-5" />}>
-            {hasFarm ? 'Desenhe o primeiro talhão no mapa.' : 'Comece cadastrando a fazenda.'}
+            {canManage
+              ? 'Desenhe o talhão no mapa e informe os espaçamentos: são eles que a fusão por planta usa para separar uma planta da outra.'
+              : 'Peça a quem administra a conta para desenhar os talhões.'}
           </Empty>
         </Card>
       )}
@@ -80,22 +136,45 @@ export default function Fields() {
         </div>
       )}
 
-      {creatingField && farms.data && (
-        <FieldModal farms={farms.data} existing={fields.data ?? []} onClose={() => setCreatingField(false)} />
+      {creatingField !== null && farms.data && (
+        <FieldModal
+          farms={farms.data}
+          initialFarmId={creatingField}
+          existing={fields.data ?? []}
+          onClose={() => setCreatingField(null)}
+        />
       )}
       {creatingFarm && <FarmModal onClose={() => setCreatingFarm(false)} />}
+      {editingFarm && <FarmRegistryModal farm={editingFarm} onClose={() => setEditingFarm(null)} />}
     </>
   )
 }
 
-function FieldModal({ farms, existing, onClose }: { farms: FarmOut[]; existing: FieldOut[]; onClose: () => void }) {
-  const [farmId, setFarmId] = useState(farms[0]?.id ?? '')
+function FieldModal({
+  farms,
+  initialFarmId,
+  existing,
+  onClose,
+}: {
+  farms: FarmOut[]
+  initialFarmId: string
+  existing: FieldOut[]
+  onClose: () => void
+}) {
+  const navigate = useNavigate()
+  const { isPlatform } = useAuth()
+  const [farmId, setFarmId] = useState(initialFarmId || farms[0]?.id || '')
   const [name, setName] = useState('')
-  const [cropValue, setCrop] = useState('corn')
+  const [cropValue, setCrop] = useState('coffee')
   const [stage, setStage] = useState('')
   const [azimuth, setAzimuth] = useState('')
   const [spacing, setSpacing] = useState('')
+  const [plantSpacing, setPlantSpacing] = useState('')
+  const [rowCount, setRowCount] = useState('')
+  const [validation, setValidation] = useState('')
+  const [notes, setNotes] = useState('')
   const [boundary, setBoundary] = useState<number[][]>([])
+  const fileiras = parseValidationRows(validation, optionalNumber(rowCount))
 
   const create = useApiMutation(
     () =>
@@ -106,8 +185,12 @@ function FieldModal({ farms, existing, onClose }: { farms: FarmOut[]; existing: 
           crop: cropValue,
           boundary,
           crop_stage: stage || null,
-          row_azimuth_deg: azimuth ? Number(azimuth) : null,
-          row_spacing_m: spacing ? Number(spacing) : null,
+          row_azimuth_deg: optionalNumber(azimuth),
+          row_spacing_m: optionalNumber(spacing),
+          plant_spacing_m: optionalNumber(plantSpacing),
+          row_count: optionalNumber(rowCount),
+          validation_rows: fileiras.rows,
+          notes: notes.trim() || null,
         },
       }),
     [keys.fields, keys.farms],
@@ -126,10 +209,16 @@ function FieldModal({ farms, existing, onClose }: { farms: FarmOut[]; existing: 
           <Button
             variant="primary"
             loading={create.isPending}
-            disabled={!name.trim() || boundary.length < 3}
-            onClick={() => create.mutate(undefined, { onSuccess: onClose })}
+            disabled={!name.trim() || boundary.length < 3 || Boolean(fileiras.error)}
+            onClick={() =>
+              create.mutate(undefined, {
+                // A equipe segue direto para o editor: a IA encaixa o contorno, lê os
+                // obstáculos e calcula a rota assim que ele abre.
+                onSuccess: (novo) => (isPlatform ? navigate(`/talhoes/${novo.id}/contorno?ajustar=1`) : onClose()),
+              })
+            }
           >
-            Salvar talhão
+            {isPlatform ? 'Salvar e ajustar com IA' : 'Salvar talhão'}
           </Button>
         </>
       }
@@ -161,10 +250,12 @@ function FieldModal({ farms, existing, onClose }: { farms: FarmOut[]; existing: 
           <FormField label="Direção das linhas (°)" hint="0 = norte-sul · 90 = leste-oeste">
             <input className="input num" type="number" min="0" max="179" value={azimuth} onChange={(event) => setAzimuth(event.target.value)} />
           </FormField>
-          <FormField label="Espaçamento (m)">
-            <input className="input num" type="number" min="0.1" step="0.05" value={spacing} onChange={(event) => setSpacing(event.target.value)} />
-          </FormField>
         </div>
+        <FieldSpacingInputs
+          values={{ spacing, plantSpacing, rowCount, validation, notes }}
+          setters={{ setSpacing, setPlantSpacing, setRowCount, setValidation, setNotes }}
+          validationError={fileiras.error}
+        />
         <PolygonDraw value={boundary} onChange={setBoundary} fields={existing} />
         <ErrorBox error={create.error} />
       </div>
@@ -177,6 +268,7 @@ function FarmModal({ onClose }: { onClose: () => void }) {
   const [center, setCenter] = useState<number[] | null>(null)
   const [base, setBase] = useState<number[] | null>(null)
   const [picking, setPicking] = useState<'center' | 'base'>('center')
+  const [registro, setRegistro] = useState<RegistryValues>(emptyRegistry)
 
   const create = useApiMutation(
     () =>
@@ -188,6 +280,7 @@ function FarmModal({ onClose }: { onClose: () => void }) {
           center_lat: center?.[1],
           base_lon: base?.[0] ?? null,
           base_lat: base?.[1] ?? null,
+          ...registryPayload(registro),
         },
       }),
     [keys.farms],
@@ -203,7 +296,7 @@ function FarmModal({ onClose }: { onClose: () => void }) {
       footer={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" loading={create.isPending} disabled={!name.trim() || !center} onClick={() => create.mutate(undefined, { onSuccess: onClose })}>
+          <Button variant="primary" loading={create.isPending} disabled={!name.trim() || !center || registryHasErrors(registro)} onClick={() => create.mutate(undefined, { onSuccess: onClose })}>
             Salvar fazenda
           </Button>
         </>
@@ -225,6 +318,13 @@ function FarmModal({ onClose }: { onClose: () => void }) {
           points={[center, base].filter((point): point is number[] => Boolean(point))}
           onPick={(point) => (picking === 'center' ? setCenter(point) : setBase(point))}
         />
+        <details className="rounded-[10px] border border-line px-4 py-3">
+          <summary className="cursor-pointer text-[14px] font-medium">Identificação da propriedade (opcional)</summary>
+          <p className="mt-1 mb-3 text-[12px] text-muted">
+            Produtor, CPF/CNPJ, município, CAR e responsável técnico. Dá para completar depois.
+          </p>
+          <FarmRegistryInputs values={registro} onChange={(key, value) => setRegistro((atual) => ({ ...atual, [key]: value }))} />
+        </details>
         <ErrorBox error={create.error} />
       </div>
     </Modal>
@@ -233,4 +333,65 @@ function FarmModal({ onClose }: { onClose: () => void }) {
 
 function FarmMapPicker({ points, onPick }: { points: number[][]; onPick: (point: number[]) => void }) {
   return <FarmMap className="h-72" draftPolygon={points} onMapClick={onPick} />
+}
+
+
+/** Situação da identificação da fazenda e o botão que a completa ou edita. */
+function FarmRegistryChip({ farm, canManage, onEdit }: { farm: FarmOut; canManage: boolean; onEdit: () => void }) {
+  const falta = farmRegistryGaps(farm)
+  const resumo = [farm.owner_name, farm.owner_document && formatDocument(farm.owner_document), farm.city && `${farm.city}${farm.state ? `/${farm.state}` : ''}`]
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <>
+      {resumo && <span className="text-[12px] text-ink-2">{resumo}</span>}
+      {falta.length > 0 && (
+        <span className="text-[12px] text-warning" title={`Falta: ${falta.join(', ')}`}>
+          cadastro incompleto: {falta.join(', ')}
+        </span>
+      )}
+      {canManage && (
+        <Button size="sm" variant={falta.length > 0 ? 'secondary' : 'ghost'} icon={<ClipboardList className="size-4" />} onClick={onEdit}>
+          {falta.length > 0 ? 'Completar cadastro' : 'Cadastro'}
+        </Button>
+      )}
+    </>
+  )
+}
+
+function FarmRegistryModal({ farm, onClose }: { farm: FarmOut; onClose: () => void }) {
+  const [registro, setRegistro] = useState<RegistryValues>(() => registryFromFarm(farm))
+  const mudancas = registryChanges(farm, registro)
+  const salvar = useApiMutation(
+    () => api<FarmOut>(`/v1/farms/${farm.id}`, { method: 'PATCH', body: mudancas }),
+    [keys.farms],
+  )
+  const alterar = (key: RegistryKey, value: string) => setRegistro((atual) => ({ ...atual, [key]: value }))
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      wide
+      title={`Cadastro de ${farm.name}`}
+      description="Identificação da propriedade. Cada alteração fica na auditoria, com o antes e o depois."
+      footer={
+        <>
+          <Button onClick={onClose}>Cancelar</Button>
+          <Button
+            variant="primary"
+            loading={salvar.isPending}
+            disabled={Object.keys(mudancas).length === 0 || registryHasErrors(registro)}
+            onClick={() => salvar.mutate(undefined, { onSuccess: onClose })}
+          >
+            Salvar cadastro
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <FarmRegistryInputs values={registro} onChange={alterar} />
+        <ErrorBox error={salvar.error} />
+      </div>
+    </Modal>
+  )
 }

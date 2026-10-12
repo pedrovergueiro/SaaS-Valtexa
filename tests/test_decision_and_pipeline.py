@@ -91,14 +91,14 @@ class TestPipelineCombination:
         assert outcome.status is DiagnosisStatus.NEEDS_REVIEW
         assert outcome.label is not None
 
-    def test_cultura_sem_modelo_e_recusada(self) -> None:
+    def test_cultura_sem_modelo_e_recusada(self, registry) -> None:
         """Classificar soja com o modelo de milho devolveria uma classe de milho."""
         with pytest.raises(pipeline.AnalyzerUnavailableError, match="soja"):
-            pipeline.model_for_crop("soja")
+            pipeline.model_for_crop(registry, "soja")
 
-    def test_culturas_atendidas_resolvem(self) -> None:
-        assert pipeline.model_for_crop("corn") == "leaf-foliar"
-        assert pipeline.model_for_crop("coffee") == "coffee-foliar"
+    def test_culturas_atendidas_resolvem(self, registry) -> None:
+        assert pipeline.model_for_crop(registry, "corn") == "leaf-foliar"
+        assert pipeline.model_for_crop(registry, "coffee") == "coffee-foliar"
 
 
 def context(**overrides: object) -> engine.DecisionContext:

@@ -15,10 +15,25 @@ import {
 
 import { api, type Query } from './client'
 import type * as T from './types'
+import type { MissionReport } from '@/lib/missionReport'
+import type { EdgeRecord } from '@/lib/edgeRecords'
+import type { HistoryStep } from '@/lib/fieldHistory'
+import type { Lugar } from '@/lib/localizar'
+import type { Comparison, MapPlant, MissionMap } from '@/lib/mapLayers'
+
+export type MissionPlants = {
+  mission_id: string
+  plants: (MapPlant & { cameras: string[]; edge_categories: Record<string, number> })[]
+  plants_seen: number
+  results_without_plant: number
+  incidence: MissionMap['incidence'] & { interval_95: [number, number] }
+  method: string
+}
 
 export const keys = {
   me: (tenantId: string | null) => ['me', tenantId] as const,
   memberships: ['memberships'] as const,
+  sessions: ['sessions'] as const,
   dashboard: ['dashboard'] as const,
   alerts: ['alerts'] as const,
   devices: (query: Query = {}) => ['devices', query] as const,
@@ -40,8 +55,14 @@ export const keys = {
   missionSafety: (id: string) => ['missions', 'safety', id] as const,
   missionHistory: (id: string) => ['missions', 'history', id] as const,
   checkpoints: (id: string) => ['missions', 'checkpoints', id] as const,
+  missionReport: (id: string) => ['missions', 'report', id] as const,
   observations: (query: Query = {}) => ['observations', query] as const,
   reviewQueue: ['review-queue'] as const,
+  reviewQueueOrdered: (order: ReviewOrder) => ['review-queue', order] as const,
+  diagnosis: (id: string) => ['diagnoses', 'one', id] as const,
+  aiModels: (fieldId: string) => ['fields', 'ai-models', fieldId] as const,
+  plants: (fieldId: string) => ['plants', fieldId] as const,
+  prevalence: (fieldId: string) => ['plants', 'prevalence', fieldId] as const,
   decisions: (query: Query = {}) => ['decisions', query] as const,
   products: ['products'] as const,
   batches: (productId: string) => ['batches', productId] as const,
@@ -50,10 +71,35 @@ export const keys = {
   verifications: ['verifications'] as const,
   audit: (query: Query = {}) => ['audit', query] as const,
   users: ['users'] as const,
+  collections: (query: Query = {}) => ['collections', query] as const,
+  collection: (id: string) => ['collections', 'one', id] as const,
+  collectionFiles: (id: string) => ['collections', 'files', id] as const,
+  adminCollections: (query: Query = {}) => ['admin', 'collections', query] as const,
+  adminCollection: (id: string) => ['admin', 'collections', 'one', id] as const,
+  adminCollectionFiles: (id: string) => ['admin', 'collections', 'files', id] as const,
+  adminTenants: ['admin', 'tenants'] as const,
+  adminJobs: (query: Query = {}) => ['admin', 'jobs', query] as const,
+  datasets: ['admin', 'datasets'] as const,
+  datasetSamples: (id: string) => ['admin', 'datasets', 'samples', id] as const,
+  modelCatalog: ['admin', 'models', 'catalog'] as const,
 }
 
 // --- leitura ----------------------------------------------------------------
 
+/**
+ * Sobre os `refetchInterval` deste arquivo.
+ *
+ * Desde que `/v1/stream` existe, eles deixaram de ser o mecanismo e passaram a
+ * ser a rede embaixo dele: o que atualiza a tela é o evento empurrado pelo
+ * servidor (ver `lib/stream.ts`), e o intervalo só entra quando a conexão ao
+ * vivo caiu e ninguém percebeu. Por isso continuam largos — encurtá-los agora
+ * seria pagar duas vezes pelo mesmo dado.
+ *
+ * A exceção é `useTelemetry`. Telemetria não vira evento de outbox: uma amostra
+ * por segundo por robô transformaria a tabela de eventos numa série temporal, e
+ * o fluxo ao vivo numa enxurrada que ninguém lê. Ali o intervalo é o mecanismo,
+ * e é por isso que ele é o mais curto.
+ */
 export const useDashboard = () =>
   useQuery({
     queryKey: keys.dashboard,
@@ -177,6 +223,54 @@ export const useMissionHistory = (id: string) =>
     queryFn: () => api<T.MissionHistoryOut[]>(`/v1/missions/${id}/history`),
   })
 
+/** Resultado da missão (seção 47): plantas, incidência, recomendações, comparação. */
+export const useMissionReport = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: keys.missionReport(id),
+    queryFn: () => api<MissionReport>(`/v1/missions/${id}/report`),
+    enabled,
+  })
+
+/** Rota percorrida, eventos da Edge AI e plantas da missão (mapa, seção 46). */
+export const useMissionMap = (id: string | null | undefined) =>
+  useQuery({
+    queryKey: ['missions', 'map', id ?? ''],
+    queryFn: () => api<MissionMap>(`/v1/missions/${id}/map`),
+    enabled: Boolean(id),
+  })
+
+/** Todas as plantas vistas na missão (o relatório só traz as ocorrências). */
+export const useMissionPlants = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: ['missions', 'plants', id],
+    queryFn: () => api<MissionPlants>(`/v1/missions/${id}/plants`),
+    enabled,
+  })
+
+export const useMissionComparison = (id: string | null | undefined, baselineId: string | null | undefined) =>
+  useQuery({
+    queryKey: ['missions', 'comparison', id ?? '', baselineId ?? ''],
+    queryFn: () =>
+      api<Comparison>(`/v1/missions/${id}/comparison`, { query: { baseline_id: baselineId } }),
+    enabled: Boolean(id && baselineId && id !== baselineId),
+  })
+
+/** Registros que os robôs sincronizaram para a missão (até 1000 por página). */
+export const useEdgeRecords = (query: Query, enabled = true) =>
+  useQuery({
+    queryKey: ['edge-records', query],
+    queryFn: () => api<EdgeRecord[]>('/v1/edge/records', { query }),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+
+export const useFieldHistory = (fieldId: string | undefined) =>
+  useQuery({
+    queryKey: ['fields', 'history', fieldId ?? ''],
+    queryFn: () => api<HistoryStep[]>(`/v1/fields/${fieldId}/history`),
+    enabled: Boolean(fieldId),
+  })
+
 export const useCheckpoints = (id: string) =>
   useQuery({
     queryKey: keys.checkpoints(id),
@@ -191,10 +285,58 @@ export const useObservations = (query: Query, enabled = true) =>
     enabled,
   })
 
-export const useReviewQueue = () =>
+/**
+ * A fila do agrônomo em uma de duas ordens.
+ *
+ * `novidade` põe no topo o que mais destoa do conhecido; `valor`, o que mais
+ * ensina ao próximo treino — e cada item volta com o motivo.
+ */
+export type ReviewOrder = 'novidade' | 'valor'
+
+export const useReviewQueue = (order: ReviewOrder = 'novidade') =>
   useQuery({
-    queryKey: keys.reviewQueue,
-    queryFn: () => api<T.DiagnosisOut[]>('/v1/review/queue', { query: { limit: 100 } }),
+    queryKey: keys.reviewQueueOrdered(order),
+    queryFn: () => api<T.DiagnosisOut[]>('/v1/review/queue', { query: { limit: 100, order } }),
+    placeholderData: keepPreviousData,
+  })
+
+/** Um diagnóstico com os sinais de cada análise — o que a lista de observações não traz. */
+export const useDiagnosis = (id: string | null | undefined) =>
+  useQuery({
+    queryKey: keys.diagnosis(id ?? ''),
+    queryFn: () => api<T.DiagnosisOut>(`/v1/diagnoses/${id}`),
+    enabled: Boolean(id),
+    staleTime: 60_000,
+  })
+
+/** As versões do modelo que servem a cultura do talhão, para o seletor. */
+export const useFieldAiModels = (fieldId: string) =>
+  useQuery({
+    queryKey: keys.aiModels(fieldId),
+    queryFn: () => api<T.AiModelChoiceOut[]>(`/v1/fields/${fieldId}/ai-models`),
+    staleTime: 5 * 60_000,
+  })
+
+/**
+ * As plantas do talhão, fundidas pela inferência a partir dos quadros do rover.
+ *
+ * Sem `retry`: o 503 aqui é estado (inferência sem talhões configurados), não
+ * falha passageira — repetir três vezes só atrasa a mensagem.
+ */
+export const useFieldPlants = (fieldId: string) =>
+  useQuery({
+    queryKey: keys.plants(fieldId),
+    queryFn: () => api<T.PlantOut[]>(`/v1/fields/${fieldId}/plants`),
+    retry: false,
+    staleTime: 30_000,
+  })
+
+export const useFieldPrevalence = (fieldId: string) =>
+  useQuery({
+    queryKey: keys.prevalence(fieldId),
+    queryFn: () => api<T.PrevalenceOut>(`/v1/fields/${fieldId}/prevalence`),
+    retry: false,
+    staleTime: 60_000,
   })
 
 export const useDecisions = (query: Query = {}) =>
@@ -274,6 +416,29 @@ export function useMissionAction(missionId: string) {
   )
 }
 
+/**
+ * Corrigir a rota à mão e mandar recalcular.
+ *
+ * Invalidam os segmentos junto com a missão: a rota é o que a tela desenha, e
+ * uma missão atualizada com segmentos velhos mostraria o percurso antigo no
+ * mapa enquanto os números ao lado já falam do novo.
+ */
+export function useEditRoute(missionId: string) {
+  return useApiMutation(
+    (body: { legs: number[][][]; reason?: string | null }) =>
+      api<T.MissionOut>(`/v1/missions/${missionId}/route`, { method: 'PATCH', body }),
+    [['missions'], keys.segments(missionId), keys.missionSafety(missionId), keys.missionHistory(missionId)],
+  )
+}
+
+export function useReplanRoute(missionId: string) {
+  return useApiMutation(
+    (body: { swath_m?: number | null; row_azimuth_deg?: number | null; obstacle_margin_m?: number | null }) =>
+      api<T.MissionOut>(`/v1/missions/${missionId}/replan`, { method: 'POST', body }),
+    [['missions'], keys.segments(missionId), keys.missionSafety(missionId), keys.missionHistory(missionId)],
+  )
+}
+
 export function useCreateMission() {
   return useApiMutation(
     (body: T.MissionCreate) => api<T.MissionOut>('/v1/missions', { method: 'POST', body }),
@@ -292,10 +457,245 @@ export function useReviewDiagnosis() {
   )
 }
 
+/**
+ * Troca a versão do modelo do talhão.
+ *
+ * Vale para o que chegar depois — o que já foi diagnosticado fica com a versão
+ * que o diagnosticou, registrada em cada análise.
+ */
+export function useSetFieldAiModel(fieldId: string) {
+  return useApiMutation(
+    (aiModel: string | null) =>
+      api<T.FieldOut>(`/v1/fields/${fieldId}/ai-model`, { method: 'PUT', body: { ai_model: aiModel } }),
+    [keys.field(fieldId), keys.fields, keys.aiModels(fieldId), keys.prevalence(fieldId)],
+  )
+}
+
 export function useDecide() {
   return useApiMutation(
     (diagnosisId: string) =>
       api<T.DecisionOut>(`/v1/diagnoses/${diagnosisId}/decide`, { method: 'POST' }),
     [['decisions']],
+  )
+}
+
+// --- coletas ------------------------------------------------------------------
+
+/**
+ * Coletas publicadas, do ponto de vista do cliente.
+ *
+ * A rota do cliente só devolve o que já foi publicado — upload e fila são
+ * assunto da ValTexa e vivem no painel administrativo.
+ */
+export const useCollections = (query: Query = {}) =>
+  useQuery({
+    queryKey: keys.collections(query),
+    queryFn: () => api<T.CollectionOut[]>('/v1/collections', { query }),
+  })
+
+export const useCollection = (id: string) =>
+  useQuery({
+    queryKey: keys.collection(id),
+    queryFn: () => api<T.CollectionOut>(`/v1/collections/${id}`),
+    enabled: Boolean(id),
+  })
+
+export const useCollectionFiles = (id: string) =>
+  useQuery({
+    queryKey: keys.collectionFiles(id),
+    queryFn: () => api<T.CollectionFileOut[]>(`/v1/collections/${id}/files`),
+    enabled: Boolean(id),
+  })
+
+// --- painel administrativo ----------------------------------------------------
+
+export const useAdminTenants = () =>
+  useQuery({ queryKey: keys.adminTenants, queryFn: () => api<T.TenantOut[]>('/v1/admin/tenants') })
+
+export const useAdminCollections = (query: Query = {}) =>
+  useQuery({
+    queryKey: keys.adminCollections(query),
+    queryFn: () => api<T.CollectionOut[]>('/v1/admin/collections', { query }),
+    placeholderData: keepPreviousData,
+  })
+
+/**
+ * Uma coleta, no painel.
+ *
+ * Reconsulta sozinha enquanto houver trabalho em curso: é o que faz a barra
+ * andar sem ninguém apertar nada. Parada a coleta, o intervalo desliga — nada
+ * de bater no servidor a cada cinco segundos por uma tela que não muda mais.
+ */
+export const useAdminCollection = (id: string) =>
+  useQuery({
+    queryKey: keys.adminCollection(id),
+    queryFn: () => api<T.CollectionOut>(`/v1/admin/collections/${id}`),
+    enabled: Boolean(id),
+    refetchInterval: (query) => {
+      const estado = query.state.data?.state
+      const emCurso = ['uploading', 'upload_completed', 'processing_queued', 'ai_processing']
+      return estado && emCurso.includes(estado) ? 3_000 : false
+    },
+  })
+
+export const useAdminCollectionFiles = (id: string, query: Query = {}) =>
+  useQuery({
+    queryKey: [...keys.adminCollectionFiles(id), query],
+    queryFn: () => api<T.CollectionFileOut[]>(`/v1/admin/collections/${id}/files`, { query }),
+    enabled: Boolean(id),
+  })
+
+export const useAdminJobs = (query: Query = {}) =>
+  useQuery({
+    queryKey: keys.adminJobs(query),
+    queryFn: () => api<T.JobOut[]>('/v1/admin/jobs', { query }),
+    refetchInterval: 10_000,
+  })
+
+export const useDatasets = () =>
+  useQuery({ queryKey: keys.datasets, queryFn: () => api<T.DatasetOut[]>('/v1/admin/datasets') })
+
+export const useDatasetSamples = (id: string) =>
+  useQuery({
+    queryKey: keys.datasetSamples(id),
+    queryFn: () => api<T.DatasetSampleOut[]>(`/v1/admin/datasets/${id}/samples`),
+    enabled: Boolean(id),
+  })
+
+export const useModelCatalog = () =>
+  useQuery({
+    queryKey: keys.modelCatalog,
+    queryFn: () => api<T.CatalogModelOut[]>('/v1/admin/models/catalog'),
+    staleTime: 5 * 60_000,
+  })
+
+export function useCreateCollection() {
+  return useApiMutation(
+    (body: T.CollectionCreate) =>
+      api<T.CollectionOut>('/v1/admin/collections', { method: 'POST', body }),
+    [['admin', 'collections']],
+  )
+}
+
+export function useCompleteUpload() {
+  return useApiMutation(
+    (id: string) =>
+      api<T.CollectionOut>(`/v1/admin/collections/${id}/complete`, { method: 'POST' }),
+    [['admin', 'collections'], keys.adminJobs()],
+  )
+}
+
+export function useReleaseCollection() {
+  return useApiMutation(
+    (id: string) =>
+      api<T.CollectionOut>(`/v1/admin/collections/${id}/release`, { method: 'POST' }),
+    [['admin', 'collections'], ['collections']],
+  )
+}
+
+export function useRetryJob() {
+  return useApiMutation(
+    (id: string) => api<T.JobOut>(`/v1/admin/jobs/${id}/retry`, { method: 'POST' }),
+    [['admin', 'jobs'], ['admin', 'collections']],
+  )
+}
+
+export function useFreezeDatasetVersion(datasetId: string) {
+  return useApiMutation(
+    (body: { version: string; notes?: string }) =>
+      api<T.DatasetVersionOut>(`/v1/admin/datasets/${datasetId}/versions`, {
+        method: 'POST',
+        body,
+      }),
+    [keys.datasets],
+  )
+}
+
+/**
+ * Cadastra um cliente, com propriedade e primeiro talhao.
+ *
+ * Invalida a lista de clientes e a de associacoes: quem e da equipe da ValTexa
+ * ve todo cliente na troca de cliente, entao um cadastro novo muda as duas.
+ */
+export function useOnboardTenant() {
+  return useApiMutation(
+    (body: T.OnboardIn) => api<T.OnboardOut>('/v1/admin/tenants', { method: 'POST', body }),
+    [keys.adminTenants, keys.memberships],
+  )
+}
+
+/** Altera contato, endereco e contrato de um cliente. */
+export function useUpdateTenant(tenantId: string) {
+  return useApiMutation(
+    (body: T.TenantUpdate) =>
+      api<T.TenantOut>(`/v1/admin/tenants/${tenantId}`, { method: 'PATCH', body }),
+    [keys.adminTenants],
+  )
+}
+
+/**
+ * Planeja a cobertura de um talhao: rota, tempo, energia e postes de recarga.
+ *
+ * Nao invalida nada. Planejar e pergunta, nao escrita: o mesmo talhao e
+ * replanejado dezenas de vezes enquanto se escolhe a direcao das linhas e a
+ * largura da faixa, e nenhuma dessas tentativas muda o banco.
+ */
+export function usePlanField(fieldId: string) {
+  return useMutation({
+    mutationFn: (body: T.PlanRequest) =>
+      api<T.PlanOut>(`/v1/admin/fields/${fieldId}/plan`, { method: 'POST', body }),
+  })
+}
+
+/** O satélite do console: o do Google (Map Tiles API) quando ligado, se não o da Esri. */
+export type Satelite =
+  | { provedor: 'esri'; aviso?: string }
+  | { provedor: 'google'; sessao: string; chave: string; url: string; tile_px: number }
+
+export function useSatelite() {
+  return useQuery({
+    queryKey: ['mapa', 'satelite'],
+    queryFn: () => api<Satelite>('/v1/mapa/satelite'),
+    staleTime: 6 * 60 * 60 * 1000,
+    retry: false,
+  })
+}
+
+/** Busca um lugar pelo endereço (Google ou OpenStreetMap, no servidor). */
+export function useBuscaLugar() {
+  return useMutation({
+    mutationFn: (q: string) =>
+      api<{ lugares: Lugar[]; avisos: string[] }>(`/v1/mapa/localizar?q=${encodeURIComponent(q)}`),
+  })
+}
+
+/**
+ * Encaixe do contorno pela IA.
+ *
+ * Não invalida nada: encaixar é pergunta, não escrita. O resultado volta para a
+ * tela e é a pessoa que decide salvar.
+ */
+export function useRefineBoundary() {
+  return useMutation({
+    mutationFn: (body: T.BoundaryRefineIn) =>
+      api<T.BoundaryRefineOut>('/v1/admin/boundary/refine', { method: 'POST', body }),
+  })
+}
+
+/**
+ * Grava o contorno redesenhado, com a leitura de terreno que veio junto.
+ *
+ * A leitura viaja com o contorno porque é dele que ela vale: um terreno lido
+ * sobre outro polígono descreve outro pedaço de chão. Salvar sem ela apaga a
+ * anterior, pelo mesmo motivo.
+ */
+export function useUpdateFieldBoundary(fieldId: string) {
+  return useApiMutation(
+    ({ boundary, terrain }: { boundary: number[][]; terrain?: T.TerrainOut | null }) =>
+      api<T.FieldOut>(`/v1/fields/${fieldId}/boundary`, {
+        method: 'PATCH',
+        body: { boundary, terrain: terrain ?? null },
+      }),
+    [keys.fields, keys.field(fieldId), ['twin'], ['scene'], keys.dashboard],
   )
 }

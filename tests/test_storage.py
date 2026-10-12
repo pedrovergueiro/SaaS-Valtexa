@@ -27,7 +27,7 @@ class FakeS3:
         self.objects: dict[tuple[str, str], bytes] = {}
         self.puts = 0
 
-    def put_object(self, Bucket, Key, Body, ContentType, Metadata):
+    def put_object(self, Bucket, Key, Body, **_extras):
         self.puts += 1
         self.objects[(Bucket, Key)] = Body
 

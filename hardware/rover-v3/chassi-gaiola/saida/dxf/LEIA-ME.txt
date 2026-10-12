@@ -1,0 +1,40 @@
+Peças planas do caderno VTX-RV3-CG-G — corte a laser/CNC
+Unidades: mm. Escala 1:1. Camadas: CORTE (contorno), FUROS, GRAVAR-NAO (identificação — não cortar).
+Quantidades e material: folhas 14 (Parte A) e 21 (Parte B).
+Peças esquerdas; as direitas são espelhadas (W-02, W-03, W-05, W-06, W-09, W-11, W-13:
+2 E + 2 D; K-01, M-02, M-20, E-01, E-02: mesma chapa virada).
+
+ATENÇÃO: DXF NÃO CARREGA TOLERÂNCIA. Toda cota com ajuste, planicidade, referência ou
+acabamento está nas folhas 28 a 31 e em revisao-g/usinagem.py. Cortar pelo DXF e usinar
+sem ler aquelas folhas produz peça fora de especificação nos furos de ajuste.
+
+C-01_chapa-de-fundo_e2,0_Al5052-H32.dxf
+E-01_bandeja-lateral_e2,0_Al5052-H32.dxf
+E-02_bandeja-de-extremidade_e2,0_Al5052-H32.dxf
+E-10_reforco-do-e-stop_e3,0_Al6061-T6.dxf
+G-05c_sapata-meio_e3,0_Al6061-T6.dxf
+G-05b_sapata-interna_e3,0_Al6061-T6.dxf
+G-05a_sapata-canto_e3,0_Al6061-T6.dxf
+G-06_suporte-do-lidar_e5,0_Al6061-T6.dxf
+G-07_tampa-do-trilho_e1,5_Al6061-T6.dxf
+K-01_carenagem-lateral-meia_e2,0_Al5052-H32.dxf
+K-02_carenagem-frontal_e2,0_Al5052-H32.dxf
+K-03_carenagem-traseira_e2,0_Al5052-H32.dxf
+K-04_tampa-superior-dianteira_e1,2_Al5052-H32.dxf
+K-05_tampa-superior-traseira_e1,2_Al5052-H32.dxf
+K-06_faixa-central_e1,2_Al5052-H32.dxf
+M-02_chapa-de-reforco-da-base_e6,0_Al6061-T6.dxf
+M-20_suporte-da-camera_e6,0_Al6061-T6.dxf
+N-01_suporte-da-antena-gnss_e5,0_Al6061-T6.dxf
+N-02_berco-do-imu_e6,0_Al6061-T6.dxf
+N-04_janela-da-camera-de-raiz_e3,0_PC.dxf
+N-06_aba-do-suporte-da-camera-de-raiz_e3,0_Al6061-T6.dxf
+N-08_reforco-do-farol_e2,0_Al5052-H32.dxf
+Q-06_tampa-de-extremidade_e2,0_Al6061-T6.dxf
+W-02_chapa-de-montagem-do-motor-roda_e10,0_Aco-A36.dxf
+W-03_tampa-gusset-da-ponta-do-braco_e6,0_Aco-A36.dxf
+W-05_orelha-da-torre-do-pivo_e6,0_Aco-A36.dxf
+W-06_berco-do-pivo_e8,0_Aco-A36.dxf
+W-09_orelha-do-prato-do-fole_e8,0_Aco-A36.dxf
+W-11_berco-do-fole_e10,0_Al6061-T6.dxf
+W-13_flange-do-colar_e4,0_Al6061-T6.dxf

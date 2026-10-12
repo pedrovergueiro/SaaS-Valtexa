@@ -38,12 +38,22 @@ from valtexa.schemas import (
     MissionCreate,
     MissionOut,
     MissionSegmentOut,
+    RouteEdit,
+    RouteReplan,
     SafetyCheckOut,
     SafetyEvaluationOut,
     SignedCommandOut,
 )
 from valtexa.security import rbac
-from valtexa.services import audit, geo, mission_manager, safety_engine
+from valtexa.services import (
+    audit,
+    geo,
+    missao_resultado,
+    mission_manager,
+    plans,
+    safety_engine,
+    visao_operacional,
+)
 
 router = APIRouter(tags=["missões"])
 
@@ -99,13 +109,14 @@ def create_mission(
         try:
             geo.as_points(polygon)
         except geo.InvalidPolygonError as exc:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
 
     if payload.kind is MissionKind.SPRAY and not payload.product_id:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Missão de pulverização exige produto, lote, tanque e dose.",
         )
+    plans.exigir(session, principal.tenant_id, "missions_month")
 
     mission = mission_manager.create_mission(
         session,
@@ -124,6 +135,7 @@ def create_mission(
         authorized_quantity_l=payload.authorized_quantity_l,
         decision_id=payload.decision_id,
     )
+    plans.registrar_missao(session, principal.tenant_id)
     session.commit()
     return _mission_out(session, mission)
 
@@ -292,6 +304,82 @@ def resume(
     return SignedCommandOut(**envelope)
 
 
+@router.patch(
+    "/missions/{mission_id}/route",
+    response_model=MissionOut,
+    summary="Corrige a rota à mão",
+)
+def edit_route(
+    mission_id: str,
+    payload: RouteEdit,
+    principal: Principal = Depends(require(rbac.MISSION_CREATE)),
+    session: Session = Depends(get_session),
+) -> MissionOut:
+    """Substitui o percurso pelo que o operador desenhou no mapa.
+
+    Existe porque o planejador não conhece o terreno todo. Ele sabe a geometria
+    do talhão e o que a leitura de imagem viu; não sabe que aquela cabeceira
+    atola em maio, nem que o portão do fundo está trancado desde a safra
+    passada. Quem sabe é quem opera — e, até aqui, esse conhecimento não tinha
+    por onde entrar: a validação humana era aprovar ou recusar, nunca corrigir.
+
+    O que o operador **não** consegue fazer por aqui é furar a cerca virtual.
+    Uma passada que saia da área da missão ou atravesse obstáculo
+    intransponível é recusada com o número da passada. Ele conhece o terreno
+    melhor que o planejador; não conhece melhor que o limite do talhão, que é
+    contrato, nem que a mata, que é física.
+    """
+    mission = get_scoped(session, Mission, mission_id, principal)
+    try:
+        mission_manager.replace_route(
+            session, mission, payload.legs, actor_id=principal.user_id, reason=payload.reason
+        )
+    except mission_manager.RouteNotEditableError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except mission_manager.InvalidRouteError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    session.commit()
+    return _mission_out(session, mission)
+
+
+@router.post(
+    "/missions/{mission_id}/replan",
+    response_model=MissionOut,
+    summary="Recalcula a rota com premissas novas",
+)
+def replan(
+    mission_id: str,
+    payload: RouteReplan,
+    principal: Principal = Depends(require(rbac.MISSION_CREATE)),
+    session: Session = Depends(get_session),
+) -> MissionOut:
+    """Refaz a rota pela máquina, e não à mão.
+
+    Dois usos, e os dois aparecem no mesmo dia de trabalho. O primeiro é mudar
+    premissa: a câmera é outra, as linhas correm noutro ângulo, o obstáculo
+    precisa de mais folga. O segundo é mais comum e menos óbvio — **aplicar uma
+    leitura de terreno que chegou depois**. A missão nasce antes de alguém rodar
+    o encaixe de contorno, então a rota original não contorna nada; replanejar
+    sem nenhum parâmetro é o que faz a mata entrar na conta.
+    """
+    mission = get_scoped(session, Mission, mission_id, principal)
+    try:
+        mission_manager.replan_route(
+            session,
+            mission,
+            swath_m=payload.swath_m,
+            azimuth_deg=payload.row_azimuth_deg,
+            obstacle_margin_m=payload.obstacle_margin_m,
+            actor_id=principal.user_id,
+        )
+    except mission_manager.RouteNotEditableError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except mission_manager.InvalidRouteError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    session.commit()
+    return _mission_out(session, mission)
+
+
 @router.post("/missions/{mission_id}/abort", response_model=MissionOut, summary="Aborta a missão")
 def abort(
     mission_id: str,
@@ -432,3 +520,63 @@ def _mission_out(session: Session, mission: Mission) -> MissionOut:
         created_at=mission.created_at,
     )
 
+
+
+# ---------------------------------------------------------------------------
+# Resultado da missão: plantas, relatório e comparação (seções 7, 44 e 47)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/missions/{mission_id}/plants", summary="Plantas vistas na missão e a incidência")
+def mission_plants(
+    mission_id: str,
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Fusão operacional por planta: quadros e câmeras da Edge AI + diagnóstico da nuvem.
+
+    ``status`` por planta: ``doente`` (nuvem confirmou), ``suspeita`` (a Edge AI
+    viu, a nuvem não fechou), ``revisar`` (com o agrônomo) ou ``sadia``.
+    """
+    missao = get_scoped(session, Mission, mission_id, principal)
+    return missao_resultado.plantas_da_missao(session, missao.tenant_id, missao.id)
+
+
+@router.get("/missions/{mission_id}/report", summary="Relatório da missão (seção 47)")
+def mission_report(
+    mission_id: str,
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
+    session: Session = Depends(get_session),
+) -> dict:
+    missao = get_scoped(session, Mission, mission_id, principal)
+    return missao_resultado.relatorio(session, missao)
+
+
+@router.get("/missions/{mission_id}/map", summary="Rota percorrida, eventos e plantas da missão")
+def mission_map(
+    mission_id: str,
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
+    session: Session = Depends(get_session),
+) -> dict:
+    """O que o mapa desenha por missão (seção 46).
+
+    ``track``: posições dos quadros analisados pelo robô, na ordem (no máximo 2000;
+    ``track_points_total`` diz quantas eram). ``events``: resultados da Edge AI que são
+    evento e eventos com posição. ``plants``: estado de cada planta na fusão operacional.
+    """
+    missao = get_scoped(session, Mission, mission_id, principal)
+    return visao_operacional.mapa_da_missao(session, missao)
+
+
+@router.get("/missions/{mission_id}/comparison", summary="Compara com uma missão anterior")
+def mission_comparison(
+    mission_id: str,
+    baseline_id: str,
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
+    session: Session = Depends(get_session),
+) -> dict:
+    nova = get_scoped(session, Mission, mission_id, principal)
+    base = get_scoped(session, Mission, baseline_id, principal)
+    if base.field_id != nova.field_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "As duas missões são de talhões diferentes.")
+    return missao_resultado.comparar(session, nova.tenant_id, base.id, nova.id)

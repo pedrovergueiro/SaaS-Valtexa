@@ -1,0 +1,15 @@
+﻿Código;Componente;Qtd;Grupo;Massa un kg;Massa tot kg;L mm;W mm;H mm;Posição;Confiança;Dados que faltam;Origem
+X-MOT;Motor-roda (MPW86 ou ZLTECH — a decidir);4;TRAÇÃO;4.5;18.0;;;86.5;±350, ±235, 100;D;L, W;"FONTE massa e Ø do MPW86 (datasheet 011121); L e W não aplicáveis a motor-roda. ZLTECH: 9 campos de interface não publicados (P-09)"
+X-RODA;Roda Ø200 (integrada ao motor-roda);4;TRAÇÃO;;;;52.1;200.0;idem motor;D;massa, L;"FONTE largura e Ø (datasheet). Massa inclusa no motor; raio efetivo sob carga NÃO publicado — afeta odometria"
+X-DRV;Driver BLDC Roboteq SBLG2360TS;4;TRAÇÃO;;;;;;bandeja E-01;D;massa, L, W, H;PENDENTE ficha técnica: dimensões, massa, dissipação
+X-BAT;Bateria 16S LiFePO4 (16× EVE 105 Ah);1;ENERGIA;36.5;36.5;460.0;350.0;130.0;sobre C-01, retida por B-01;A;—;massa: BASELINE tab. 5.1. Caixa 460×350×130 é ESTIMATIVA — o arranjo real das 16 células, barramentos e BMS não está documentado (P-18)
+X-BMS;BMS Daly Smart 16S 100 A com CAN;1;ENERGIA;;;;;;bandeja;D;massa, L, W, H;PENDENTE ficha técnica
+X-DCDC;Conversor DC/DC 48→12 V 30 A;1;ENERGIA;;;;;;bandeja;D;massa, L, W, H;PENDENTE ficha técnica. Potência 360 W: FONTE (BOM)
+X-CONT;Contator DC TE Kilovac LEV200;1;ENERGIA;;;;;;bandeja;D;massa, L, W, H;PENDENTE ficha técnica
+X-CAM;Câmera OAK-D Pro W PoE;8;SENSORES;;;;;;6 nos mastros (3 níveis × 2 lados), 1 frontal, 1 inferior;D;massa, L, W, H;PENDENTE desenho dimensional (P-06) — bloqueia M-20 e N-09. Potência: TETO de 12,95 W pela classe 3 de 802.3af, não medição
+X-LIDAR;LiDAR Livox Mid-360;1;SENSORES;;;;;;suporte G-06, sobre a gaiola;D;massa, L, W, H;PENDENTE dimensões, massa e centro óptico (pendência 11 do caderno)
+X-GNSS;GNSS RTK ZED-F9P + antena;1;SENSORES;;;;;;antena no suporte N-01, na tampa;D;massa, L, W, H;PENDENTE ficha técnica
+X-IMU;IMU Xsens MTi-630 (CAN);1;SENSORES;;;;;;berço N-02, próximo ao CG;D;massa, L, W, H;PENDENTE furação real e offset ao CG (pendência 18 do caderno)
+X-RADIO;Par de rádios RFD900x;1;SENSORES;;;;;;bandeja + base;D;massa, L, W, H;PENDENTE ficha técnica
+X-ESTOP;E-STOP sem fio + relé Pilz PNOZ s4;1;SENSORES;;;;;;botoeira no reforço E-10, tampa traseira;D;massa, L, W, H;Botão Ø22 IP65: FONTE (caderno). Receptor e relé: PENDENTE
+X-CPU;Jetson Orin NX 16 GB + SSD NVMe 1 TB;1;COMPUTAÇÃO;;;;;;bandeja E-01;D;massa, L, W, H;PENDENTE dimensões e perfil de potência adotado (10 a 40 W muda o orçamento energético e a dissipação dentro de carenagem fechada)

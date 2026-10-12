@@ -4,6 +4,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { api, setCredentials, setUnauthorizedHandler } from '@/api/client'
 import { keys } from '@/api/queries'
 import type { MeResponse, MembershipOut, TokenResponse } from '@/api/types'
+import {
+  enterSupport as enterSupportState,
+  isPlatformLogin,
+  leaveSupport,
+  restoreSession,
+  withSupportMode,
+  type StoredSession,
+  type SupportInfo,
+  type SupportStarted,
+} from '@/platform/support'
 
 /**
  * Sessão do console.
@@ -12,13 +22,6 @@ import type { MeResponse, MembershipOut, TokenResponse } from '@/api/types'
  * `/auth/me`, porque mudam por cliente e podem ser revogados a qualquer momento
  * — uma cópia no navegador ficaria desatualizada no pior momento possível.
  */
-
-type StoredSession = {
-  token: string
-  tenantId: string | null
-  email: string
-  expiresAt: string
-}
 
 type AuthValue = {
   session: StoredSession | null
@@ -29,6 +32,13 @@ type AuthValue = {
   logout: () => void
   selectTenant: (tenantId: string) => void
   can: (capability: string) => boolean
+  /** Pessoa da equipe ValTexa (tem acesso ao console da plataforma). */
+  isPlatform: boolean
+  /** Sessão de suporte ativa ("entrar como cliente"), se houver. */
+  support: SupportInfo | null
+  enterSupport: (started: SupportStarted) => void
+  exitSupport: () => Promise<void>
+  setSupportMode: (mode: SupportInfo['mode']) => void
 }
 
 const KEY = 'valtexa.session'
@@ -38,9 +48,7 @@ function readSession(): StoredSession | null {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as StoredSession
-    if (!parsed.token || new Date(parsed.expiresAt).getTime() <= Date.now()) return null
-    return parsed
+    return restoreSession(JSON.parse(raw) as StoredSession)
   } catch {
     return null
   }
@@ -74,18 +82,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear()
   }, [queryClient, update])
 
-  useEffect(() => {
-    setUnauthorizedHandler(logout)
-    return () => setUnauthorizedHandler(null)
-  }, [logout])
+  /**
+   * Volta ao console da plataforma sem chamar o servidor: a sessão de suporte
+   * venceu ou foi encerrada por outra pessoa (o servidor já respondeu 401).
+   */
+  const dropSupport = useCallback(() => {
+    if (!session?.support) return logout()
+    queryClient.clear()
+    update(leaveSupport(session))
+  }, [logout, queryClient, session, update])
 
-  // Sessão vencida enquanto a aba estava aberta.
+  useEffect(() => {
+    setUnauthorizedHandler(session?.support ? dropSupport : logout)
+    return () => setUnauthorizedHandler(null)
+  }, [logout, dropSupport, session?.support])
+
+  // Sessão vencida enquanto a aba estava aberta. Com suporte, vence só ele.
   useEffect(() => {
     if (!session) return
     const remaining = new Date(session.expiresAt).getTime() - Date.now()
-    const timer = window.setTimeout(logout, Math.max(0, remaining))
+    const timer = window.setTimeout(session.support ? dropSupport : logout, Math.max(0, remaining))
     return () => window.clearTimeout(timer)
-  }, [session, logout])
+  }, [session, logout, dropSupport])
 
   const memberships = useQuery({
     queryKey: keys.memberships,
@@ -105,7 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const rows = memberships.data
     const only = rows?.[0]
-    if (session && !session.tenantId && rows?.length === 1 && only) {
+    // A equipe não entra sozinha num cliente: a porta dela é o console da
+    // plataforma, e o cliente se abre por "Entrar como cliente".
+    if (session && !session.platform && !session.tenantId && rows?.length === 1 && only) {
       update({ ...session, tenantId: only.tenant_id })
     }
   }, [memberships.data, session, update])
@@ -123,9 +143,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantId: token.tenant_id ?? null,
         email,
         expiresAt: token.expires_at,
+        platform: isPlatformLogin(token.capabilities ?? []),
       })
     },
     [queryClient, update],
+  )
+
+  const enterSupport = useCallback(
+    (started: SupportStarted) => {
+      if (!session) return
+      queryClient.clear()
+      update(enterSupportState(session, started))
+    },
+    [queryClient, session, update],
+  )
+
+  const exitSupport = useCallback(async () => {
+    if (!session?.support) return
+    try {
+      // Com o token do suporte ainda ativo: a rota aceita o dono da sessão.
+      await api(`/v1/platform/support-sessions/${session.support.id}/end`, {
+        method: 'POST',
+        body: { reason: 'saiu' },
+      })
+    } catch {
+      // Já encerrada ou vencida: o servidor não aceita mais o token, e sair
+      // localmente é exatamente o que se quer.
+    }
+    queryClient.clear()
+    update(leaveSupport(session))
+  }, [queryClient, session, update])
+
+  const setSupportMode = useCallback(
+    (mode: SupportInfo['mode']) => {
+      if (!session) return
+      queryClient.invalidateQueries()
+      update(withSupportMode(session, mode))
+    },
+    [queryClient, session, update],
   )
 
   const selectTenant = useCallback(
@@ -149,8 +204,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       selectTenant,
       can: (capability: string) => capabilities.has(capability),
+      isPlatform: Boolean(session?.platform || me.data?.platform_role),
+      support: session?.support ?? null,
+      enterSupport,
+      exitSupport,
+      setSupportMode,
     }
-  }, [session, me.data, me.isLoading, memberships.data, memberships.isLoading, login, logout, selectTenant])
+  }, [
+    session,
+    me.data,
+    me.isLoading,
+    memberships.data,
+    memberships.isLoading,
+    login,
+    logout,
+    selectTenant,
+    enterSupport,
+    exitSupport,
+    setSupportMode,
+  ])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

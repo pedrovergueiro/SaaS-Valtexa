@@ -93,6 +93,78 @@ rover a passar por cima de cada fileira.
 
 ---
 
+## Corrigir a rota
+
+O planejador conhece a geometria do talhão e o que a leitura de imagem viu. Não
+conhece que aquela cabeceira atola em maio, nem que o portão do fundo está
+trancado desde a safra passada. Quem conhece é quem opera — e, até a rota se
+tornar editável, esse conhecimento não tinha por onde entrar: a validação humana
+era aprovar ou recusar, nunca corrigir.
+
+Dois caminhos, porque são duas situações:
+
+| | Rota | Quando |
+| --- | --- | --- |
+| Desenhar | `PATCH /v1/missions/{id}/route` | a premissa está certa e um pedaço específico não serve |
+| Recalcular | `POST /v1/missions/{id}/replan` | mudou uma premissa (faixa, azimute, folga) — ou a leitura de terreno chegou depois |
+
+O segundo uso do replanejamento é o mais comum e o menos óbvio: a missão nasce
+antes de alguém rodar o encaixe de contorno, então a rota original não contorna
+nada. **Replanejar sem parâmetro nenhum ainda faz trabalho** — é o que faz a mata
+entrar na conta.
+
+O operador manda só o percurso. Metros, energia e segmentos são derivados no
+servidor: aceitar a metragem do cliente abriria a porta para o número na tela
+discordar do que o robô vai cumprir.
+
+### O que a edição não permite
+
+Uma rota que saia da área da missão, ou que atravesse obstáculo intransponível,
+é recusada com o número da passada. Sem isso, editar à mão seria o caminho para
+furar a cerca virtual pela porta da frente — bastaria desenhar uma passada por
+cima da mata. O operador conhece o terreno melhor que o planejador; não conhece
+melhor que o limite do talhão, que é contrato, nem que a mata, que é física.
+
+A rota só se mexe em `DRAFT`, `PENDING_SAFETY` e `BLOCKED` (`EDITABLE_STATES`).
+A partir de `AUTHORIZED`, a assinatura cobre um percurso específico: trocá-lo por
+baixo faria o robô executar o que ninguém aprovou e que a assinatura não
+descreve. Para mudar depois disso, aborta-se e cria-se outra — o custo é um
+registro a mais na trilha, e é exatamente o registro que se quer ter.
+
+`BLOCKED` é editável porque corrigir a rota é *o* jeito de destravar uma missão
+barrada por área; obrigar a recriar perderia o parecer que explicou o bloqueio.
+
+Toda troca vira `mission.route_updated` na trilha, com o resumo sha256 da rota
+antes e depois. Guardar só a rota nova diria que a missão *tem* tal percurso, não
+que ela *passou* por outro — e a pergunta de uma apuração é a segunda.
+
+---
+
+## Relevo
+
+O planejamento trata o talhão como plano **até alguém configurar
+`ELEVATION_URL`**. A diferença aparece em três lugares que custam dinheiro ou
+equipamento: a conta de autonomia (subir consome muito mais), o ângulo de
+tombamento, e a direção das passadas — curva de nível é mais segura e mais barata
+que subir e descer a encosta.
+
+`POST /v1/admin/fields/{id}/relief` mede e grava em `field.relief`. Sem fonte
+configurada responde **501**, e não zeros: um zero seria lido como "terreno
+plano" e entraria no plano com a autoridade de uma medição.
+
+O relevo tem coluna própria, e não vive dentro de `terrain`, porque as duas
+medições envelhecem em ritmos incomparáveis — a cobertura do solo muda a cada
+safra, a encosta não muda nunca. Uma releitura de imagem não o derruba; um
+contorno novo, sim, porque aí o pedaço de chão medido é outro.
+
+Medido o relevo, a camada de segurança **barra** missão cuja declividade máxima
+passe do limite do modelo (`capabilities.max_slope_deg`, ou 15° quando o
+descritor de hardware não declara). Sem relevo medido ela passa, e o parecer diz
+em letras que não foi medido: transformar "não medi" em "não pode" travaria toda
+missão de toda instalação que ainda não ligou um DEM.
+
+---
+
 ## Área padrão e a margem
 
 Uma missão criada sem `target_polygon` cobre o talhão **menos a margem de

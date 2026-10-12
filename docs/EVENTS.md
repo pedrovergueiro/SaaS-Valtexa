@@ -55,6 +55,34 @@ handler não idempotente aqui vira aplicação duplicada no campo.
 | `device.offline` | passou de 5 min sem contato |
 | `device.fault` | evento crítico do dispositivo |
 | `row_scan.received` | o rover enviou uma passada por rua; a cópia 3D mudou |
+| `ota.failed` | o robô informou `falhou`, `revertida` ou `recusada` numa atualização (Parte 6) |
+| `ticket.created` / `.commented` / `.status_changed` | chamado de suporte (Parte 6; comentário interno não gera evento) |
+| `incident.updated` | situação ou nota pública de um incidente mudou (Parte 6) |
+| `alert.fired` / `alert.resolved` | uma regra de alerta disparou ou passou (Parte 7, `services/alertas.py`) |
+
+### Quem assina hoje: as notificações (Parte 6)
+
+Os primeiros *handlers* registrados são as **regras de aviso** de
+`valtexa/services/notifications.py` (e as dos chamados, em
+`services/support_tickets.py`), declaradas com `@notifications.regra(...)`:
+
+| Evento | Aviso | Quem recebe por padrão |
+|---|---|---|
+| `diagnosis.created` (doença/praga, não saudável) | `nova_infeccao` — uma vez por doença, talhão e missão (ou dia) | dono, gestor, agrônomo |
+| `mission.completed` | `incidencia_alta` — incidência por planta ≥ limite da pessoa (padrão 5 %) | dono, gestor, agrônomo |
+| `safety.blocked` | `missao_bloqueada` | dono, gestor, operador |
+| `device.offline` | `rover_offline` | dono, gestor, operador, técnico |
+| `ota.failed` | `atualizacao_falhou` (cliente) e `plataforma_atualizacao_falhou` (equipe) | dono, gestor, técnico; superadmin, Operações, IA & Dados |
+| `ticket.created` (pelo cliente) | `plataforma_chamado_novo` | superadmin, Suporte |
+| `ticket.commented` / `.status_changed` | `chamado_atualizado` (para quem abriu) ou `plataforma_chamado_resposta` (para o responsável, ou o Suporte) | dirigido |
+| `incident.updated` | `chamado_atualizado` para quem abriu cada chamado ligado | dirigido |
+| `alert.fired` (Parte 7) | `alerta_robo` (cliente dono do robô; não para `rover_offline`, que já tem aviso) e `plataforma_alerta` (equipe) | dono, gestor, técnico; superadmin, Operações |
+| `alert.resolved` (só crítico) | os mesmos tipos, "Resolvido — ..." | idem |
+
+A regra só cria o aviso (`notification`, com `dedup_key` única por pessoa — o mesmo
+evento entregue duas vezes não avisa duas vezes) e a entrega pendente por e-mail; o
+e-mail sai depois, pelo worker (`notifications.entregar_pendentes`), com novas
+tentativas. Ver [`API.md`](API.md#notificações-e-suporte-parte-6).
 
 Um nome novo entra em `valtexa/services/events.py` **e aqui**, nunca só na
 chamada.

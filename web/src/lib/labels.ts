@@ -165,6 +165,26 @@ const DISEASE: Record<string, string> = {
   Anticarsia_gemmatalis: 'Lagarta-da-soja',
   Leucoptera_coffeella: 'Bicho-mineiro',
   Hypothenemus_hampei: 'Broca-do-café',
+  // banana
+  Sigatoka: 'Sigatoka',
+  Fusarium_Wilt: 'Mal-do-Panamá (fusariose)',
+  Cordana: 'Mancha de cordana',
+  Pestalotiopsis: 'Pestalotiopsis',
+  Cosmopolites_sordidus: 'Moleque-da-bananeira',
+  // citros
+  Algal_Leaf_Spot: 'Mancha de alga',
+  Anthracnose: 'Antracnose',
+  Black_Spot: 'Pinta-preta',
+  Canker: 'Cancro cítrico',
+  Curl_Leaf: 'Enrolamento da folha',
+  Greening: 'Greening (HLB)',
+  Melanose: 'Melanose',
+  Scab: 'Verrugose',
+  Sooty_Mold: 'Fumagina',
+  Leafminer: 'Larva-minadora',
+  Mites: 'Ácaros',
+  Phyllocnistis_citrella: 'Larva-minadora-dos-citros',
+  Diaphorina_citri: 'Psilídeo (Diaphorina)',
   Other: 'Outros',
 }
 export const disease = (value: string | null | undefined) => {
@@ -187,6 +207,21 @@ export const KNOWN_LABELS = [
   'Diabrotica_speciosa',
   'Euschistus_heros',
   'Hypothenemus_hampei',
+  'Sigatoka',
+  'Fusarium_Wilt',
+  'Cordana',
+  'Pestalotiopsis',
+  'Algal_Leaf_Spot',
+  'Anthracnose',
+  'Black_Spot',
+  'Canker',
+  'Curl_Leaf',
+  'Greening',
+  'Leafminer',
+  'Melanose',
+  'Mites',
+  'Scab',
+  'Sooty_Mold',
 ]
 
 // --- cópia 3D: categoria de cada achado --------------------------------------------
@@ -268,8 +303,88 @@ export function healthClass(label: string | null | undefined, status: string | n
 
 // --- insumos, aplicação, pessoas ------------------------------------------------
 
-const CROP: Record<string, string> = { corn: 'Milho', coffee: 'Café', soy: 'Soja', milho: 'Milho' }
+const CROP: Record<string, string> = {
+  corn: 'Milho',
+  coffee: 'Café',
+  soy: 'Soja',
+  milho: 'Milho',
+  banana: 'Banana',
+  bananeira: 'Banana',
+  citrus: 'Citros',
+  citros: 'Citros',
+  laranja: 'Laranja',
+  lemon: 'Limão',
+  orange: 'Laranja',
+}
 export const crop = (value: string) => lookup(CROP, value)
+
+/**
+ * Culturas em que o rover chega perto da planta e a inferência junta os quadros
+ * por planta — os mesmos apelidos de BANANA e CITRUS em `services/ai_pipeline.py`.
+ */
+const ROVER_FRAME_CROPS = new Set([
+  'banana', 'bananeira', 'banana-prata', 'banana-nanica',
+  'citrus', 'citros', 'laranja', 'limão', 'limao', 'lima', 'orange', 'lemon',
+])
+export const isRoverFrameCrop = (value: string) => ROVER_FRAME_CROPS.has(value.trim().toLowerCase())
+
+// --- IA: portão de enquadramento, zonas da planta, plantas do talhão --------------
+
+/**
+ * O que o portão de enquadramento achou que a foto é, quando não é folha. É
+ * o que o agrônomo vê para nomear o recorte — e daí sai o dataset de pseudocaule.
+ */
+const SCENE: Record<string, string> = {
+  folha_milho: 'folha de milho',
+  folha_cafe: 'folha de café',
+  folha_banana: 'folha de bananeira',
+  folha_citros: 'folha de citros',
+  folha_doente: 'folha com lesões',
+  folha: 'folha',
+  aereo: 'foto aérea',
+  dossel: 'dossel visto de cima',
+  colmo: 'colmo',
+  planta_inteira: 'planta inteira',
+  texto: 'texto ou slide',
+  solo: 'solo',
+  ceu: 'céu',
+  pessoa: 'pessoa',
+  maquina: 'máquina',
+  fruto: 'fruto',
+  pseudocaule: 'pseudocaule',
+  tronco: 'tronco',
+  fruto_citros: 'fruto de citros',
+  corte: 'corte do caule',
+}
+export const scene = (value: string | null | undefined) => lookup(SCENE, value)
+
+/** Faixas de altura da planta que a câmera do rover cobre (VALTEXA-B/app/rover.py). */
+const PLANT_ZONE: Record<string, string> = {
+  pseudocaule: 'Pseudocaule',
+  folhas_baixas: 'Folhas baixas',
+  tronco_e_saia: 'Tronco e saia',
+  copa: 'Copa',
+}
+export const plantZone = (value: string) => lookup(PLANT_ZONE, value)
+
+const PLANT_STATUS: Record<string, string> = {
+  sadia: 'Sadia',
+  suspeita: 'Suspeita',
+  doente: 'Doente',
+  revisar: 'Revisar',
+}
+const PLANT_STATUS_TONE: Record<string, Tone> = {
+  sadia: 'good',
+  suspeita: 'warning',
+  doente: 'serious',
+  revisar: 'info',
+}
+export const plantStatus = (value: string) => lookup(PLANT_STATUS, value)
+export const plantStatusTone = (value: string): Tone => PLANT_STATUS_TONE[value] ?? 'neutral'
+export const PLANT_STATUSES = Object.keys(PLANT_STATUS)
+
+const MODEL_VARIANT: Record<string, string> = { campo: 'Campo', comercial: 'Comercial' }
+export const modelVariant = (value: string) => lookup(MODEL_VARIANT, value)
 
 const ROLE: Record<string, string> = {
   owner: 'Proprietário',
@@ -368,3 +483,153 @@ const EVENT: Record<string, string> = {
   'row_scan.received': 'Rua escaneada pelo rover',
 }
 export const eventName = (value: string) => EVENT[value] ?? value
+
+// --- coletas -------------------------------------------------------------------
+
+const COLLECTION_STATE: Record<string, string> = {
+  draft: 'Rascunho',
+  uploading: 'Enviando',
+  upload_completed: 'Upload concluído',
+  processing_queued: 'Na fila',
+  ai_processing: 'Processando',
+  results_generated: 'Resultados gerados',
+  review_required: 'Aguardando agrônomo',
+  analyzed: 'Analisada',
+  available_to_client: 'Disponível ao cliente',
+  failed: 'Falhou',
+  cancelled: 'Cancelada',
+}
+
+const COLLECTION_STATE_TONE: Record<string, Tone> = {
+  draft: 'neutral',
+  uploading: 'info',
+  upload_completed: 'info',
+  processing_queued: 'info',
+  ai_processing: 'accent',
+  results_generated: 'accent',
+  review_required: 'warning',
+  analyzed: 'good',
+  available_to_client: 'good',
+  failed: 'critical',
+  cancelled: 'neutral',
+}
+
+export const collectionState = (value: string | null | undefined) => lookup(COLLECTION_STATE, value)
+export const collectionStateTone = (value: string | null | undefined): Tone =>
+  COLLECTION_STATE_TONE[value ?? ''] ?? 'neutral'
+
+const COLLECTION_FILE_STATE: Record<string, string> = {
+  registered: 'Declarado',
+  uploading: 'Enviando',
+  stored: 'Guardado',
+  processing: 'Processando',
+  analyzed: 'Analisado',
+  needs_review: 'Para o agrônomo',
+  no_model: 'Sem modelo',
+  failed: 'Falhou',
+  rejected: 'Recusado',
+}
+
+const COLLECTION_FILE_TONE: Record<string, Tone> = {
+  registered: 'neutral',
+  uploading: 'info',
+  stored: 'info',
+  processing: 'accent',
+  analyzed: 'good',
+  needs_review: 'warning',
+  no_model: 'warning',
+  failed: 'critical',
+  rejected: 'critical',
+}
+
+export const collectionFileState = (value: string | null | undefined) =>
+  lookup(COLLECTION_FILE_STATE, value)
+export const collectionFileTone = (value: string | null | undefined): Tone =>
+  COLLECTION_FILE_TONE[value ?? ''] ?? 'neutral'
+
+const COLLECTION_KIND: Record<string, string> = {
+  aerial_image: 'Imagem aérea',
+  orthomosaic: 'Ortomosaico',
+  ground_image: 'Imagem de solo',
+  other: 'Outro',
+}
+
+export const collectionKind = (value: string | null | undefined) => lookup(COLLECTION_KIND, value)
+
+const COLLECTION_SOURCE: Record<string, string> = {
+  drone_third_party: 'Drone terceirizado',
+  rover: 'Rover ValTexa',
+  handheld: 'Câmera de mão',
+  drone_owned: 'Drone ValTexa (fase futura)',
+}
+
+export const collectionSource = (value: string | null | undefined) =>
+  lookup(COLLECTION_SOURCE, value)
+
+const PLATFORM: Record<string, string> = {
+  aerial: 'Aérea',
+  ground: 'Solo',
+  any: 'Qualquer',
+}
+
+export const capturePlatform = (value: string | null | undefined) => lookup(PLATFORM, value)
+
+const JOB_STATE: Record<string, string> = {
+  queued: 'Na fila',
+  running: 'Executando',
+  done: 'Concluído',
+  failed: 'Falhou',
+  cancelled: 'Cancelado',
+}
+
+const JOB_TONE: Record<string, Tone> = {
+  queued: 'info',
+  running: 'accent',
+  done: 'good',
+  failed: 'critical',
+  cancelled: 'neutral',
+}
+
+export const jobState = (value: string | null | undefined) => lookup(JOB_STATE, value)
+export const jobStateTone = (value: string | null | undefined): Tone =>
+  JOB_TONE[value ?? ''] ?? 'neutral'
+
+/** Tamanho em bytes, na escala que couber. Coleta se mede em GB. */
+export function bytes(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—'
+  const escala = ['B', 'kB', 'MB', 'GB', 'TB']
+  let restante = value
+  let passo = 0
+  while (restante >= 1024 && passo < escala.length - 1) {
+    restante /= 1024
+    passo += 1
+  }
+  return `${restante.toLocaleString('pt-BR', { maximumFractionDigits: passo ? 1 : 0 })} ${escala[passo]}`
+}
+
+// --- leitura de terreno ---------------------------------------------------------
+
+/**
+ * O que a imagem achou dentro do talhão.
+ *
+ * "Não identificado" é resposta, não desistência: o agrupamento existe e tem
+ * posição medida, e só a classe é que a regra de cor não soube nomear. Chamá-lo
+ * de mata por precaução tiraria área operável que talvez seja lavoura.
+ */
+const TERRAIN_KIND: Record<string, string> = {
+  mata: 'Mata',
+  carreador: 'Carreador',
+  solo_exposto: 'Solo exposto',
+  desconhecido: 'Não identificado',
+}
+
+export const terrainKind = (value: string | null | undefined) => lookup(TERRAIN_KIND, value)
+
+const COVER_CLASS: Record<string, string> = {
+  lavoura: 'Lavoura',
+  mata: 'Mata',
+  solo: 'Solo exposto',
+  outro: 'Não separado',
+}
+
+export const coverClass = (value: string | null | undefined) => lookup(COVER_CLASS, value)

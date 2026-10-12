@@ -1,0 +1,111 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Rover V3 — roteiro de usinagem</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; margin: 0; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #15402a;
+     border-bottom: 2.4pt solid #1f6b3a; padding-bottom: 2.5mm; }
+h2 { font-size: 13.5pt; margin: 9mm 0 3mm; color: #1f6b3a; page-break-after: avoid;
+     border-bottom: .6pt solid #cfd8d2; padding-bottom: 1.5mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #15402a; page-break-after: avoid; }
+p { margin: 0 0 2.8mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm;
+        font-size: 9pt; page-break-inside: avoid; }
+th { background: #1f6b3a; color: #fff; text-align: left; padding: 1.6mm 2mm;
+     font-weight: 600; font-size: 8.6pt; }
+td { border-bottom: .4pt solid #dde3df; padding: 1.5mm 2mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8f7; }
+code { font: 9pt 'Cascadia Mono', Consolas, monospace; background: #eef2ef;
+       padding: .3mm 1mm; border-radius: 1mm; }
+pre { background: #f4f6f5; border-left: 2.5pt solid #1f6b3a; padding: 2.5mm 3mm;
+      margin: 2mm 0 4mm; overflow-x: auto; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.45; }
+blockquote { border-left: 2.5pt solid #c9a227; background: #fdf9ec; margin: 2mm 0 4mm;
+             padding: 2mm 3mm; }
+blockquote p { margin: 0; }
+hr { border: 0; border-top: .6pt solid #cfd8d2; margin: 6mm 0; }
+strong { font-weight: 650; color: #0d2b1c; }
+.rodape { margin-top: 8mm; padding-top: 2.5mm; border-top: .6pt solid #cfd8d2;
+          font-size: 8pt; color: #6a7570; }
+</style></head><body><h1>Rover V3 — roteiro de usinagem</h1>
+<blockquote><p><strong>VTX-RV3 · Revisão G · 11/10/2026</strong> EMITIDO PARA COTAÇÃO E VALIDAÇÃO — NÃO LIBERADO PARA FABRICAÇÃO  Documento <strong>gerado</strong> de <code>revisao-g/usinagem.py</code> sobre a geometria de <code>chassi-gaiola/modelo.py</code>. Não editar à mão: a próxima geração sobrescreve.</p></blockquote>
+<h2>Corte e usinagem não são a mesma coisa</h2>
+<p>Este documento separa as duas, porque elas custam diferente e porque a oficina as faz em máquinas diferentes:</p>
+<ul>
+<li><strong>corte</strong> — laser ou serra. Sai pronto do DXF 1:1 em <code>saida/dxf</code>, sem tolerância a</li>
+</ul>
+<p>controlar além do contorno;</p>
+<ul>
+<li><strong>usinagem</strong> — torno, fresa, alargador. Exige operação, referência, tolerância e</li>
+</ul>
+<p>acabamento, e nada disso está no DXF.</p>
+<p><strong>DXF não carrega tolerância.</strong> Quem cortar pelo DXF e usinar sem ler esta tabela e as folhas 28 a 31 produz peça fora de especificação em todos os furos de ajuste.</p>
+<h2>A regra que organiza o roteiro</h2>
+<p><strong>Solda primeiro, tolerância depois.</strong> Toda operação marcada <em>DEPOIS DA SOLDA</em> é obrigatoriamente posterior: a solda distorce, e uma tolerância feita antes dela se perdeu sem que ninguém perceba — até o eixo não entrar.</p>
+<h2>Resumo por peça</h2>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>material</th><th>ops</th><th>corte</th><th>usinagem</th><th>solda</th><th>ops × qt</th></tr></thead><tbody><tr><td><strong>W-01</strong></td><td>Braço longitudinal</td><td>4</td><td>Aço 1020</td><td>7</td><td>1</td><td>5</td><td>1</td><td>28</td></tr><tr><td><strong>W-02</strong></td><td>Chapa de montagem do motor-roda</td><td>4</td><td>Aço A36</td><td>6</td><td>1</td><td>4</td><td>1</td><td>24</td></tr><tr><td><strong>W-03</strong></td><td>Tampa-gusset da ponta do braço</td><td>4</td><td>Aço A36</td><td>2</td><td>1</td><td>0</td><td>1</td><td>8</td></tr><tr><td><strong>W-04</strong></td><td>Alojamento da bucha do pivô</td><td>4</td><td>Aço 1045</td><td>3</td><td>0</td><td>3</td><td>0</td><td>12</td></tr><tr><td><strong>W-05</strong></td><td>Orelha da torre do pivô</td><td>8</td><td>Aço A36</td><td>4</td><td>1</td><td>2</td><td>1</td><td>32</td></tr><tr><td><strong>W-06</strong></td><td>Berço do pivô</td><td>4</td><td>Aço A36</td><td>4</td><td>1</td><td>2</td><td>1</td><td>16</td></tr><tr><td><strong>W-07</strong></td><td>Eixo do pivô</td><td>4</td><td>Inox 304</td><td>3</td><td>0</td><td>3</td><td>0</td><td>12</td></tr><tr><td><strong>W-08</strong></td><td>Disco do prato do fole</td><td>4</td><td>Aço A36</td><td>4</td><td>0</td><td>3</td><td>1</td><td>16</td></tr><tr><td><strong>W-09</strong></td><td>Orelha do prato do fole</td><td>8</td><td>Aço A36</td><td>3</td><td>1</td><td>1</td><td>1</td><td>24</td></tr><tr><td><strong>W-10</strong></td><td>Pino do prato</td><td>4</td><td>Inox 304</td><td>2</td><td>0</td><td>2</td><td>0</td><td>8</td></tr><tr><td><strong>W-11</strong></td><td>Berço do fole</td><td>4</td><td>Al 6061-T6</td><td>4</td><td>1</td><td>3</td><td>0</td><td>16</td></tr><tr><td><strong>W-13</strong></td><td>Flange do colar</td><td>4</td><td>Al 6061-T6</td><td>3</td><td>1</td><td>1</td><td>1</td><td>12</td></tr><tr><td><strong>W-12</strong></td><td>Tubo do colar de vedação</td><td>4</td><td>Al 6061-T6</td><td>3</td><td>0</td><td>2</td><td>1</td><td>12</td></tr><tr><td><strong>Q-05</strong></td><td>Bucha de compressão</td><td>16</td><td>Al 6061-T6</td><td>2</td><td>0</td><td>1</td><td>1</td><td>32</td></tr><tr><td><strong>M-01</strong></td><td>Luva do mastro</td><td>2</td><td>Al 6061-T6</td><td>4</td><td>1</td><td>2</td><td>1</td><td>8</td></tr><tr><td><strong>N-02</strong></td><td>Berço do IMU</td><td>1</td><td>Al 6061-T6</td><td>2</td><td>1</td><td>1</td><td>0</td><td>2</td></tr></tbody></table>
+<h2>Roteiro detalhado</h2>
+<h3>W-01 — Braço longitudinal</h3>
+<p>4 un · Aço 1020 · Tubo ret. 40×30×3 × 182</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Serrar o tubo no comprimento</td><td>serra de fita</td><td>182 ± 0,5</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Furar as duas paredes laterais para o alojamento da bucha</td><td>fresa de topo Ø16 + interpolação</td><td>2× Ø34 H11, coaxiais em 0,2</td><td>Ra 12,5</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Fresar o rasgo do prato na parede superior</td><td>fresa de topo Ø10</td><td>24 × 34, centro em X 425 ± 0,3</td><td>Ra 6,3</td></tr><tr><td><strong>USINAR</strong> 4</td><td>Furar as duas paredes laterais para o pino do prato</td><td>broca Ø11,8 + alargador</td><td>2× Ø12 H7, coaxiais em 0,05</td><td>Ra 1,6</td></tr><tr><td><strong>SOLDA</strong> 5</td><td>SOLDAR o alojamento W-04, a chapa W-02 e a tampa W-03</td><td>TIG/MIG</td><td>filete a4 contínuo; ver folha 33</td><td>—</td></tr><tr><td><strong>USINAR</strong> 6</td><td>DEPOIS da solda: alargar o alojamento da bucha</td><td>alargador de haste longa</td><td>Ø23 H7 passante nas duas paredes</td><td>Ra 1,6</td></tr><tr><td><strong>USINAR</strong> 7</td><td>Conferir o paralelismo do eixo do pivô com a face da chapa</td><td>desempeno + relógio</td><td>0,2 em 100</td><td>—</td></tr></tbody></table>
+<h3>W-02 — Chapa de montagem do motor-roda</h3>
+<p>4 un · Aço A36 · Chapa 124×148×10</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar o contorno</td><td>laser (DXF 1:1)</td><td>contorno livre ± 0,3</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Furar o alojamento do motor</td><td>torno vertical ou fresa + interpolação</td><td>Ø88 H8, concentricidade 0,1 ao datum C</td><td>Ra 3,2</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Furar os 7 passantes do flange do motor</td><td>broca Ø4,5</td><td>7× Ø4,5 eq. esp. em PCD 95, posição Ø0,2 (B, C)</td><td>Ra 12,5</td></tr><tr><td><strong>SOLDA</strong> 4</td><td>SOLDAR o braço W-01 e a tampa W-03</td><td>TIG/MIG</td><td>filete a4 em cima e embaixo da sobreposição</td><td>—</td></tr><tr><td><strong>USINAR</strong> 5</td><td>DEPOIS da solda: faceamento da face de montagem (datum B)</td><td>fresa de facear Ø63</td><td>planeza 0,1 · perpendicular 0,3 a A · e ≥ 9.5</td><td>Ra 3,2</td></tr><tr><td><strong>USINAR</strong> 6</td><td>Conferir a planicidade na face usinada</td><td>desempeno + relógio</td><td>planeza 0,1 na área de contato Ø105,7</td><td>—</td></tr></tbody></table>
+<h3>W-03 — Tampa-gusset da ponta do braço</h3>
+<p>4 un · Aço A36 · Chapa 40×40×6</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar o contorno</td><td>laser (DXF 1:1)</td><td>30 × 40 ± 0,3</td><td>—</td></tr><tr><td><strong>SOLDA</strong> 2</td><td>SOLDAR na ponta do braço e na chapa W-02</td><td>TIG/MIG</td><td>filete a4 em todo o contorno — é o que fecha o tubo</td><td>—</td></tr></tbody></table>
+<h3>W-04 — Alojamento da bucha do pivô</h3>
+<p>4 un · Aço 1045 · Barra Ø34, furo Ø23 H7 × 44</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td><strong>USINAR</strong> 1</td><td>Tornear o diâmetro externo e facear as duas pontas</td><td>torno</td><td>Ø34 h11 × 38 ± 0,2</td><td>Ra 6,3</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Furar e pré-alargar o alojamento</td><td>torno</td><td>Ø22.7 (sobremetal para alargar depois de soldar)</td><td>Ra 3,2</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Chanfrar as duas bocas</td><td>torno</td><td>1 × 45°</td><td>—</td></tr></tbody></table>
+<h3>W-05 — Orelha da torre do pivô</h3>
+<p>8 un · Aço A36 · Chapa 44×70×6, furo Ø20 H7</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar o contorno</td><td>laser (DXF 1:1)</td><td>contorno ± 0,3</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Alargar o furo do eixo</td><td>broca Ø19,8 + alargador</td><td>Ø20 H7</td><td>Ra 1,6</td></tr><tr><td><strong>SOLDA</strong> 3</td><td>SOLDAR no berço W-06, as duas orelhas no mesmo dispositivo</td><td>TIG/MIG</td><td>filete a4; distância entre faces internas 42 ± 0,2</td><td>—</td></tr><tr><td><strong>USINAR</strong> 4</td><td>DEPOIS da solda: alargar os dois furos no mesmo passe</td><td>alargador de haste longa</td><td>2× Ø20 H7 coaxiais em 0,05</td><td>Ra 1,6</td></tr></tbody></table>
+<h3>W-06 — Berço do pivô</h3>
+<p>4 un · Aço A36 · Chapa 46×106×8</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar o contorno e os 2 furos de fixação</td><td>laser (DXF 1:1)</td><td>2× Ø8,5, posição ± 0,2</td><td>—</td></tr><tr><td><strong>SOLDA</strong> 2</td><td>SOLDAR as duas orelhas W-05</td><td>TIG/MIG</td><td>ver W-05 op. 3</td><td>—</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Facear a face de assento, DEPOIS da solda</td><td>fresa de facear</td><td>planeza 0,15 na face que encosta na chapa de fundo</td><td>Ra 6,3</td></tr><tr><td><strong>USINAR</strong> 4</td><td>Zincar ou pintar o conjunto soldado</td><td>tratamento</td><td>aço contra alumínio: isolar — arruela de nylon no parafuso</td><td>—</td></tr></tbody></table>
+<h3>W-07 — Eixo do pivô</h3>
+<p>4 un · Inox 304 · Barra Ø20 h7 × 66, 2 ran. anéis</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td><strong>USINAR</strong> 1</td><td>Tornear o diâmetro do eixo</td><td>torno CNC</td><td>Ø20 h7 × 66 ± 0,2</td><td>Ra 0,8</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Abrir as duas ranhuras de anel elástico</td><td>torno, bedame de 1,1</td><td>DIN 471 para Ø20, distância entre ranhuras 58 ± 0,2</td><td>Ra 3,2</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Chanfrar as duas pontas</td><td>torno</td><td>1,5 × 20°</td><td>—</td></tr></tbody></table>
+<h3>W-08 — Disco do prato do fole</h3>
+<p>4 un · Aço A36 · Disco Ø92×8, M12 central</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td><strong>USINAR</strong> 1</td><td>Tornear o disco</td><td>torno</td><td>Ø92 h11 × 8 ± 0,2</td><td>Ra 3,2</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Facear a face de assento do fole</td><td>torno</td><td>planeza 0,05 · perpendicular 0,1 ao eixo</td><td>Ra 1,6</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Rosquear o furo central</td><td>torno + macho</td><td>M12 × 1,75, profundidade 8 passante</td><td>—</td></tr><tr><td><strong>SOLDA</strong> 4</td><td>SOLDAR as duas orelhas W-09, em dispositivo</td><td>TIG/MIG</td><td>filete a4; 2× Ø12 H7 coaxiais em 0,05 depois de soldar</td><td>Ra 1,6</td></tr></tbody></table>
+<h3>W-09 — Orelha do prato do fole</h3>
+<p>8 un · Aço A36 · Chapa 28×26×8, furo Ø12 H7</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar o contorno e o furo do pino</td><td>laser (DXF 1:1)</td><td>28 × 26 ± 0,3</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Alargar o furo do pino</td><td>alargador</td><td>Ø12 H7</td><td>Ra 1,6</td></tr><tr><td><strong>SOLDA</strong> 3</td><td>SOLDAR no disco W-08, em dispositivo</td><td>TIG/MIG</td><td>filete a4; eixo do pino paralelo à face do disco em 0,1</td><td>—</td></tr></tbody></table>
+<h3>W-10 — Pino do prato</h3>
+<p>4 un · Inox 304 · Barra Ø12 h7 × 42</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td><strong>USINAR</strong> 1</td><td>Tornear o pino</td><td>torno CNC</td><td>Ø12 h7 × 42 ± 0,2</td><td>Ra 0,8</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Abrir as duas ranhuras de anel elástico</td><td>torno, bedame de 1,0</td><td>DIN 471 para Ø12, distância 36 ± 0,2</td><td>Ra 3,2</td></tr></tbody></table>
+<h3>W-11 — Berço do fole</h3>
+<p>4 un · Al 6061-T6 · Chapa 180×106×10</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar o contorno, os 4 furos de fixação e os 2 do fole</td><td>laser (DXF 1:1)</td><td>4× Ø8,5 ± 0,2 · Ø14 central ± 0,2 · Ø12 da porta de ar</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Facear as duas faces</td><td>fresa de facear</td><td>e = 10 ± 0,1 · paralelismo 0,1</td><td>Ra 3,2</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Rosquear o furo central do fole</td><td>macho</td><td>M12 × 1,75 passante</td><td>—</td></tr><tr><td><strong>USINAR</strong> 4</td><td>Rebarbar e anodizar</td><td>tratamento</td><td>anodização dura 15 µm</td><td>—</td></tr></tbody></table>
+<h3>W-13 — Flange do colar</h3>
+<p>4 un · Al 6061-T6 · Chapa Ø140×4, cortada em |X| 470</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar a flange e os 6 rebites</td><td>laser (DXF 1:1)</td><td>perfil de círculo cortado em</td><td>X</td><td>470; 6× Ø4,9</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Facear as duas faces de junta</td><td>fresa</td><td>planeza 0,1 nas duas faces que recebem junta NBR</td><td>Ra 3,2</td></tr><tr><td><strong>SOLDA</strong> 3</td><td>SOLDAR no tubo W-12</td><td>TIG</td><td>filete a3 estanque em todo o contorno — a junta tem de selar</td><td>—</td></tr></tbody></table>
+<h3>W-12 — Tubo do colar de vedação</h3>
+<p>4 un · Al 6061-T6 · Tubo Ø100×3 × 32</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td><strong>USINAR</strong> 1</td><td>Tornear o tubo do colar</td><td>torno</td><td>Ø100 ext. × Ø94 int. × 32 ± 0,3</td><td>Ra 6,3</td></tr><tr><td><strong>SOLDA</strong> 2</td><td>SOLDAR a flange W-13</td><td>TIG</td><td>ver W-13 op. 3</td><td>—</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Ensaio de estanqueidade do conjunto soldado</td><td>ar a 0,5 bar em água</td><td>sem bolha em 60 s</td><td>—</td></tr></tbody></table>
+<h3>Q-05 — Bucha de compressão</h3>
+<p>16 un · Al 6061-T6 · Barra Ø12, furo Ø8,5</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td><strong>USINAR</strong> 1</td><td>Tornear a bucha de compressão</td><td>torno</td><td>Ø12 × 30 ± 0,1, furo Ø8,5</td><td>Ra 6,3</td></tr><tr><td><strong>SOLDA</strong> 2</td><td>SOLDAR dentro do tubo ANTES de fechar o anel</td><td>TIG</td><td>depois de fechar o anel não há acesso</td><td>—</td></tr></tbody></table>
+<h3>M-01 — Luva do mastro</h3>
+<p>2 un · Al 6061-T6 · Tubo Ø34×4,5 × 180</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Serrar a luva no comprimento</td><td>serra de fita</td><td>180 ± 0,5</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Alargar o furo da haste</td><td>alargador</td><td>Ø25 H8</td><td>Ra 3,2</td></tr><tr><td><strong>USINAR</strong> 3</td><td>Furar e rosquear os travamentos</td><td>fresa + macho</td><td>2× M6 passante</td><td>—</td></tr><tr><td><strong>SOLDA</strong> 4</td><td>SOLDAR no quadro, sobre o reforço M-02</td><td>TIG</td><td>perpendicular 0,5 em 180 ao plano do deck</td><td>—</td></tr></tbody></table>
+<h3>N-02 — Berço do IMU</h3>
+<p>1 un · Al 6061-T6 · Chapa 90×70×6, face usinada</p>
+<table><thead><tr><th>op</th><th>operação</th><th>ferramenta</th><th>cota / tolerância</th><th>acabamento</th></tr></thead><tbody><tr><td>corte 1</td><td>Cortar o contorno e os furos</td><td>laser (DXF 1:1)</td><td>contorno ± 0,3</td><td>—</td></tr><tr><td><strong>USINAR</strong> 2</td><td>Facear a face de assento do IMU</td><td>fresa de facear</td><td>planeza 0,05 · paralela ao plano do deck em 0,1</td><td>Ra 1,6</td></tr></tbody></table>
+<h2>Ajustes e folgas</h2>
+<table><thead><tr><th>Interface</th><th>Ajuste</th><th>O que ele garante</th></tr></thead><tbody><tr><td>Eixo do pivô W-07 na bucha autolubrificante</td><td>Ø20 h7 / bucha H7</td><td>folga de 0,02 a 0,05 — o eixo gira</td></tr><tr><td>Bucha autolubrificante no alojamento W-04</td><td>Ø23 H7 / bucha s6</td><td>interferência leve: a bucha é prensada e não gira</td></tr><tr><td>Eixo do pivô W-07 nas orelhas W-05</td><td>Ø20 H7</td><td>ajuste deslizante: o eixo entra à mão e é travado por anel</td></tr><tr><td>Pino W-09 nas orelhas do prato W-08</td><td>Ø12 h7 / H7</td><td>folga mínima: o prato articula poucos graus</td></tr><tr><td>Motor MPW86 no alojamento da chapa W-02</td><td>Ø88 H8 / motor Ø86,5 máx.</td><td>folga de montagem; a centragem é pelo PCD, não pelo diâmetro</td></tr><tr><td>Fole W-10 dentro do colar W-12</td><td>Ø88 máx. / Ø94 int.</td><td>3 mm radiais: o fole dilata ao pressurizar</td></tr></tbody></table>
+<h2>Notas gerais</h2>
+<ul>
+<li>Toda cota sem tolerância indicada segue ISO 2768-mK; conjuntos soldados, ISO 13920-BF.</li>
+<li>As operações marcadas DEPOIS DA SOLDA são obrigatoriamente posteriores: a solda distorce, e usinar antes joga a tolerância fora.</li>
+<li>Os DXF em saida/dxf são 1:1 e já traçam contorno e furos. Eles NÃO carregam tolerância — a tolerância está nesta tabela e nas folhas 28 a 31.</li>
+<li>Aço contra alumínio em qualquer interface: isolar. É o item de corrosão galvânica de materiais.py, e nesta revisão ele aparece em W-06 e nos parafusos M8 da suspensão.</li>
+<li>Nenhuma peça deve ser usinada antes de a massa oficial ser fechada (P-02) e de o caso 9 do FEA rodar (P-22). Esta tabela é para COTAR.</li>
+</ul>
+<h2>Conferência automática</h2>
+<ul>
+<li>roteiro declarado para peça que não existe no modelo: <strong>nenhuma</strong></li>
+<li>peça do grupo W sem roteiro declarado: <strong>nenhuma</strong></li>
+</ul><div class="rodape">VALTEXA · Rover V3 · Revisão G · gerado de <code>VTX-RV3-USINAGEM-G.md</code> · EMITIDO PARA COTAÇÃO E VALIDAÇÃO</div></body></html>

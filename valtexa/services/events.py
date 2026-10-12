@@ -157,3 +157,35 @@ DEVICE_PROVISIONED = "device.provisioned"
 DEVICE_OFFLINE = "device.offline"
 DEVICE_FAULT = "device.fault"
 ROW_SCAN_RECEIVED = "row_scan.received"
+
+# --- coletas e dataset -------------------------------------------------------
+COLLECTION_QUEUED = "collection.queued"
+COLLECTION_PROCESSED = "collection.processed"
+COLLECTION_AVAILABLE = "collection.available"
+COLLECTION_NO_MODEL = "collection.no_model"
+"""A coleta entrou sem que exista modelo treinado para ela.
+
+Não é falha: é o sinal de que aquelas imagens só viram dado depois de um
+agrônomo anotá-las. Ver valtexa/services/ai_pipeline.py.
+"""
+
+DATASET_SAMPLE_ADDED = "dataset.sample_added"
+DATASET_VERSION_FROZEN = "dataset.version_frozen"
+
+# --- atualização remota (Parte 6) -------------------------------------------
+OTA_FAILED = "ota.failed"
+"""O robô informou ``falhou``, ``revertida`` ou ``recusada`` num destino OTA."""
+
+# --- suporte (Parte 6, seção 49) ---------------------------------------------
+TICKET_CREATED = "ticket.created"
+TICKET_COMMENTED = "ticket.commented"
+"""Comentário visível ao cliente (o interno não gera evento para o cliente)."""
+TICKET_STATUS_CHANGED = "ticket.status_changed"
+INCIDENT_UPDATED = "incident.updated"
+
+# --- observabilidade (Parte 7, seção 35) -------------------------------------
+ALERT_FIRED = "alert.fired"
+"""Uma regra de alerta passou a valer para um assunto (robô, API, IA, modelo)."""
+ALERT_RESOLVED = "alert.resolved"
+# Parte 11 (rodada 3) — ensaio de validação do Rover que estava aprovado e reprovou.
+ENSAIO_REGRESSAO = "ensaio.regressao"

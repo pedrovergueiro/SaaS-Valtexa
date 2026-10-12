@@ -22,7 +22,8 @@ from typing import TypeVar
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, object_session
 
 from valtexa.api.deps import DeviceCaller, current_device, require_active_device
 from valtexa.config import settings
@@ -33,6 +34,7 @@ from valtexa.models import (
     ApplicationState,
     Asset,
     AssetKind,
+    CapturePlatform,
     Device,
     Field,
     Mission,
@@ -49,6 +51,8 @@ from valtexa.schemas import (
     ApplicationOut,
     ApplicationStart,
     ApplicationStop,
+    DesignatedModelOut,
+    DeviceSessionIn,
     EventBatch,
     IngestOut,
     Message,
@@ -68,10 +72,14 @@ from valtexa.security import tokens
 from valtexa.services import (
     ai_pipeline,
     audit,
+    consent,
     events,
+    fusao_borda,
     geo,
     ingestion,
     mission_manager,
+    model_registry,
+    plant_map,
     pointcloud,
     scene,
     storage,
@@ -103,13 +111,25 @@ def server_time() -> dict:
 
 
 @router.post("/session", response_model=TokenResponse, summary="Token de sessão do dispositivo")
-def open_session(caller: DeviceCaller = Depends(current_device)) -> TokenResponse:
+def open_session(
+    payload: DeviceSessionIn | None = None,
+    caller: DeviceCaller = Depends(current_device),
+    session: Session = Depends(get_session),
+) -> TokenResponse:
     """Troca uma requisição assinada por um token de curta duração.
 
     Conveniência para enlaces caros: o token evita uma assinatura por amostra de
     telemetria. Ele **não** substitui a assinatura em nada que mude o mundo
     físico — essas rotas continuam exigindo Ed25519.
+
+    No corpo (opcional) o robô diz o software que está rodando: runtime, Edge AI,
+    modelo, dNATY (brief, seção 22). É daí que a frota sabe a versão de cada um;
+    ninguém a digita. Uma troca de versão fica na trilha do cliente.
     """
+    if payload is not None:
+        _registra_versoes(session, caller.device, payload)
+    caller.device.last_seen_at = datetime.now(UTC)
+    session.commit()
     token, expires_at = tokens.issue(
         "device", caller.device_id, tenant_id=caller.tenant_id, key_id=caller.credential.key_id
     )
@@ -120,6 +140,98 @@ def open_session(caller: DeviceCaller = Depends(current_device)) -> TokenRespons
         role=None,
         capabilities=[],
     )
+
+
+_VERSOES = (
+    ("firmware_version", "firmware_version"),
+    ("hardware_version", "hardware_version"),
+    ("runtime_version", "runtime_version"),
+    ("edge_ai_version", "edge_ai_version"),
+    ("ai_model_key", "model_key"),
+    ("ai_model_version", "model_version"),
+    ("dnaty_version", "dnaty_version"),
+)
+
+
+def _registra_versoes(session: Session, device: Device, payload: DeviceSessionIn) -> None:
+    """Grava as versões informadas; campo ausente não apaga o que já se sabia."""
+    antes: dict[str, str | None] = {}
+    depois: dict[str, str | None] = {}
+    for coluna, campo in _VERSOES:
+        valor = getattr(payload, campo)
+        if valor is None or valor == getattr(device, coluna):
+            continue
+        antes[coluna] = getattr(device, coluna)
+        depois[coluna] = valor
+        setattr(device, coluna, valor)
+    device.versions_reported_at = datetime.now(UTC)
+    if depois:
+        audit.record(
+            session,
+            tenant_id=device.tenant_id,
+            action="device.versions_reported",
+            subject_type=SubjectType.DEVICE,
+            subject_id=device.id,
+            actor_type=ActorType.DEVICE,
+            actor_id=device.id,
+            actor_label=device.serial_number,
+            payload={"antes": antes, "depois": depois},
+        )
+
+
+@router.get(
+    "/models",
+    response_model=list[DesignatedModelOut],
+    summary="Modelos designados a este robô pelo registry",
+)
+def designated_models(
+    caller: DeviceCaller = Depends(current_device),
+    session: Session = Depends(get_session),
+) -> list[DesignatedModelOut]:
+    """Para cada talhão onde o robô trabalha, a versão em PRODUÇÃO que ele deve rodar.
+
+    Brief, seções 9 e 22: um robô nunca recebe modelo arbitrário. A resposta só
+    traz versão em PRODUÇÃO do Model Registry, liberada para o cliente, com o
+    hash que o robô confere antes de carregar. Sem artefato com hash no registry,
+    ``artifact_sha256`` vem nulo — e o robô não carrega nada.
+    """
+    saida = []
+    for item in model_registry.designados(session, caller.device):
+        versao = item.version
+        otimizado = bool(versao and versao.optimized_artifact_sha256)
+        saida.append(
+            DesignatedModelOut(
+                field_id=item.field_id,
+                field_name=item.field_name,
+                crop=item.crop,
+                model_key=versao.model_key if versao else None,
+                version=versao.version if versao else None,
+                state=versao.state if versao else None,
+                artifact_uri=(
+                    None
+                    if versao is None
+                    else versao.optimized_artifact_uri if otimizado
+                    else versao.original_artifact_uri
+                ),
+                artifact_sha256=(
+                    None
+                    if versao is None
+                    else versao.optimized_artifact_sha256 if otimizado
+                    else versao.original_artifact_sha256
+                ),
+                artifact_kind=(
+                    None
+                    if versao is None
+                    else "otimizado" if otimizado
+                    else "original" if versao.original_artifact_sha256
+                    else None
+                ),
+                dnaty_version=versao.dnaty_version if otimizado and versao else None,
+                target_hardware=versao.target_hardware if versao else None,
+                reason=item.reason,
+            )
+        )
+    return saida
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +300,11 @@ def sync(
         [event.model_dump() for event in payload.events],
         sync_id=payload.sync_id,
     )
+    agora = datetime.now(UTC)
+    caller.device.last_seen_at = agora
+    caller.device.sync_pending = payload.remaining or 0
+    if caller.device.sync_pending == 0:
+        caller.device.last_sync_at = agora
     session.commit()
 
     return IngestOut(
@@ -242,16 +359,36 @@ def post_observation(
         return _observation_out(session, existing)
 
     data = file.file.read()
-    asset = _store_asset(
-        session, caller, data, file.content_type, AssetKind.IMAGE, payload.captured_at
+    # O tipo é o que os bytes dizem, não só o cabeçalho (Parte 9, seção 43): o tipo
+    # declarado já era conferido contra a lista, mas um HTML declarado "image/jpeg"
+    # entrava e era guardado e servido como imagem.
+    tipo = storage.tipo_de_imagem(data)
+    if tipo is None:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "O arquivo não é uma imagem JPEG, PNG, WebP ou TIFF.",
+        )
+    filename = file.filename or "frame.jpg"
+    mission_id = _mission_of(session, caller.device, payload.mission_id)
+    # A inferência vem antes de qualquer escrita: são segundos de HTTP, e com a
+    # transação aberta a linha do dispositivo (a marca d'água) ficaria presa —
+    # a telemetria do mesmo robô esperaria o diagnóstico de cada quadro.
+    analyses = _analyses(
+        data,
+        filename,
+        field_row,
+        _rover_frame(payload, field_row, mission_id),
+        training_consent=consent.permite_treino(session, field_row.tenant_id),
     )
+
+    asset = _store_asset(session, caller, data, tipo, AssetKind.IMAGE, payload.captured_at)
 
     observation = Observation(
         tenant_id=caller.tenant_id,
         farm_id=field_row.farm_id,
         field_id=field_row.id,
         zone_id=payload.zone_id,
-        mission_id=_mission_of(session, caller.device, payload.mission_id),
+        mission_id=mission_id,
         device_id=caller.device_id,
         sequence_number=payload.sequence_number,
         captured_at=payload.captured_at,
@@ -268,7 +405,7 @@ def post_observation(
     session.flush()
     ingestion.bump_watermark(caller.device, payload.sequence_number)
 
-    _run_pipeline(session, observation, data, file.filename or "frame.jpg", field_row.crop)
+    _run_pipeline(session, observation, data, filename, field_row, analyses=analyses)
     session.commit()
     return _observation_out(session, observation)
 
@@ -318,7 +455,7 @@ def post_row_scan(
 
     if not payload.plants and file is None:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Passada sem plantas e sem nuvem de pontos."
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Passada sem plantas e sem nuvem de pontos."
         )
     # Um talhão trocado no firmware colaria a rua de um talhão na cópia do outro.
     if not any(
@@ -326,7 +463,7 @@ def post_row_scan(
         for point in payload.path
     ):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "O eixo da passada não cruza o talhão informado."
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "O eixo da passada não cruza o talhão informado."
         )
 
     asset_id: str | None = None
@@ -337,7 +474,7 @@ def post_row_scan(
             info = pointcloud.inspect(data)
         except pointcloud.PointCloudError as exc:
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY, f"Nuvem de pontos recusada: {exc}"
+                status.HTTP_422_UNPROCESSABLE_CONTENT, f"Nuvem de pontos recusada: {exc}"
             ) from exc
         asset = _store_asset(
             session, caller, data, "application/x-ply", AssetKind.POINTCLOUD, payload.captured_at
@@ -561,6 +698,12 @@ def complete_mission(
         actor_id=caller.device_id,
     )
     session.commit()
+    # A passada do rover pelo talhão é a missão: fechá-la consolida cada planta
+    # e aponta o que mudou desde a anterior. Melhor esforço — ver plant_map. Com o
+    # Rover Runtime os resultados sincronizam depois (offline-first): quem fecha é o
+    # worker, quando todos chegarem e forem fundidos (services.fusao_borda).
+    if not fusao_borda.fecha_pelo_worker(session, mission):
+        plant_map.close_pass(mission.field_id, mission.id)
     return Message(detail="Missão concluída.")
 
 
@@ -715,17 +858,81 @@ def stop_application(
 # ---------------------------------------------------------------------------
 
 
-def _run_pipeline(
-    session: Session, observation: Observation, data: bytes, filename: str, crop: str
-) -> None:
-    """Roda os analisadores e grava detecções, diagnóstico e decisão."""
+def _rover_frame(
+    payload: ObservationIn, field_row: Field, mission_id: str | None
+) -> ai_pipeline.RoverFrame | None:
+    """A câmera do quadro, no formato do pipeline — ou nada, se é foto de folha."""
+    camera = payload.camera
+    if camera is None:
+        return None
+    return ai_pipeline.RoverFrame(
+        camera_height_mm=camera.camera_height_mm,
+        distance_mm=camera.distance_mm,
+        side=camera.side,
+        x_m=camera.x_m,
+        field_id=field_row.id,
+        row_id=None if payload.row_index is None else str(payload.row_index),
+        # A passada é a missão; sem missão, o dia — a fusão compara passadas.
+        pass_id=mission_id or payload.captured_at.date().isoformat(),
+        lat=payload.lat,
+        lon=payload.lon,
+        heading_deg=payload.heading_deg,
+        camera_id=camera.camera_id,
+        frame_id=None if payload.sequence_number is None else str(payload.sequence_number),
+        captured_at=payload.captured_at,
+    )
+
+
+def _analyses(
+    data: bytes,
+    filename: str,
+    field_row: Field,
+    frame: ai_pipeline.RoverFrame | None = None,
+    *,
+    training_consent: bool = False,
+) -> list[ai_pipeline.Analysis]:
+    """Chama os analisadores com a versão do modelo do talhão.
+
+    Só lê o registry (qual modelo atende o talhão); a inferência em si não toca no banco.
+    """
     try:
         analyzers = ai_pipeline.default_analyzers()
     except ai_pipeline.AnalyzerUnavailableError:
         analyzers = []
 
+    try:
+        model_key = ai_pipeline.resolve_model(
+            object_session(field_row),
+            field_row.crop,
+            CapturePlatform.GROUND,
+            field_row.ai_model,
+            tenant_id=field_row.tenant_id,
+        )
+    except ai_pipeline.NoModelForCaptureError:
+        model_key = None  # o analisador explica a recusa na própria análise
+    return ai_pipeline.run_analyzers(
+        data,
+        filename,
+        field_row.crop,
+        analyzers,
+        model_key=model_key,
+        frame=frame,
+        training_consent=training_consent,
+    )
+
+
+def _run_pipeline(
+    session: Session,
+    observation: Observation,
+    data: bytes,
+    filename: str,
+    field_row: Field,
+    *,
+    analyses: list[ai_pipeline.Analysis],
+) -> None:
+    """Grava detecções, diagnóstico e decisão de análises já feitas (:func:`_analyses`)."""
     detections, diagnosis = ai_pipeline.analyze_observation(
-        observation, data, filename, crop, analyzers
+        observation, data, filename, field_row.crop, [], analyses=analyses
     )
     session.add_all(detections)
     session.add(diagnosis)
@@ -735,6 +942,10 @@ def _run_pipeline(
         diagnosis.primary_detection_id = detections[0].id
         if len(detections) > 1:
             diagnosis.secondary_detection_id = detections[1].id
+
+    audit.record_ai_diagnosis(
+        session, diagnosis, pipeline_version=ai_pipeline.PIPELINE_VERSION
+    )
 
     events.publish(
         session,
@@ -807,7 +1018,7 @@ def _parse_metadata(raw: str, schema: type[_Metadata] = ObservationIn) -> _Metad
         return schema(**json.loads(raw))
     except (ValueError, TypeError) as exc:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, f"Campo 'metadata' inválido: {exc}"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, f"Campo 'metadata' inválido: {exc}"
         ) from exc
 
 
@@ -830,18 +1041,28 @@ def _store_asset(
         select(Asset).where(Asset.tenant_id == caller.tenant_id, Asset.sha256 == stored.sha256)
     ).first()
     if asset is None:
-        asset = Asset(
-            tenant_id=caller.tenant_id,
-            kind=kind,
-            content_type=stored.content_type,
-            size_bytes=stored.size_bytes,
-            sha256=stored.sha256,
-            storage_key=stored.key,
-            device_id=caller.device_id,
-            captured_at=captured_at,
-        )
-        session.add(asset)
-        session.flush()
+        try:
+            # Savepoint: dois envios simultâneos dos mesmos bytes (mesmo cliente)
+            # disputam a mesma linha; quem perde reaproveita a do outro.
+            with session.begin_nested():
+                asset = Asset(
+                    tenant_id=caller.tenant_id,
+                    kind=kind,
+                    content_type=stored.content_type,
+                    size_bytes=stored.size_bytes,
+                    sha256=stored.sha256,
+                    storage_key=stored.key,
+                    device_id=caller.device_id,
+                    captured_at=captured_at,
+                )
+                session.add(asset)
+                session.flush()
+        except IntegrityError:
+            asset = session.scalars(
+                select(Asset).where(
+                    Asset.tenant_id == caller.tenant_id, Asset.sha256 == stored.sha256
+                )
+            ).one()
     return asset
 
 
@@ -877,6 +1098,7 @@ def _observation_out(session: Session, observation: Observation) -> ObservationO
         zone_id=observation.zone_id,
         mission_id=observation.mission_id,
         device_id=observation.device_id,
+        collection_id=observation.collection_id,
         captured_at=observation.captured_at,
         lat=observation.lat,
         lon=observation.lon,
@@ -887,7 +1109,18 @@ def _observation_out(session: Session, observation: Observation) -> ObservationO
         confidence=diagnosis.confidence if diagnosis else None,
         novelty_score=diagnosis.novelty_score if diagnosis else None,
         severity=diagnosis.severity if diagnosis else None,
+        signals=_primary_signals(session, diagnosis),
     )
+
+
+def _primary_signals(session: Session, diagnosis) -> dict:
+    """Os sinais da análise primária — portão, conformal e o resumo do quadro."""
+    from valtexa.models import Detection
+
+    if diagnosis is None or diagnosis.primary_detection_id is None:
+        return {}
+    detection = session.get(Detection, diagnosis.primary_detection_id)
+    return dict(detection.signals or {}) if detection is not None else {}
 
 
 def _application_out(application: Application) -> ApplicationOut:

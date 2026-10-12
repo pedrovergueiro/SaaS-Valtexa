@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from valtexa.api.deps import Principal, get_scoped, require, scoped
 from valtexa.db import get_session
@@ -36,7 +36,7 @@ from valtexa.schemas import (
     ProvisioningTokenOut,
 )
 from valtexa.security import rbac, signing
-from valtexa.services import audit, events
+from valtexa.services import audit, events, fleet_state, model_registry, plans
 from valtexa.services.hal import Capabilities, capabilities_of
 
 router = APIRouter(tags=["frota"])
@@ -96,6 +96,10 @@ def create_provisioning_token(
         )
     if payload.farm_id:
         get_scoped(session, Farm, payload.farm_id, principal)
+    # Conferido aqui, para o convite não nascer inútil, e de novo no
+    # provisionamento, que é quando o robô passa a existir: entre um e outro
+    # pode ter entrado outro robô.
+    plans.exigir(session, principal.tenant_id, "devices")
 
     token = signing.new_provisioning_token()
     row = ProvisioningToken(
@@ -183,10 +187,12 @@ def provision(
         select(Device).where(Device.serial_number == payload.serial_number)
     ).first()
     if device is None:
+        plans.exigir(session, token.tenant_id, "devices")
         device = Device(
             tenant_id=token.tenant_id,
             serial_number=payload.serial_number,
-            name=payload.name or f"{model.name} {payload.serial_number[-4:]}",
+            name=_nome_do_robo(session, token.tenant_id, payload.name, model.name,
+                               payload.serial_number),
             kind=model.kind,
             device_model_id=model.id,
             farm_id=token.farm_id,
@@ -244,6 +250,7 @@ def provision(
         tenant_id=device.tenant_id,
         key_id=credential.key_id,
         platform_public_key=signing.platform_public_key(),
+        ota_public_key=signing.ota_public_key(),
         protocol_version=PROTOCOL_VERSION,
         server_time=datetime.now(UTC),
     )
@@ -261,7 +268,12 @@ def list_devices(
         statement = statement.where(Device.kind == kind)
     if farm_id is not None:
         statement = statement.where(Device.farm_id == farm_id)
-    return [_device_out(row) for row in session.scalars(statement)]
+    statement = statement.options(selectinload(Device.credentials), selectinload(Device.model))
+    cache: dict = {}
+    return [
+        DeviceOut(**device_snapshot(session, row, cache=cache))
+        for row in session.scalars(statement)
+    ]
 
 
 @router.get("/devices/{device_id}", response_model=DeviceOut, summary="Um dispositivo")
@@ -270,7 +282,7 @@ def get_device(
     principal: Principal = Depends(require(rbac.DEVICE_READ)),
     session: Session = Depends(get_session),
 ) -> DeviceOut:
-    return _device_out(get_scoped(session, Device, device_id, principal))
+    return _device_out(session, get_scoped(session, Device, device_id, principal))
 
 
 @router.patch(
@@ -291,6 +303,12 @@ def update_status(
     device = get_scoped(session, Device, device_id, principal)
     previous = device.status
     device.status = payload.status
+    if payload.status is DeviceStatus.MAINTENANCE:
+        device.maintenance_note = payload.maintenance_note or payload.reason
+    elif previous is DeviceStatus.MAINTENANCE:
+        # Saiu da oficina: é esta a data que a frota mostra como última manutenção.
+        device.last_maintenance_at = datetime.now(UTC)
+        device.maintenance_note = None
 
     audit.record(
         session,
@@ -306,7 +324,7 @@ def update_status(
         reason=payload.reason,
     )
     session.commit()
-    return _device_out(device)
+    return _device_out(session, device)
 
 
 @router.post(
@@ -372,22 +390,91 @@ def _create_default_tanks(session: Session, device: Device, capabilities: Capabi
         )
 
 
-def _device_out(device: Device) -> DeviceOut:
-    return DeviceOut(
-        id=device.id,
-        serial_number=device.serial_number,
-        name=device.name,
-        kind=device.kind,
-        status=device.status,
-        model_code=device.model.code if device.model else "",
-        farm_id=device.farm_id,
-        firmware_version=device.firmware_version,
-        protocol_version=device.protocol_version,
-        connectivity=device.connectivity,
-        battery_percent=device.battery_percent,
-        last_seen_at=device.last_seen_at,
-        last_lat=device.last_lat,
-        last_lon=device.last_lon,
-        active_mission_id=device.active_mission_id,
-        capabilities=device.capabilities,
-    )
+def device_snapshot(
+    session: Session, device: Device, now: datetime | None = None, *, cache: dict | None = None
+) -> dict:
+    """O retrato de frota de um robô: estado derivado, versões, saúde e o modelo.
+
+    Usado pela frota do cliente e pela de Operações; o estado vem de
+    :func:`valtexa.services.fleet_state.derive` e a conformidade do modelo, do
+    registry — nada aqui é digitado por alguém.
+    """
+    situacao = fleet_state.derive(device, now)
+    etiquetas = {
+        d.etiqueta
+        for d in model_registry.designados(session, device, cache=cache)
+        if d.etiqueta
+    }
+    return {
+        "id": device.id,
+        "serial_number": device.serial_number,
+        "name": device.name,
+        "kind": device.kind,
+        "status": device.status,
+        "model_code": device.model.code if device.model else "",
+        "farm_id": device.farm_id,
+        "firmware_version": device.firmware_version,
+        "protocol_version": device.protocol_version,
+        "connectivity": situacao.connectivity,
+        "battery_percent": device.battery_percent,
+        "last_seen_at": device.last_seen_at,
+        "last_lat": device.last_lat,
+        "last_lon": device.last_lon,
+        "active_mission_id": device.active_mission_id,
+        "capabilities": device.capabilities,
+        "fleet_state": situacao.state.value,
+        "fleet_state_label": fleet_state.ROTULOS[situacao.state],
+        "fleet_state_reason": situacao.reason,
+        "hardware_version": device.hardware_version,
+        "runtime_version": device.runtime_version,
+        "edge_ai_version": device.edge_ai_version,
+        "ai_model_key": device.ai_model_key,
+        "ai_model_version": device.ai_model_version,
+        "dnaty_version": device.dnaty_version,
+        "versions_reported_at": device.versions_reported_at,
+        "temperature_c": device.temperature_c,
+        "storage_total_bytes": device.storage_total_bytes,
+        "storage_free_bytes": device.storage_free_bytes,
+        "link_quality": device.link_quality,
+        "operating_hours": device.operating_hours,
+        "active_faults": list(device.active_faults or []),
+        "sync_pending": device.sync_pending,
+        "last_sync_at": device.last_sync_at,
+        "last_maintenance_at": device.last_maintenance_at,
+        "maintenance_note": device.maintenance_note,
+        "model_status": model_registry.situacao_do_modelo(session, device, etiquetas),
+        "designated_models": sorted(etiquetas),
+    }
+
+
+def _device_out(session: Session, device: Device) -> DeviceOut:
+    return DeviceOut(**device_snapshot(session, device))
+
+
+def _nome_do_robo(session: Session, tenant_id: str, pedido: str | None, modelo: str,
+                  serial: str) -> str:
+    """Nome livre no cliente (``uq_device_tenant_name``).
+
+    O nome automático era "modelo + 4 últimos dígitos do número de série": dois robôs
+    com séries terminadas igual (ROV-A-0007 e ROV-B-0007) davam 500 no provisionamento
+    do segundo (achado no ensaio de produção da Parte 9). Agora: os 4 dígitos; se já
+    existir, a série inteira; se ainda existir, um sufixo. Nome **pedido** que já
+    existe é 409 — quem pediu escolhe outro.
+    """
+
+    def livre(nome: str) -> bool:
+        return session.scalar(select(Device.id).where(
+            Device.tenant_id == tenant_id, Device.name == nome)) is None
+
+    if pedido:
+        if not livre(pedido):
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                f"Já existe um robô chamado {pedido!r} neste cliente.")
+        return pedido
+    for nome in (f"{modelo} {serial[-4:]}", f"{modelo} {serial}"):
+        if livre(nome):
+            return nome
+    n = 2
+    while not livre(f"{modelo} {serial} ({n})"):
+        n += 1
+    return f"{modelo} {serial} ({n})"

@@ -24,22 +24,17 @@ from helpers import DeviceSession, provision, send_telemetry, upload_observation
 
 from simulator.plants import Focus, SimulatedCrop
 from valtexa.models import DiagnosisStatus
-from valtexa.seed import DEMO_FIELD_BOUNDARY
+from valtexa.seed import DEMO_FIELD_BOUNDARY, DEMO_ZONE_BOUNDARY
 from valtexa.services import pointcloud
 from valtexa.services.taxonomy import Category, categorize
 
-EIXO = [[-55.9081, -12.7240], [-55.9068, -12.7240]]
-"""Uma rua leste-oeste de ~141 m, no meio do talhão de demonstração."""
+EIXO = [[-45.86300, -21.90330], [-45.86160, -21.90330]]
+"""Uma rua leste-oeste de ~145 m, dentro do cafezal de demonstração."""
 
-VIZINHA = [[lon, lat + 3.0 / 111_320] for lon, lat in EIXO]
-"""A rua 3 m ao norte."""
+VIZINHA = [[lon, lat + 3.5 / 111_320] for lon, lat in EIXO]
+"""A rua seguinte, 3,5 m ao norte — o espaçamento de café da demonstração."""
 
-ZONA = [
-    [-55.9084, -12.7236],
-    [-55.9071, -12.7236],
-    [-55.9071, -12.7245],
-    [-55.9084, -12.7245],
-]
+ZONA = list(DEMO_ZONE_BOUNDARY)
 
 
 def _lonlat(origin: list[float], x: float, y: float) -> tuple[float, float]:
@@ -140,7 +135,7 @@ class TestPassada:
         assert body["plant_count"] == 3
         assert body["point_count"] == 3
         assert body["has_pointcloud"] is True
-        assert body["length_m"] == pytest.approx(141, abs=2)
+        assert body["length_m"] == pytest.approx(144, abs=2)
 
         cena = _cena(client, demo["field_id"], operator_token)
         assert len(cena["scans"]) == 1
@@ -220,7 +215,7 @@ class TestPassada:
 
         lon, lat = _lonlat(EIXO[0], 10.0, 0.25)
         ferrugem = upload_observation(
-            rover, demo["field_id"], label="Common_Rust", novelty=0.3, lon=lon, lat=lat
+            rover, demo["field_id"], label="Rust", novelty=0.3, lon=lon, lat=lat
         ).json()
         lon, lat = _lonlat(EIXO[0], 40.0, -0.25)
         lagarta = upload_observation(
@@ -257,7 +252,7 @@ class TestPassada:
         self, client: TestClient, demo: dict, admin_token: dict, operator_token: dict
     ) -> None:
         rover = provision(client, admin_token, "ROVER_SCOUT_V1", "R3D-6", demo["farm_id"])
-        send_telemetry(rover, battery_percent=95.0, lat=-12.7252, lon=-55.9075)
+        send_telemetry(rover, battery_percent=95.0, lat=-21.9068, lon=-45.8630)
         mission = client.post(
             "/v1/missions",
             json={
@@ -339,7 +334,7 @@ class TestRecusas:
         assert cena["scans"] == []
         assert cena["plants"]["x"] == []
         assert cena["coverage_ratio"] == 0.0
-        assert len(cena["boundary"]) == 4
+        assert len(cena["boundary"]) == len(DEMO_FIELD_BOUNDARY)
 
 
 # --- categorias ---------------------------------------------------------------
@@ -349,8 +344,8 @@ class TestRecusas:
     ("label", "status", "categoria"),
     [
         ("Healthy", DiagnosisStatus.AI_VALIDATED, Category.HEALTHY),
-        ("Common_Rust", DiagnosisStatus.AI_VALIDATED, Category.DISEASE),
-        ("Common_Rust", DiagnosisStatus.NEEDS_REVIEW, Category.REVIEW),
+        ("Rust", DiagnosisStatus.AI_VALIDATED, Category.DISEASE),
+        ("Rust", DiagnosisStatus.NEEDS_REVIEW, Category.REVIEW),
         ("Spodoptera_frugiperda", DiagnosisStatus.HUMAN_CONFIRMED, Category.PEST),
         ("Leaf_Miner_Damage", DiagnosisStatus.AI_VALIDATED, Category.PEST),
         ("Deficiência de magnésio", DiagnosisStatus.HUMAN_CONFIRMED, Category.OTHER),
@@ -370,7 +365,9 @@ class TestLavouraSimulada:
         plants, cloud = crop.scan(EIXO, 1.5)
         again, _ = crop.scan(EIXO, 1.5)
         assert plants == again
-        # 141 m, seis linhas a 0,5 m, uma planta a cada 0,3 m, ~4% de falha.
+        # 144 m no espaçamento padrão do SimulatedCrop (não o do cafezal da
+        # demonstração, que vem de demo_crop): o que se testa aqui é que a
+        # mesma rua devolve sempre as mesmas plantas.
         assert 2_400 < len(plants) < 3_100
         assert pointcloud.inspect(cloud).points > 20 * len(plants)
 
@@ -391,7 +388,7 @@ class TestLavouraSimulada:
                     lat=centro[1],
                     radius_m=10.0,
                     drawn="Common_Rust",
-                    model_label="Common_Rust",
+                    model_label="Rust",
                     stunting=0.3,
                     yellowing=0.4,
                 )

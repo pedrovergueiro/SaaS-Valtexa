@@ -15,6 +15,7 @@ está assinando comandos com um segredo público.
 | SQLite | migrar para Postgres |
 | `CORS_ORIGINS` com `*` | listar as origens |
 | `SIMULATED_INFERENCE` ligado | desligar |
+| IA ligada sem `INFERENCE_SERVICE_TOKEN` | gerar um token e configurar o **mesmo** valor em `SERVICE_TOKEN` no servidor de IA (`ia/`) |
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(48))"
@@ -24,7 +25,10 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 de um usuário passaria a permitir forjar uma missão assinada. A fronteira entre
 "alguém entrou na conta" e "alguém mandou o drone pulverizar" desapareceria.
 
-`/health` mostra a mesma lista em qualquer ambiente — use como alerta.
+`/health` diz **quantas** pendências há em qualquer ambiente — use como alerta. O
+texto de cada uma (e o endereço da IA) só aparece para a equipe, em
+`/v1/platform/health` e na tela "Saúde do sistema" do console `/plataforma`: o
+`/health` não tem autenticação, e "SESSION_SECRET ainda é o padrão" é mapa de ataque.
 
 ---
 
@@ -197,12 +201,17 @@ qualquer réplica.
 ## Observabilidade
 
 `/health` responde `200` enquanto o processo estiver de pé (*liveness*); o corpo
-diz se o banco e a inferência estão acessíveis (*readiness*):
+diz se o banco e a inferência estão acessíveis (*readiness*), sem detalhe interno
+(`database` só `ok`/`erro`, `inference` só `ligado`/`desligado`, cada pendência
+como linha genérica):
 
 ```json
 {"status": "ok", "environment": "production", "protocol_version": "1.0",
- "database": "ok", "inference": "http://...", "pending_events": 3, "warnings": []}
+ "database": "ok", "inference": "ligado", "pending_events": 3, "warnings": []}
 ```
+
+O mesmo diagnóstico por extenso (URL da IA, tipo do erro do banco, texto das
+pendências) fica em `GET /v1/platform/health`, para qualquer papel da equipe.
 
 O que vale alertar:
 
@@ -243,6 +252,7 @@ inclui o corpo das requisições e **não deve ir para produção**.
 - [ ] `CORS_ORIGINS` com as origens reais
 - [ ] TLS terminado antes da aplicação
 - [ ] `INFERENCE_URL` apontando para o `VALTEXA-B`
+- [ ] `INFERENCE_SERVICE_TOKEN` (SaaS) = `SERVICE_TOKEN` (IA): sem ele a IA fica aberta
 - [ ] `EVENT_WORKER_IN_API=false` na API e o `worker` no ar
 - [ ] `/health` monitorado, com alerta em `pending_events` e `warnings`
 - [ ] depois do deploy, `alembic current` igual a `alembic heads`

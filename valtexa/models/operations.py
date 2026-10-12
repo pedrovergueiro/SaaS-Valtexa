@@ -30,6 +30,10 @@ class Mission(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     """Uma tarefa fechada e autorizada para um dispositivo."""
 
     __tablename__ = "mission"
+    __table_args__ = (
+        # Linha do tempo e comparação do talhão: missões de um tipo num talhão (Parte 9).
+        Index("ix_mission_field_kind", "field_id", "kind"),
+    )
 
     kind: Mapped[MissionKind] = mapped_column(enum_column(MissionKind), nullable=False, index=True)
     state: Mapped[MissionState] = mapped_column(
@@ -89,6 +93,13 @@ class Mission(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    fusion_closed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        doc=(
+            "Quando a passada desta missão foi fechada na fusão por planta da IA — depois "
+            "que os resultados do Rover chegaram e foram fundidos (``services.fusao_borda``)."
+        ),
+    )
 
     safety_status: Mapped[SafetyVerdict | None] = mapped_column(enum_column(SafetyVerdict))
     safety_reason: Mapped[str | None] = mapped_column(Text)

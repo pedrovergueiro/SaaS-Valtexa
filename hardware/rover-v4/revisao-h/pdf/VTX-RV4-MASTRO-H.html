@@ -1,0 +1,95 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Rover V4 — rigidez do mastro e vibração dos sensores</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; margin: 0; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #15402a;
+     border-bottom: 2.4pt solid #1f6b3a; padding-bottom: 2.5mm; }
+h2 { font-size: 13.5pt; margin: 9mm 0 3mm; color: #1f6b3a; page-break-after: avoid;
+     border-bottom: .6pt solid #cfd8d2; padding-bottom: 1.5mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #15402a; page-break-after: avoid; }
+p { margin: 0 0 2.8mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm;
+        font-size: 9pt; page-break-inside: avoid; }
+th { background: #1f6b3a; color: #fff; text-align: left; padding: 1.6mm 2mm;
+     font-weight: 600; font-size: 8.6pt; }
+td { border-bottom: .4pt solid #dde3df; padding: 1.5mm 2mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8f7; }
+code { font: 9pt 'Cascadia Mono', Consolas, monospace; background: #eef2ef;
+       padding: .3mm 1mm; border-radius: 1mm; }
+pre { background: #f4f6f5; border-left: 2.5pt solid #1f6b3a; padding: 2.5mm 3mm;
+      margin: 2mm 0 4mm; overflow-x: auto; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.45; }
+blockquote { border-left: 2.5pt solid #c9a227; background: #fdf9ec; margin: 2mm 0 4mm;
+             padding: 2mm 3mm; }
+blockquote p { margin: 0; }
+hr { border: 0; border-top: .6pt solid #cfd8d2; margin: 6mm 0; }
+strong { font-weight: 650; color: #0d2b1c; }
+.rodape { margin-top: 8mm; padding-top: 2.5mm; border-top: .6pt solid #cfd8d2;
+          font-size: 8pt; color: #6a7570; }
+</style></head><body><h1>Rover V4 — rigidez do mastro e vibração dos sensores</h1>
+<blockquote><p><strong>VTX-RV4 · Revisão H · 12/10/2026</strong> EMITIDO PARA COTAÇÃO E VALIDAÇÃO — NÃO LIBERADO PARA FABRICAÇÃO  Documento <strong>gerado</strong> de <code>revisao-h/mastro.py</code> sobre a geometria de <code>chassi-gaiola/modelo.py</code>. Não editar à mão: a próxima geração sobrescreve.</p></blockquote>
+<h2>Resumo</h2>
+<p>O mastro adotado é <strong>Ø32 × 3</strong>, em alumínio 6061-T6, e a razão está na tabela abaixo: o projeto descreve um mastro com <strong>mais carga</strong> do que o V4 inicial supôs.</p>
+<table><thead><tr><th>Estado do mastro</th><th>Ø25×2 (V3)</th><th>Ø32×2 (V4 inicial)</th><th><strong>Ø32×3 (adotado)</strong></th></tr></thead><tbody><tr><td>Entrega: 3 OAK-D por mastro</td><td>6,31 Hz</td><td>9,11 Hz</td><td><strong>10,08 Hz</strong></td></tr><tr><td>Cheio: + 2 térmicas removíveis por mastro</td><td>5,74 Hz</td><td>8,33 Hz</td><td><strong>9,29 Hz</strong></td></tr><tr><td><strong>Projeto: + antena GNSS no topo (0,30 kg, ESTIMATIVA)</strong></td><td><strong>4,77 Hz</strong></td><td><strong>6,97 Hz</strong></td><td><strong>7,88 Hz</strong></td></tr><tr><td>Contra o requisito de 7,5 Hz (caso de projeto)</td><td><strong>não atende</strong></td><td><strong>não atende</strong></td><td>atende</td></tr></tbody></table>
+<p>O requisito de 7,5 Hz é o caso 6 do FEA — <em>&quot;1ª frequência do mastro ≥ 7,5 Hz&quot;</em> —, aberto desde a Rev E e nunca verificado até o V4.</p>
+<blockquote><p><strong>Correção a uma versão anterior deste documento.</strong> Ela dava o Ø32×2 como aprovado. Estava errada em dois pontos. (1) O Ø32×2 foi calculado para três câmeras por mastro, e o projeto descreve cinco postos mais a antena: nessa carga ele dá 6,97 Hz, abaixo do requisito. (2) O próprio cálculo já reportava que a margem contra o terreno não fechava — e o texto não dizia. Está dito na seção seguinte.</p></blockquote>
+<h2>O que o mastro carrega</h2>
+<table><thead><tr><th>Posto</th><th>Z nominal</th><th>Estado</th><th>Massa estimada do sensor</th></tr></thead><tbody><tr><td>3 × OAK-D por mastro</td><td>450, 1000, 1540</td><td>fixas, calibradas</td><td>0,25 kg (ESTIMATIVA)</td></tr><tr><td>2 × térmica por mastro</td><td>725, 1270</td><td><strong>removíveis</strong></td><td>0,20 kg (ESTIMATIVA)</td></tr><tr><td>Antena GNSS no topo</td><td>1802 (base)</td><td>provisão T-10</td><td>0,30 kg (ESTIMATIVA) + T-10 0,073 kg</td></tr></tbody></table>
+<p>Cada posto soma 0,389 kg de estrutura VMS (braçadeira, prato, adaptador e protetor), medidos na geometria do modelo. As massas dos <strong>sensores</strong> não vêm de ficha técnica — nenhum modelo de térmica ou de antena foi escolhido, e a da OAK-D é pendência P-06.</p>
+<h2>Por que a parede engrossa e o diâmetro não</h2>
+<p>O diâmetro externo fica em 32 porque o tubo entra na luva Ø42×5 (furo 32), e a luva não pode crescer: já alcança |Y| 297 e o envelope externo é 600. Uma seção maior exigiria luva maior, e luva maior exigiria mexer na base do mastro e na carenagem K-01.</p>
+<table><thead><tr><th>Seção</th><th>1ª freq. (projeto)</th><th>Razão contra o terreno</th><th>Δ massa (2 mastros)</th><th>Cabe na luva?</th></tr></thead><tbody><tr><td>Ø25 × 2 — V3, herdado da baseline</td><td>4,77 Hz (abaixo)</td><td>0,85</td><td>-0,874 kg</td><td>sim</td></tr><tr><td>Ø32 × 2 — V4 inicial, dimensionado para 3 câmeras</td><td>6,97 Hz (abaixo)</td><td>1,24</td><td>-0,575 kg</td><td>sim</td></tr><tr><td>Ø32 × 3 ← <strong>adotada</strong></td><td>7,88 Hz (atende)</td><td>1,41</td><td>+0,000 kg</td><td>sim</td></tr><tr><td>Ø32 × 4</td><td>8,43 Hz (atende)</td><td>1,51</td><td>+0,533 kg</td><td>sim</td></tr><tr><td>Ø35 × 2</td><td>7,98 Hz (atende)</td><td>1,42</td><td>-0,447 kg</td><td>não</td></tr><tr><td>Ø38 × 3</td><td>10,22 Hz (atende)</td><td>1,83</td><td>+0,384 kg</td><td>não</td></tr><tr><td>Ø40 × 3</td><td>11,03 Hz (atende)</td><td>1,97</td><td>+0,511 kg</td><td>não</td></tr></tbody></table>
+<p>Δ massa é medida contra o Ø32×3 adotado. <strong>Contra o V3 (Ø25×2) o mastro novo pesa +0,87 kg nos dois.</strong></p>
+<h2>A margem contra o terreno NÃO fecha — e isso precisa ficar dito</h2>
+<p>Dois critérios, e o mastro adotado cumpre só um.</p>
+<table><thead><tr><th></th><th>Valor</th><th>Critério</th><th></th></tr></thead><tbody><tr><td>1ª frequência (projeto)</td><td>7,88 Hz</td><td>≥ 7,5 Hz</td><td>atende</td></tr><tr><td>Razão contra a excitação do terreno</td><td>1,41</td><td>≥ 2,0</td><td><strong>não atende</strong></td></tr></tbody></table>
+<p>A excitação estimada do terreno é 5,60 Hz (1,4 m/s sobre ondas de 0,25 m — <strong>critério de projeto, não medição</strong>). Com razão 1,41 o mastro cheio <strong>amplifica</strong> essa excitação em 2,02× (sem amortecimento, que é o lado seguro). A margem de 2,0 só fecha com marcha abaixo de</p>
+<p><strong>0,98 m/s</strong>.</p>
+<p>Rigidez sozinha não resolve: mesmo o Ø40×3, que nem cabe na luva, chega a razão 1,97 — ainda abaixo de 2,0. O que decide é o <strong>espectro real</strong>, ensaio V-12. Enquanto ele não rodar, as opções honestas são: (a) medir; (b) limitar a marcha com o mastro cheio a ~1,0 m/s; (c) aceitar a amplificação. Não é decisão de desenho — é decisão sua, com o dado na mão. Pendência P-39.</p>
+<p>A suspensão pneumática (frequência de canto 1,95 Hz) atenua o terreno acima de √2 vezes isso, ou 2,8 Hz — a 5,6 Hz ela já filtra. A razão acima é contra o <strong>chão</strong>; o que chega ao mastro é menos. Quanto menos, é o que o V-12 mede.</p>
+<h2>A antena: quanto o mastro aguenta</h2>
+<p>Nenhuma antena foi escolhida. O que se pode dizer, e que vira exigência de compra:</p>
+<table><thead><tr><th>Massa da antena</th><th>1ª freq.</th><th>Razão</th><th></th></tr></thead><tbody><tr><td>0,00 kg</td><td>9,11 Hz</td><td>1,63</td><td>atende</td></tr><tr><td>0,10 kg</td><td>8,64 Hz</td><td>1,54</td><td>atende</td></tr><tr><td>0,20 kg</td><td>8,23 Hz</td><td>1,47</td><td>atende</td></tr><tr><td>0,30 kg</td><td>7,88 Hz</td><td>1,41</td><td>atende</td></tr><tr><td>0,40 kg</td><td>7,57 Hz</td><td>1,35</td><td>atende</td></tr><tr><td>0,50 kg</td><td>7,29 Hz</td><td>1,30</td><td><strong>abaixo do requisito</strong></td></tr><tr><td>0,60 kg</td><td>7,04 Hz</td><td>1,26</td><td><strong>abaixo do requisito</strong></td></tr></tbody></table>
+<p><strong>Massa máxima da antena para manter 7,5 Hz: 0,42 kg</strong> (sem o adaptador T-10, que já está contado). Antena mais pesada: Ø32×4, que dá 8,43 Hz, ao custo do furo para os cabos (ver abaixo) — ou antena na tampa (N-01).</p>
+<p><strong>Onde ela fica é decisão aberta (P-36).</strong> Topo do mastro: céu livre, mas a antena sobe a 1832 mm contra 433 mm na tampa, e uma inclinação de 10° do rover desloca a antena 323 mm contra 76 mm — a compensação por IMU deixa de ser opcional. Sob galho de 80 N o topo flete 26 mm. Ensaio V-17 decide com dado.</p>
+<h2>Conferência do método</h2>
+<table><thead><tr><th></th><th>Valor</th></tr></thead><tbody><tr><td>Rayleigh, um termo</td><td>8,29 Hz</td></tr><tr><td>Rayleigh-Ritz, 5 modos de viga</td><td>8,24 Hz</td></tr><tr><td>Diferença</td><td>0,6 %</td></tr><tr><td><strong>Valor adotado</strong> = Rayleigh × 0,95</td><td><strong>7,88 Hz</strong></td></tr></tbody></table>
+<p>O fator 0,95 <strong>não</strong> corrige erro do método — o Ritz mostra que ele é menor que 1 %. Ele cobre o que o modelo não tem: o engaste real (haste em luva, travada por 2 parafusos) não é rígido. É <strong>hipótese</strong>, e quem a substitui é o ensaio V-12 com o mastro montado.</p>
+<h2>Cabos dentro do tubo — o preço da parede grossa</h2>
+<table><thead><tr><th>Seção</th><th>Furo</th><th>Ocupação por 5 cabos M12 + 1 coaxial</th></tr></thead><tbody><tr><td>Ø32×2</td><td>Ø28</td><td>34 %</td></tr><tr><td><strong>Ø32×3 (adotado)</strong></td><td><strong>Ø26</strong></td><td><strong>40 %</strong> (limite 40 %)</td></tr></tbody></table>
+<p>Com cabos de Ø7 mm — <strong>ESTIMATIVA</strong>; nenhum cabo foi escolhido. O Ø32×3 está no limite: cabo mais grosso estoura. É a pendência P-40, e a saída é cabo mais fino ou canaleta externa.</p>
+<h2>Deflexão e tensão</h2>
+<p>Sob galho de 80 N na ponta, seção adotada:</p>
+<table><thead><tr><th>Z</th><th>Flecha</th><th>Rotação</th><th>Erro a 10 m</th></tr></thead><tbody><tr><td>725</td><td>0,9 mm</td><td>0,53°</td><td>92 mm</td></tr><tr><td>1000</td><td>4,9 mm</td><td>1,11°</td><td>193 mm</td></tr><tr><td>1270</td><td>11,2 mm</td><td>1,51°</td><td>263 mm</td></tr><tr><td>1540</td><td>18,9 mm</td><td>1,74°</td><td>304 mm</td></tr><tr><td>1782</td><td>26,4 mm</td><td>1,81°</td><td>315 mm</td></tr></tbody></table>
+<p>Tensão na raiz 55,4 MPa, fator de segurança 4,34. O galho governa. Vento de 20 m/s não é o caso crítico deste mastro — a área projetada é pequena demais.</p>
+<h2>De onde vem a excitação</h2>
+<table><thead><tr><th>Fonte</th><th>Frequência</th></tr></thead><tbody><tr><td>Terreno a 1,4 m/s, onda de 0,25 m</td><td>5,60 Hz</td></tr><tr><td>Suspensão pneumática (frequência de canto)</td><td>1,95 Hz</td></tr><tr><td>Rotação da roda</td><td>2,23 Hz</td></tr></tbody></table>
+<h2>Sensibilidade à massa da câmera</h2>
+<p>A massa da OAK-D é <strong>estimativa</strong> (P-06). No caso de projeto:</p>
+<table><thead><tr><th>Massa da OAK-D</th><th>Frequência</th><th></th></tr></thead><tbody><tr><td>0,15 kg</td><td>8,09 Hz</td><td>atende</td></tr><tr><td>0,20 kg</td><td>7,98 Hz</td><td>atende</td></tr><tr><td>0,25 kg</td><td>7,88 Hz</td><td>atende</td></tr><tr><td>0,35 kg</td><td>7,69 Hz</td><td>atende</td></tr><tr><td>0,50 kg</td><td>7,42 Hz</td><td><strong>abaixo do requisito</strong></td></tr></tbody></table>
+<p><strong>O resultado NÃO é robusto a ela</strong>: com a OAK-D em 0,50 kg o mastro cheio sai do requisito. Hoje o mastro passa por 5 % — pouca folga para massas que ninguém mediu. Quando as fichas técnicas chegarem, <code>python mastro.py</code> refaz tudo.</p>
+<h2>Rigidez do mastro não é isolamento do sensor</h2>
+<p>O pedido do V4 manda diferenciar as duas coisas. A diferença não é de grau — é de sinal.</p>
+<table><thead><tr><th></th><th>Enrijecer o mastro</th><th>Isolar a câmera</th></tr></thead><tbody><tr><td>O que faz</td><td>sobe a frequência própria para longe da excitação</td><td>desacopla a câmera do mastro</td></tr><tr><td>Efeito na imagem</td><td>reduz a amplitude do movimento</td><td>reduz o borrão de alta frequência</td></tr><tr><td>Efeito na calibração</td><td><strong>nenhum</strong> — a câmera segue solidária ao rover</td><td><strong>destrói</strong> — a extrínseca passa a depender da aceleração</td></tr></tbody></table>
+<p>Isolar a câmera resolveria o borrão e criaria um problema maior.</p>
+<p>A fusão de dados da IA usa a matriz extrínseca de cada câmera — onde ela está e para onde aponta, em relação ao referencial do rover. Essa matriz é medida uma vez, na calibração, e tratada como <strong>constante</strong>. Num mount rígido ela é constante de verdade: a câmera acompanha o rover.</p>
+<p>Num mount isolado ela deixa de ser. A câmera passa a se mover em relação ao chassi em função da aceleração instantânea, com amplitude de milímetros e defasagem de fase. A reconstrução 3D passa a ter um erro que varia com o terreno e que <strong>nenhuma calibração estática corrige</strong>, porque não é um offset — é uma função do movimento.</p>
+<p>Entre uma imagem com algum borrão de movimento e uma nuvem de pontos com erro variável de origem desconhecida, a primeira é recuperável (obturador mais rápido, ganho maior, estabilização auxiliada por IMU) e a segunda não.</p>
+<p>Por isso: <strong>câmera rígida, mastro rígido o bastante, e o problema de vibração resolvido onde ele nasce.</strong></p>
+<h3>O único sensor isolado continua sendo o LiDAR</h3>
+<p>E isolar o LiDAR está certo, porque ele é o caso oposto: mede distância instantânea ponto a ponto, não integra imagem no tempo, e a extrínseca dele precisa valer na média.</p>
+<p>Os coxins G-08 já existem desde a Rev E. A conta de verificação:</p>
+<table><thead><tr><th></th><th>Valor</th></tr></thead><tbody><tr><td>4 coxins a 120 N/mm sob 0,30 kg</td><td>201 Hz</td></tr><tr><td>Razão contra a excitação</td><td>36×</td></tr><tr><td>Isola ou amplifica?</td><td><strong>isola</strong></td></tr></tbody></table>
+<blockquote><p>Isolador só atenua acima de √2 vezes a própria frequência. Abaixo disso ele <strong>amplifica</strong>. A conta depende da massa do LiDAR, que é estimativa (P-11).</p></blockquote>
+<h2>O que continua aberto</h2>
+<ul>
+<li><strong>massas reais</strong>: OAK-D (P-06), térmica (P-30) e antena (P-37) — o mastro tem 5 % de folga sobre o requisito;</li>
+<li><strong>espectro real de vibração em campo</strong> (ensaio V-12) — hoje a excitação é critério, e a margem de 2,0 não fecha;</li>
+<li><strong>FEA do caso 6</strong> — este cálculo é analítico (Rayleigh conferido por Ritz de 5 modos), não</li>
+</ul>
+<p>substitui o modelo de elementos finitos, e o engaste real entra como hipótese de 0,95;</p>
+<ul>
+<li><strong>cabos</strong> (P-40) — o furo do tubo está no limite de ocupação.</li>
+</ul><div class="rodape">VALTEXA · Rover V4 · Revisão H · gerado de <code>VTX-RV4-MASTRO-H.md</code> · EMITIDO PARA COTAÇÃO E VALIDAÇÃO</div></body></html>

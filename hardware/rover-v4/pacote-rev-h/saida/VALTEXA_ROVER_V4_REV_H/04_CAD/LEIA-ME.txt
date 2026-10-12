@@ -1,0 +1,12 @@
+VALTEXA ROVER V4 — Rev H — arquivos de CAD
+=========================================
+
+DXF/  peças planas em 1:1, milímetros, camadas CORTE / FUROS / GRAVAR-NAO.
+      Geometria exata, gerada do modelo paramétrico. É o arquivo de produção.
+
+STL/  malha 3D do contorno externo das peças, para visualização e conferência de montagem.
+      ATENÇÃO: a malha NÃO contém furos nem roscas. Não usar para fabricação.
+
+STEP  não incluso. O modelo da ValTexa é paramétrico em Python, não um CAD nativo.
+      A conversão para CAD (SolidWorks / Fusion / Onshape) e a emissão de STEP são
+      pendência de engenharia — ver 08_PENDENCIAS.

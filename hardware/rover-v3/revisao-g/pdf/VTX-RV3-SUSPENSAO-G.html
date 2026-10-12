@@ -1,0 +1,142 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Rover V3 — suspensão pneumática independente</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; margin: 0; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #15402a;
+     border-bottom: 2.4pt solid #1f6b3a; padding-bottom: 2.5mm; }
+h2 { font-size: 13.5pt; margin: 9mm 0 3mm; color: #1f6b3a; page-break-after: avoid;
+     border-bottom: .6pt solid #cfd8d2; padding-bottom: 1.5mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #15402a; page-break-after: avoid; }
+p { margin: 0 0 2.8mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm;
+        font-size: 9pt; page-break-inside: avoid; }
+th { background: #1f6b3a; color: #fff; text-align: left; padding: 1.6mm 2mm;
+     font-weight: 600; font-size: 8.6pt; }
+td { border-bottom: .4pt solid #dde3df; padding: 1.5mm 2mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8f7; }
+code { font: 9pt 'Cascadia Mono', Consolas, monospace; background: #eef2ef;
+       padding: .3mm 1mm; border-radius: 1mm; }
+pre { background: #f4f6f5; border-left: 2.5pt solid #1f6b3a; padding: 2.5mm 3mm;
+      margin: 2mm 0 4mm; overflow-x: auto; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.45; }
+blockquote { border-left: 2.5pt solid #c9a227; background: #fdf9ec; margin: 2mm 0 4mm;
+             padding: 2mm 3mm; }
+blockquote p { margin: 0; }
+hr { border: 0; border-top: .6pt solid #cfd8d2; margin: 6mm 0; }
+strong { font-weight: 650; color: #0d2b1c; }
+.rodape { margin-top: 8mm; padding-top: 2.5mm; border-top: .6pt solid #cfd8d2;
+          font-size: 8pt; color: #6a7570; }
+</style></head><body><h1>Rover V3 — suspensão pneumática independente</h1>
+<blockquote><p><strong>VTX-RV3 · Revisão G · 11/10/2026</strong> EMITIDO PARA COTAÇÃO E VALIDAÇÃO — NÃO LIBERADO PARA FABRICAÇÃO  Cálculo completo em <code>revisao-g/suspensao.py</code>. Rodando <code>python suspensao.py</code> saem todos os números deste documento, na mesma ordem.</p></blockquote>
+<hr>
+<h2>O que mudou, em uma frase</h2>
+<p>Quatro braços longitudinais independentes, um fole pneumático por canto, <strong>sem barra estabilizadora</strong>, e a bitola subindo de 470 para 530 mm. A suspensão a ar entra no conjunto fornecido — não é mais estudo paralelo.</p>
+<hr>
+<h2>1. A objeção que travava a suspensão a ar, e como ela caiu</h2>
+<p>As Revisões E e F recusaram a articulação em rolagem, e a razão estava escrita no próprio modelo:</p>
+<blockquote><p><em>A articulação em rolagem (eixo oscilante, mola macia) derruba o tombamento de 37,7° para 20,1° — inaceitável em lavoura de café.</em></p></blockquote>
+<p>Fole é mola macia. Pela mesma lógica, suspensão a ar com quatro cantos independentes cai na condição recusada. A Rev F tentou contornar com <strong>balancim longitudinal</strong>: arfagem pneumática, rolagem rígida por construção, porque o pivô do balancim é fixo no chassi.</p>
+<p>A proposta era boa e tinha dois furos que a Rev F não fechou:</p>
+<p><strong>Primeiro — ela não ajusta o vão livre.</strong> Com o pivô fixo, mudar a pressão dos foles gira os dois balancins no mesmo sentido, e isso é arfagem, não altura. O <code>ALTURA_AJUSTAVEL_MM = 50</code> declarado no módulo da Rev F era incompatível com a própria geometria daquele módulo. É erro da Rev F, e está registrado como tal na auditoria.</p>
+<p><strong>Segundo — massa.</strong> O balancim somava 6,85 kg de estrutura só para articular, antes dos foles.</p>
+<h3>A saída não é rigidez — é bitola e curso</h3>
+<p>A Rev G não tenta fazer o fole ser rígido em rolagem. Ela ataca os dois termos que realmente determinam o tombamento:</p>
+<p><strong>Bitola.</strong> De 470 para 530 mm. Os 60 mm estavam sobrando: o envelope externo de 600 mm nunca era usado inteiro — a face externa da roda ficava em |Y| 261, com 39 mm livres de cada lado. Com 530, a face vai a 291,05, ainda 8,95 mm dentro da linha de 300. <strong>E a carenagem lateral não é afetada</strong>: ela começa em Z 250 e a roda termina em Z 200. Não há sobreposição vertical nenhuma — nunca houve.</p>
+<p><strong>Curso.</strong> A rolagem da carroceria não é limitada pela rigidez do fole; é limitada pelo</p>
+<p><strong>fim de curso</strong>. Com ±25 mm de curso em 530 mm de bitola, a carroceria rola <strong>5,39° e nada mais</strong>: depois disso o fole do lado interno chega ao batente e a rigidez de rolagem passa a ser a do batente, que é uma ordem de grandeza maior.</p>
+<p>A Rev F calculava a rolagem como se o fole fosse livre até o limite geométrico, e por isso achava 8,5° e perdia 4,9° de envelope. Com o batente no cálculo e a bitola em 530, o resultado inverte.</p>
+<h3>O resultado</h3>
+<table><thead><tr><th>Arranjo</th><th>Bitola</th><th>Tombamento</th><th>Envelope de estabilidade</th></tr></thead><tbody><tr><td>Rev F — balancim, rolagem rígida</td><td>470</td><td>39,44°</td><td>19,57°</td></tr><tr><td>Esta suspensão, se a bitola fosse 470</td><td>470</td><td>35,76°</td><td>16,02°</td></tr><tr><td><strong>Rev G — como desenhada</strong></td><td><strong>530</strong></td><td><strong>39,92°</strong></td><td><strong>20,89°</strong></td></tr></tbody></table>
+<p><strong>A suspensão macia fica mais estável que a rígida.</strong> Não há mágica: 60 mm de bitola valem mais que 5,4° de rolagem, e os 60 mm estavam disponíveis de graça. A linha do meio da tabela é a que mostra de onde vem o ganho — sem a bitola, esta arquitetura perderia 3,5° de envelope contra o balancim.</p>
+<hr>
+<h2>2. Não há barra estabilizadora, e isso é cálculo</h2>
+<p>Uma barra estabilizadora troca rigidez de rolagem por transferência de carga em terreno torcido. O limite é levantar roda: quando a transferência iguala a carga estática, a roda descarrega e o rover passa a apoiar em três — exatamente a condição de margem ZERO que a baseline já apontava e que a suspensão independente existe para eliminar.</p>
+<p>Com rigidez de roda de <strong>4,77 N/mm</strong>, numa articulação de 60 mm num eixo:</p>
+<table><thead><tr><th></th><th>Valor</th></tr></thead><tbody><tr><td>Carga estática por roda</td><td>310 N</td></tr><tr><td>Transferência dos foles sozinhos</td><td>286 N</td></tr><tr><td>Sobra antes de descarregar a roda</td><td>24 N</td></tr><tr><td><strong>Teto de rigidez para a barra</strong></td><td><strong>114 N·m/rad</strong></td></tr></tbody></table>
+<p>114 N·m/rad é rigidez desprezível — não muda nada que valha a massa de uma barra, de dois mancais e de duas bieletas. <strong>Não há barra no projeto.</strong></p>
+<p>Pela mesma razão, <strong>os quatro circuitos de ar são independentes</strong>, sem interligação esquerda-direita. Interligar os lados equaliza pressão e zera a rigidez de rolagem: é o que se faz quando se quer articulação, e articulação aqui já vem da independência dos braços.</p>
+<h3>E a articulação, então?</h3>
+<p>Quem limita a articulação é o curso, não a carga:</p>
+<blockquote><p>A roda bate no batente a <strong>50 mm</strong> de degrau, e só descarregaria a <strong>130 mm</strong>.</p></blockquote>
+<p>Isso é bom. Batente é peça, roda no ar é condição.</p>
+<hr>
+<h2>3. Geometria</h2>
+<table><thead><tr><th>Parâmetro</th><th>Valor</th><th>Origem</th></tr></thead><tbody><tr><td>Estação do pivô</td><td>\</td><td>X\</td><td>500 mm</td><td>CALC — bucha Ø34 dentro de \</td><td>X\</td><td>525</td></tr><tr><td>Estação da roda</td><td>\</td><td>X\</td><td>350 mm</td><td>entre-eixos 700, inalterado</td></tr><tr><td>Eixo do braço e do pivô</td><td>Z 190 mm</td><td>CRITÉRIO — horizontal</td></tr><tr><td>Braço efetivo (pivô → roda)</td><td>150 mm</td><td>CALC</td></tr><tr><td>Estação do fole no braço</td><td>75 mm do pivô</td><td>CRITÉRIO</td></tr><tr><td>Relação de movimento fole/roda</td><td>0,500</td><td>CALC</td></tr><tr><td>Curso de trabalho na roda</td><td>± 25 mm</td><td>CRITÉRIO</td></tr><tr><td>Ajuste de vão livre</td><td>150 → 180 mm</td><td>CRITÉRIO</td></tr><tr><td>Curso total na roda</td><td>80 mm</td><td>CALC</td></tr><tr><td>Curso no fole</td><td>40 mm</td><td>CALC</td></tr><tr><td>Giro do braço, batente a batente</td><td>30,9°</td><td>CALC</td></tr><tr><td>Recuo da roda no curso</td><td>5,4 mm</td><td>CALC</td></tr></tbody></table>
+<h3>Por que o braço é horizontal</h3>
+<p>Não é preferência de desenho. Braço inclinado gera componente longitudinal de carga no pivô a cada curso, e faz a relação de movimento variar ao longo dele — o fole vê carga diferente em cada altura, e o controle de nível passa a brigar com a própria geometria. Horizontal, a relação é constante e o pivô só vê carga vertical e longitudinal de tração.</p>
+<h3>Por que o pivô dianteiro fica à frente da roda e o traseiro atrás</h3>
+<p>Para que a reação de torque do motor-roda gire os braços dos dois eixos em sentidos opostos. O resultado é <strong>arfagem pura e zero de altura</strong>: a frente desce o que a traseira sobe. Se os quatro pivôs ficassem do mesmo lado, a perturbação seria de altura, e o nivelamento brigaria com o acelerador.</p>
+<hr>
+<h2>4. O fole</h2>
+<p><strong>O fole é comprado e não tem ficha técnica no projeto.</strong> O que está desenhado é a</p>
+<p><em>interface</em> — prato, berço, colar, curso e altura — como requisito. Qualquer fole que feche a tabela abaixo monta sem alterar desenho de usinagem nenhum, e um cilindro pneumático de mesma área também fecha. É a pendência <strong>P-20</strong>.</p>
+<table><thead><tr><th>Requisito</th><th>Valor</th></tr></thead><tbody><tr><td>Área efetiva</td><td>3421 mm² ± 10 %</td></tr><tr><td>Ø externo máximo</td><td>88 mm</td></tr><tr><td>Altura instalada (mín · nom · máx)</td><td>57,5 · 70,0 · 97,5 mm</td></tr><tr><td>Curso útil</td><td>40 mm</td></tr><tr><td>Pressão de trabalho (carga estática)</td><td>1,81 bar</td></tr><tr><td>Pressão de projeto a suportar</td><td>7,34 bar · admissível ≥ 8 bar</td></tr><tr><td>Batente interno de compressão</td><td>integrado, ≥ 4,5 kN</td></tr><tr><td>Fixação inferior · superior</td><td>M12 central · M12 central + porta R1/8</td></tr><tr><td>Temperatura</td><td>−10 a +70 °C</td></tr><tr><td>Proteção</td><td>resistente a UV, ozônio e abrasão por poeira</td></tr></tbody></table>
+<h3>A área saiu da pressão de projeto, não da estática</h3>
+<p>Esta foi a correção mais importante do dimensionamento. A primeira tentativa usou 2003 mm² (Ø50,5 efetivo): a pressão estática ficava confortável em 3,13 bar e a de projeto ia a</p>
+<p><strong>12,69 bar</strong> — acima de qualquer fole industrial pequeno. Com 3421 mm² a estática cai para 1,81 e a de projeto para 7,34, dentro do teto de 8. <strong>É o caso de carga raro que dimensiona o componente, não o do dia a dia.</strong></p>
+<h3>O fole nunca vê a carga de projeto</h3>
+<table><thead><tr><th></th><th>Valor</th></tr></thead><tbody><tr><td>Carga estática na roda</td><td>310 N</td></tr><tr><td>Carga de projeto na roda (3,0 × 1,35)</td><td>1256 N</td></tr><tr><td>Rigidez na roda</td><td>4,77 N/mm</td></tr><tr><td>Força na roda ao fim do curso de compressão</td><td>429 N — <strong>34 %</strong> da de projeto</td></tr><tr><td>Absorvido pelo batente</td><td>826 N</td></tr></tbody></table>
+<p>A rigidez é baixa e o curso acaba antes. Por isso o <strong>batente de compressão é requisito do componente comprado</strong> (integrado ao fole), e não peça de desenho. O de extensão é peça: o cabo W-14, que limita a distensão no fim do curso.</p>
+<p>Frequência de canto resultante: <strong>1,95 Hz</strong>. É faixa de veículo utilitário, apropriada para um rover a 1,4 m/s em lavoura.</p>
+<hr>
+<h2>5. Tensões — as peças aguentam com folga</h2>
+<table><thead><tr><th>Peça</th><th>Verificação</th><th>Valor</th><th>Fator de segurança</th></tr></thead><tbody><tr><td>W-01 braço</td><td>flexão, seção fechada</td><td>23,1 MPa</td><td><strong>9,07</strong></td></tr><tr><td>W-01 braço</td><td>flexão na seção do rasgo do prato</td><td>44,8 MPa</td><td><strong>4,69</strong></td></tr><tr><td>W-01 ↔ W-02</td><td>solda, 72 mm de sobreposição</td><td>—</td><td><strong>6,6</strong></td></tr><tr><td>W-07 eixo do pivô</td><td>corte e flexão</td><td>2,2 / 21,1 MPa</td><td><strong>10,2</strong></td></tr><tr><td>W-05 orelha da torre</td><td>flexão</td><td>17,9 MPa</td><td><strong>14,0</strong></td></tr><tr><td>W-10 pino do prato</td><td>corte em 4 planos</td><td>5,6 MPa</td><td><strong>22,4</strong></td></tr><tr><td>W-11 berço do fole</td><td>flexão, vão 158 mm</td><td>56,0 MPa</td><td><strong>4,29</strong></td></tr><tr><td>Bucha autolubrificante</td><td>pressão de contato</td><td>1,7 MPa</td><td>limite 80 MPa</td></tr></tbody></table>
+<p>Fatores de segurança altos não são desperdício aqui: as seções são as mínimas comerciais disponíveis, e a peça que governa é a <strong>fadiga</strong>, não o escoamento — e fadiga não aparece nesta tabela.</p>
+<h3>Por que aço, e não alumínio</h3>
+<p>W-01, W-02, W-03, W-04, W-05, W-06, W-08 e W-09 são de aço. Não é preferência de material:</p>
+<ol>
+<li><strong>Alumínio não tem limite de fadiga.</strong> Aço carbono tem: abaixo dele não acumula dano.</li>
+</ol>
+<p>Alumínio acumula sempre, sem patamar. Para peças que veem uma ondulação de terreno a cada metro de lavoura, isso deixa de ser acadêmico.</p>
+<ol>
+<li><strong>Alumínio soldado perde na ZTA.</strong> O 6061-T6 cai a 110 MPa na zona afetada; o aço não</li>
+</ol>
+<p>perde. O fator de segurança do braço cairia de <strong>9,07</strong> para <strong>4,75</strong> só pela troca — e perderia o limite de fadiga, que não se recupera com espessura.</p>
+<ol>
+<li><strong>É a sugestão 2.4 do fabricante</strong>, que pedia a chapa do motor em aço. Ela está</li>
+</ol>
+<p>implementada nesta revisão, e com um argumento que a Rev F ainda não tinha: na Rev G a peça passou a ser de suspensão.</p>
+<p>O custo é massa: <strong>6,49 kg</strong>. Se o engenheiro decidir alumínio, o número está calculado e a decisão fica registrada com ele ao lado. O caso 9 do FEA (<strong>P-22</strong>, novo nesta revisão) é o que confirma ou derruba esta escolha.</p>
+<hr>
+<h2>6. Reação de torque — o número que corrigiu a si mesmo</h2>
+<p>Numa roda com motor no cubo, a suspensão recebe <strong>duas</strong> coisas do acionamento: a força de tração no contato e a reação de torque no estator. Elas giram o braço em <strong>sentidos opostos</strong>. Em torno do pivô, a tração tem braço <code>Z_pivô</code> (190 mm) e a reação de torque tem braço <code>raio da roda</code> (100 mm). O que sobra é a diferença: <strong>90 mm</strong>.</p>
+<p>Com o pivô na cota do eixo da roda a diferença seria ZERO — antiesquat perfeito, o acionamento não mexeria na suspensão. O vão livre de 150 mm proíbe o pivô a Z 100, e os 90 mm são o preço do vão livre.</p>
+<table><thead><tr><th>Condição</th><th>Torque</th><th>Tração</th><th>Δcarga na roda</th><th>Deslocamento</th></tr></thead><tbody><tr><td>Rolamento em solo solto</td><td>3,1 N·m</td><td>0,10 g</td><td>19 N</td><td><strong>3,9 mm</strong></td></tr><tr><td>Contínuo do motor</td><td>20,0 N·m</td><td>0,65 g</td><td>120 N</td><td>25,2 mm — bate no batente</td></tr><tr><td>Pico do motor</td><td>35,0 N·m</td><td>1,13 g</td><td>210 N</td><td>44,1 mm — bate no batente</td></tr></tbody></table>
+<p>No ponto de operação real é desprezível. No contínuo do motor — que é condição de rampa forte a 0,65 g de esforço trator, não de cruzeiro — consome o curso de trabalho. Bater no batente em tração máxima é comportamento normal de suspensão. Ensaio <strong>V-07</strong>.</p>
+<hr>
+<h2>7. Massa — e ela é o problema desta revisão</h2>
+<table><thead><tr><th></th><th>kg</th><th>Z (mm)</th></tr></thead><tbody><tr><td>Grupo W, estrutura desenhada</td><td>13,258</td><td>205,5</td></tr><tr><td>Grupo pneumático, comprado (FAIXA de catálogo)</td><td>7,730</td><td>260,7</td></tr><tr><td>Sai: grupo S da Rev F</td><td>−4,538</td><td>201,9</td></tr><tr><td><strong>Líquido</strong></td><td><strong>+16,45</strong></td><td>—</td></tr></tbody></table>
+<table><thead><tr><th></th><th>Antes (Rev F)</th><th>Depois (Rev G)</th></tr></thead><tbody><tr><td>Massa</td><td>110,07 kg</td><td><strong>126,52 kg</strong></td></tr><tr><td>Z do CG</td><td>294,1 mm</td><td><strong>285,9 mm</strong></td></tr><tr><td>Margem contra a baseline de 97,8 kg</td><td>−12,27 kg</td><td><strong>−28,72 kg</strong></td></tr></tbody></table>
+<p><strong>O CG desceu 8,2 mm</strong> — o sistema todo fica abaixo dele — e é parte do que explica o tombamento melhor. Mas a massa subiu 16,45 kg sobre uma baseline que já estava 12,27 kg excedida.</p>
+<h3>Isto é um problema de projeto, não deste documento</h3>
+<p>A massa oficial do rover é a <strong>pendência P-02</strong>, e continua aberta: quatro números circulam (85,04 / 82,49 / 97,8 / 110,07 kg). Este dimensionamento foi feito na mais alta e a sensibilidade está calculada — e o resultado é tranquilizador: <strong>tombamento e envelope não mudam com a massa</strong>, porque a rolagem é limitada por curso, não por rigidez. O que muda com a massa é a pressão do fole, e ela tem margem dos dois lados:</p>
+<table><thead><tr><th>Massa (kg)</th><th>p estática</th><th>p projeto</th><th>k roda</th><th>freq</th><th>tombamento</th><th>envelope</th></tr></thead><tbody><tr><td>85,04</td><td>1,22 bar</td><td>4,94 bar</td><td>3,76 N/mm</td><td>2,12 Hz</td><td>39,92°</td><td>20,89°</td></tr><tr><td>97,80</td><td>1,40</td><td>5,68</td><td>4,07</td><td>2,05</td><td>39,92°</td><td>20,89°</td></tr><tr><td>110,07</td><td>1,58</td><td>6,39</td><td>4,37</td><td>2,01</td><td>39,92°</td><td>20,89°</td></tr><tr><td><strong>126,52</strong></td><td><strong>1,81</strong></td><td><strong>7,34</strong></td><td><strong>4,77</strong></td><td><strong>1,95</strong></td><td><strong>39,92°</strong></td><td><strong>20,89°</strong></td></tr><tr><td>130,00</td><td>1,86</td><td>7,55</td><td>4,85</td><td>1,94</td><td>39,92°</td><td>20,89°</td></tr></tbody></table>
+<p>Em toda a faixa a pressão estática fica entre 1 e 3 bar (o fole mantém a forma) e a de projeto fica abaixo de 8. <strong>A suspensão não depende de fechar P-02 para ser cotada.</strong> A estrutura do rover, sim.</p>
+<hr>
+<h2>8. Energia</h2>
+<p><strong>10,8 W médios</strong> — compressor 9,0 (180 W a 5 % de ciclo) + solenoides 0,32 + controle 1,5. Cerca de 1,5 % de uma bateria de 600 Wh por hora. Não é o problema.</p>
+<p>Uma subida completa dos quatro cantos consome 1,53 L normais de ar.</p>
+<h3>Requisitos do controle de nível</h3>
+<table><thead><tr><th>Requisito</th><th>O que significa</th></tr></thead><tbody><tr><td>Quatro circuitos independentes</td><td>um solenoide e um sensor de altura por canto</td></tr><tr><td>Nivelamento</td><td>manter a carroceria horizontal; é o que preserva o tombamento</td></tr><tr><td>Monitoramento de ciclo do compressor</td><td>ciclo acima de 15 % = vazamento; é alarme, não tolerância</td></tr><tr><td>Modo de falha</td><td>perda de pressão <strong>desce</strong> para o vão mínimo e trava; nunca sobe sozinho</td></tr><tr><td>Limite de velocidade por altura</td><td>vão acima de 165 mm restringe velocidade</td></tr><tr><td>Interface com o SaaS</td><td>telemetria de altura e pressão por canto — <code>NOT_IMPLEMENTED</code></td></tr></tbody></table>
+<hr>
+<h2>9. O que a suspensão custou em espaço</h2>
+<p>O compartimento tem <strong>76,8 L livres</strong>, medidos célula por célula numa grade de 8 mm, descontada toda peça do modelo. Ver <code>VTX-RV3-ESPACO-G</code>.</p>
+<p>O custo concreto: a bandeja de extremidade <strong>E-02 encolheu</strong>. Ela ia de |Y| 105 a 250 e colidia frontalmente com o colar do fole (|Y| 159…259). A faixa que sobra, entre a janela da câmera de raiz e o colar, é de 100 a 152 mm — menos da metade da área original. Isso é preço de ter suspensão, não erro de desenho.</p>
+<p>Quatro passagens Ø102 foram abertas na chapa de fundo, uma por canto, vedadas pelo colar W-12 + W-13: um canudo fechado no topo pelo berço W-11, com junta nas duas pontas. <strong>É a única abertura nova no compartimento, e ela não o viola</strong> — mas tem ensaio de estanqueidade obrigatório antes de montar (folha 35).</p>
+<hr>
+<h2>10. Pendências que esta revisão abre ou mantém</h2>
+<table><thead><tr><th>Cód.</th><th>Assunto</th><th>Grau</th><th>Situação</th></tr></thead><tbody><tr><td><strong>P-02</strong></td><td>Massa oficial</td><td>CRÍTICA</td><td>aberta desde a Rev E; dimensionado na massa alta, com sensibilidade calculada</td></tr><tr><td><strong>P-20</strong></td><td>Fole: modelo comercial</td><td>ALTA</td><td>nenhum escolhido; interface desenhada como requisito</td></tr><tr><td><strong>P-22</strong></td><td>Fadiga do braço e da chapa W-02</td><td>ALTA</td><td>caso 9 do FEA, <strong>novo nesta revisão</strong>; é o caso que justifica o aço</td></tr><tr><td><strong>P-21</strong></td><td>Bucha autolubrificante do pivô</td><td>MÉDIA</td><td>alojamento Ø23 H7 desenhado; modelo a escolher</td></tr><tr><td><strong>P-23</strong></td><td>Reação de torque</td><td>MÉDIA</td><td>calculada e aceitável; depende do torque real do motor. Ensaio V-07</td></tr><tr><td><strong>P-04</strong></td><td>Planicidade da face do motor</td><td>MÉDIA</td><td>a ElectroCraft não publicou; herdada da Rev F</td></tr><tr><td><strong>P-05/P-13</strong></td><td>Fichas técnicas dos componentes</td><td>ALTA</td><td>13 de 14 ausentes; bandejas continuam provisões</td></tr></tbody></table>
+<hr>
+<h2>11. O que este documento NÃO autoriza</h2>
+<p>Nenhuma peça desta revisão deve ser usinada antes de:</p>
+<ol>
+<li>a <strong>massa oficial</strong> ser fechada (P-02) — ela não muda a suspensão, mas muda a estrutura;</li>
+<li>o <strong>caso 9 do FEA</strong> rodar (P-22) — é o que confirma a escolha do aço e o</li>
+</ol>
+<p>dimensionamento do braço à fadiga;</p>
+<ol>
+<li>um <strong>fole</strong> ser escolhido (P-20) — a interface não depende dele, mas o rover depende.</li>
+</ol>
+<p>Este pacote é para <strong>cotar</strong>. Nenhum campo de aprovação foi preenchido, e a liberação para fabricação continua pendente das verificações aplicáveis — ver <code>VTX-RV3-LIBERACAO-G</code>.</p><div class="rodape">VALTEXA · Rover V3 · Revisão G · gerado de <code>VTX-RV3-SUSPENSAO-G.md</code> · EMITIDO PARA COTAÇÃO E VALIDAÇÃO</div></body></html>

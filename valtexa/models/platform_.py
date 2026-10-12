@@ -7,7 +7,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from valtexa.models.base import Base, Timestamped, UUIDPrimaryKey, enum_column, utcnow
@@ -50,6 +59,15 @@ class AuditEntry(UUIDPrimaryKey, Base):
     rule_version: Mapped[str | None] = mapped_column(String(32))
     ip: Mapped[str | None] = mapped_column(String(64))
     payload: Mapped[dict] = mapped_column(default=dict)
+    support_session_id: Mapped[str | None] = mapped_column(
+        String(32),
+        index=True,
+        doc=(
+            "Preenchido quando a ação foi feita pela equipe da ValTexa dentro de uma "
+            "sessão de suporte ('entrar como cliente'). O ator é o interno; o "
+            "``tenant_id`` é o cliente. É o que deixa o cliente ver o que a equipe fez."
+        ),
+    )
 
 
 class OutboxEvent(UUIDPrimaryKey, Base):
@@ -106,3 +124,25 @@ class UsedNonce(Timestamped, Base):
             "relógio já recusaria a requisição por idade."
         ),
     )
+
+
+class LoginAttempt(Base):
+    """Uma tentativa de login, certa ou errada: a base da limitação de tentativas.
+
+    Guarda o e-mail **como digitado** (minúsculo) e não o id do usuário, para que
+    e-mail inexistente seja limitado igual a e-mail existente — tratar os dois de
+    forma diferente entregaria quais contas existem. Linhas com mais de um dia
+    são apagadas na própria gravação.
+    """
+
+    __tablename__ = "login_attempt"
+    __table_args__ = (
+        Index("ix_login_attempt_email_at", "email", "at"),
+        Index("ix_login_attempt_ip_at", "ip", "at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    ip: Mapped[str | None] = mapped_column(String(64))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False)

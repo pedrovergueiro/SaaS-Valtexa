@@ -1,3 +1,13 @@
 -r requirements.txt
 pytest>=8.0
 ruff>=0.6
+# S3 por HTTP em memória (tests/test_producao_s3.py) e Redis em memória com Lua
+# (tests/test_coordenacao.py). O teste também usa um redis-server de verdade se houver.
+moto[s3,server]>=5.0
+fakeredis[lua]>=2.20
+# O pacote do Rover (rover/), para o teste de integração robô ↔ SaaS
+# (tests/test_rover_integracao.py). Ele não entra na imagem da plataforma.
+-e ../VALTEXA-ROVER[dev]
+# A base da fazenda (base/), para o ponta a ponta Rover ⇄ rádio emulado ⇄ base ⇄ plataforma
+# (tests/test_base_fazenda.py). Também não entra na imagem da plataforma.
+-e ../VALTEXA-BASE[dev]

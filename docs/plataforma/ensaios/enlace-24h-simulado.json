@@ -1,0 +1,171 @@
+{
+  "simulado": true,
+  "aviso": "rádio EMULADO e perfil de cafezal SIMULADO: não é medida de campo",
+  "perfil": {
+    "horas": 24.0,
+    "operacao_h": [
+      6.0,
+      18.0
+    ],
+    "starlink_fora_h": [
+      [
+        1.0,
+        1.75,
+        "noite"
+      ],
+      [
+        15.1667,
+        15.6667,
+        "chuva"
+      ]
+    ],
+    "chuva_h": [
+      [
+        15.0,
+        16.0
+      ]
+    ],
+    "base_sem_energia_h": [
+      [
+        13.0,
+        13.0667
+      ]
+    ],
+    "repetidora_morta_h": [
+      [
+        10.0,
+        10.8333
+      ]
+    ],
+    "p0_s": 10.0,
+    "p1_s": 1.0,
+    "p2_s": 5.0,
+    "p3_s": 1.0,
+    "p4_s": 60.0,
+    "p4_bytes": 200000,
+    "passo_operacao_s": 0.05,
+    "passo_noite_s": 0.2,
+    "ruas_inicio": 0,
+    "drenagem_h": 0.5,
+    "v_ms": 0.8,
+    "semente": 13
+  },
+  "duracao_simulada_h": 24.0,
+  "duracao_real_s": 837.4,
+  "disponibilidade_enlace": {
+    "P0": {
+      "sondas": 8556,
+      "no_prazo": 8429,
+      "entregues": 8429,
+      "disponibilidade": 0.9852,
+      "prazo_s": 2.0
+    },
+    "P1": {
+      "sondas": 42428,
+      "no_prazo": 41163,
+      "entregues": 41175,
+      "disponibilidade": 0.9702,
+      "prazo_s": 2.0
+    },
+    "P2": {
+      "sondas": 17042,
+      "no_prazo": 16761,
+      "entregues": 16824,
+      "disponibilidade": 0.9835,
+      "prazo_s": 15.0
+    },
+    "P3": {
+      "sondas": 42669,
+      "no_prazo": 41555,
+      "entregues": 42669,
+      "disponibilidade": 0.9739,
+      "prazo_s": 60.0
+    }
+  },
+  "latencia_p1": {
+    "n": 41175,
+    "p50_ms": 50.0,
+    "p95_ms": 150.0,
+    "p99_ms": 300.0,
+    "max_ms": 3650.0,
+    "media_ms": 76.8
+  },
+  "nuvem": {
+    "registros_criados": 59711,
+    "aceitos": 59711,
+    "duplicados_absorvidos": 28,
+    "perdidos_p2": 0,
+    "perdidos_p3": 0,
+    "pendentes_no_rover": 0
+  },
+  "p4": {
+    "enviados": 720,
+    "recebidos": 720
+  },
+  "trocas_de_rota": 48,
+  "trocas_de_enlace_com_a_base": 2002,
+  "tempo_de_troca_de_rota_s": {
+    "n": 22,
+    "p50": 1.05,
+    "p95": 1.05,
+    "max": 1.05,
+    "sem_alternativa": 7
+  },
+  "tempo_de_troca_de_enlace_s": {
+    "n": 347,
+    "p50": 0.9,
+    "p95": 1.0,
+    "max": 1.05
+  },
+  "interrupcoes_p1_s": {
+    "episodios": 6,
+    "repetidora_morta": {
+      "n": 6,
+      "p50_s": 229.0,
+      "p95_s": 230.0,
+      "max_s": 230.0,
+      "total_s": 1265.0
+    }
+  },
+  "p0_p1_nao_entregues": {
+    "vencidos_sem_caminho": 1380,
+    "vencidos_caminho_degradado": 0,
+    "perdidos_com_caminho_bom": 0,
+    "horas_dos_perdidos": []
+  },
+  "eventos": [
+    {
+      "h": 1.0,
+      "evento": "starlink cai"
+    },
+    {
+      "h": 1.75,
+      "evento": "starlink volta"
+    },
+    {
+      "h": 10.0,
+      "evento": "repetidora morre"
+    },
+    {
+      "h": 10.833,
+      "evento": "repetidora volta"
+    },
+    {
+      "h": 13.0,
+      "evento": "base sem energia"
+    },
+    {
+      "h": 13.067,
+      "evento": "base volta"
+    },
+    {
+      "h": 15.167,
+      "evento": "starlink cai"
+    },
+    {
+      "h": 15.667,
+      "evento": "starlink volta"
+    }
+  ],
+  "zero_perda_p0_p3": true
+}

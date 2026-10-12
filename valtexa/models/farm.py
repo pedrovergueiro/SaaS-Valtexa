@@ -12,9 +12,19 @@ Quando o volume justificar índice espacial, o caminho é migrar a coluna para
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Date, Float, ForeignKey, String, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from valtexa.models.base import Base, TenantScoped, Timestamped, UUIDPrimaryKey
@@ -37,6 +47,19 @@ class Farm(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     base_lon: Mapped[float | None] = mapped_column(Float)
     area_ha: Mapped[float | None] = mapped_column(Float)
 
+    # Identificação da propriedade (brief, seção 5). CPF/CNPJ só com dígitos e CAR
+    # normalizado: quem valida é o schema de entrada (services/documentos.py).
+    owner_name: Mapped[str | None] = mapped_column(String(160), doc="Proprietário/produtor.")
+    owner_document: Mapped[str | None] = mapped_column(String(14), doc="CPF ou CNPJ, só dígitos.")
+    city: Mapped[str | None] = mapped_column(String(120))
+    state: Mapped[str | None] = mapped_column(String(2), doc="UF.")
+    main_crop: Mapped[str | None] = mapped_column(String(64), doc="Cultura principal.")
+    car_code: Mapped[str | None] = mapped_column(String(64), doc="Recibo do CAR.")
+    technical_lead: Mapped[str | None] = mapped_column(
+        String(160), doc="Responsável técnico (agrônomo) e registro."
+    )
+    notes: Mapped[str | None] = mapped_column(Text, doc="Observações livres da fazenda.")
+
     fields: Mapped[list[Field]] = relationship(
         back_populates="farm", cascade="all, delete-orphan", passive_deletes=True
     )
@@ -56,10 +79,25 @@ class Field(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
         String(64), nullable=False, doc="Cultura: 'corn', 'coffee', 'soy'. Casa com allowed_crops."
     )
     variety: Mapped[str | None] = mapped_column(String(120))
+    ai_model: Mapped[str | None] = mapped_column(
+        String(64),
+        doc=(
+            "Versão do modelo de diagnóstico escolhida para este talhão, ex.: "
+            "'banana-foliar-cc' (a comercial). Nulo: PRIMARY_MODELS ou a recomendada."
+        ),
+    )
     crop_stage: Mapped[str | None] = mapped_column(
         String(64), doc="Estágio fenológico: 'V6', 'VT', 'R3'. Entra na regra de decisão."
     )
     planted_on: Mapped[date | None] = mapped_column(Date)
+    cobertura: Mapped[dict | None] = mapped_column(
+        doc=(
+            "Mapa de cobertura do rádio da fazenda (levantamento da base): grade com a "
+            "classe de cada célula, zonas mortas e repetidoras sugeridas. Vai assinado na "
+            "missão para o Rover antecipar a travessia. Ver services/cobertura_talhao.py."
+        )
+    )
+    cobertura_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     row_spacing_m: Mapped[float | None] = mapped_column(Float)
     row_azimuth_deg: Mapped[float | None] = mapped_column(
         Float,
@@ -69,12 +107,59 @@ class Field(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
             "passadas a ela: o rover anda entre as linhas, não por cima."
         ),
     )
+    plant_spacing_m: Mapped[float | None] = mapped_column(
+        Float,
+        doc=(
+            "Espaçamento entre plantas na linha, em metros. Com o entre linhas, é o "
+            "que a fusão por planta precisa para não juntar duas plantas numa só (a IA "
+            "usa 2,5 m e 4 m fixos quando falta)."
+        ),
+    )
+    row_count: Mapped[int | None] = mapped_column(
+        Integer, doc="Número de linhas (ruas de plantio) do talhão."
+    )
+    validation_rows: Mapped[list] = mapped_column(
+        default=list,
+        doc=(
+            "Fileiras de validação: números das linhas (a partir de 1) em que o agrônomo "
+            "rotula **todas** as plantas, para medir detecção e alarme falso no campo."
+        ),
+    )
+    notes: Mapped[str | None] = mapped_column(Text, doc="Observações livres do talhão.")
     area_ha: Mapped[float | None] = mapped_column(Float)
     boundary: Mapped[list] = mapped_column(
         nullable=False,
         default=list,
         doc="Polígono [[lon, lat], ...]. É o limite externo de toda missão neste talhão.",
     )
+    terrain: Mapped[dict | None] = mapped_column(
+        doc=(
+            "A última leitura de imagem deste talhão: frações de cobertura, área "
+            "operável e os objetos localizados. Mesma forma do TerrainOut da API. "
+            "Fica gravada porque quem a produz e quem a consome estão em telas "
+            "diferentes — o encaixe de contorno a calcula, e o planejamento de "
+            "missão precisa dela dias depois. Sem persistir, o obstáculo achado "
+            "teria que ser reencontrado a cada planejamento, e isso são tiles "
+            "baixados de novo, com a questão de licença que vem junto. "
+            "É cache de uma heurística, não verdade."
+        ),
+    )
+    terrain_read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        doc="Quando o terreno foi lido. Uma leitura velha descreve uma lavoura que já mudou.",
+    )
+    relief: Mapped[dict | None] = mapped_column(
+        JSON,
+        doc=(
+            "O relevo medido deste talhão: desnível, declividade e para onde o "
+            "terreno cai. Coluna própria, e não um campo dentro de ``terrain``, "
+            "porque as duas medições envelhecem em ritmos muito diferentes: a "
+            "cobertura do solo muda a cada safra, a encosta não muda nunca. "
+            "Guardá-las juntas faria toda releitura de imagem apagar uma "
+            "consulta de DEM que continua válida."
+        ),
+    )
+    relief_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     farm: Mapped[Farm] = relationship(back_populates="fields")
     zones: Mapped[list[Zone]] = relationship(

@@ -242,7 +242,11 @@ def centroid(polygon: list) -> Point:
 
 
 def boustrophedon(
-    polygon: list, swath_m: float, azimuth_deg: float = 90.0
+    polygon: list,
+    swath_m: float,
+    azimuth_deg: float = 90.0,
+    obstacles: list[list] | None = None,
+    margin_m: float = 0.0,
 ) -> list[list[Point]]:
     """Planeja a cobertura em vaivém — as passadas de ida e volta do rover.
 
@@ -255,6 +259,17 @@ def boustrophedon(
     passadas seguem as linhas. Um rover que cruzasse as linhas passaria por cima
     das plantas — e a câmera, feita para olhar a folha de lado, veria o solo.
 
+    ``obstacles`` são polígonos em que o rover **não entra** — a moita de mata
+    que cresceu dentro do talhão, o barranco, o açude. Cada passada que atravessa
+    um deles é **cortada em duas**, uma de cada lado, e o buraco vira manobra. É
+    por isso que o desvio nasce aqui e não numa camada depois: partir a passada
+    na varredura mantém cada faixa reta e paralela às linhas de plantio, que é a
+    condição que faz o rover andar entre as plantas em vez de por cima delas.
+
+    ``margin_m`` afasta as passadas da borda do obstáculo. Vale a largura do
+    rover mais o erro de quem desenhou o obstáculo — e, quando ele vem da leitura
+    de imagem, esse erro é o tamanho de um bloco da grade, que não é pequeno.
+
     Por dentro, o polígono é levado para metros locais, girado até as linhas
     ficarem horizontais, varrido e girado de volta. Girar a geometria, e não o
     laço de varredura, mantém um único algoritmo de varredura para qualquer
@@ -266,19 +281,32 @@ def boustrophedon(
     points = as_points(polygon)
     origin_lon, origin_lat = centroid(points)
     rotation = math.radians(azimuth_deg - 90.0)
-    local = [_rotate(to_local(point, origin_lon, origin_lat), rotation) for point in points]
+
+    def para_local(ring: list) -> list[Point]:
+        return [_rotate(to_local(point, origin_lon, origin_lat), rotation) for point in ring]
+
+    local = para_local(points)
+    bloqueios = [para_local(as_points(ring)) for ring in (obstacles or [])]
 
     ys = [point[1] for point in local]
     y_min, y_max = min(ys), max(ys)
 
     legs: list[list[Point]] = []
+    fim_anterior: float | None = None
     y = y_min + swath_m / 2
-    forward = True
     while y < y_max:
-        for x_start, x_end in _pair_up(_horizontal_crossings(local, y)):
-            leg = [(x_start, y), (x_end, y)]
-            legs.append(leg if forward else leg[::-1])
-            forward = not forward
+        vaos = _pair_up(_horizontal_crossings(local, y))
+        for bloqueio in bloqueios:
+            vaos = _subtrai(vaos, _faixa_bloqueada(bloqueio, y, margin_m, swath_m))
+
+        # Um retalho mais curto que a própria faixa não é passada: é uma manobra
+        # de entrar e sair que não cobre lavoura nenhuma. Descartá-lo é o que
+        # impede o contorno de um obstáculo de encher o plano de cotocos.
+        vaos = [(a, b) for a, b in vaos if b - a >= swath_m]
+
+        for inicio, fim in _ordena_vaos(vaos, fim_anterior):
+            legs.append([(inicio, y), (fim, y)])
+            fim_anterior = fim
         y += swath_m
 
     # Um polígono mais estreito que uma faixa não produziria passada nenhuma.
@@ -292,6 +320,95 @@ def boustrophedon(
         [from_local(_rotate(point, -rotation), origin_lon, origin_lat) for point in leg]
         for leg in legs
     ]
+
+
+def _faixa_bloqueada(
+    obstaculo: list[Point], y: float, margem: float, swath_m: float
+) -> list[tuple[float, float]]:
+    """Os trechos da horizontal ``y`` que o obstáculo proíbe.
+
+    Olha o obstáculo em três alturas — ``y`` e ``y`` mais ou menos a margem — e
+    junta o que as três proíbem. É o que dá à margem efeito nos dois eixos: sem
+    as alturas vizinhas, uma passada que raspasse a ponta de uma moita encontraria
+    um cruzamento estreito ali e entraria nela do mesmo jeito.
+
+    A varredura também olha meia faixa acima e abaixo, porque o rover é largo: a
+    passada é uma linha no plano, mas o robô que a percorre ocupa ``swath_m``.
+    """
+    alcance = max(margem, swath_m / 2.0)
+    trechos: list[tuple[float, float]] = []
+    for altura in (y - alcance, y, y + alcance):
+        for inicio, fim in _pair_up(_horizontal_crossings(obstaculo, altura)):
+            trechos.append((inicio - margem, fim + margem))
+    return _funde(trechos)
+
+
+def _funde(intervalos: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Junta intervalos que se tocam ou se sobrepõem."""
+    if not intervalos:
+        return []
+    ordenados = sorted(intervalos)
+    fundidos = [ordenados[0]]
+    for inicio, fim in ordenados[1:]:
+        ultimo_inicio, ultimo_fim = fundidos[-1]
+        if inicio <= ultimo_fim:
+            fundidos[-1] = (ultimo_inicio, max(ultimo_fim, fim))
+        else:
+            fundidos.append((inicio, fim))
+    return fundidos
+
+
+def _subtrai(
+    vaos: list[tuple[float, float]], buracos: list[tuple[float, float]]
+) -> list[tuple[float, float]]:
+    """O que sobra de cada vão depois de tirar os buracos.
+
+    Um vão atravessado no meio vira dois; um vão engolido some. É esta função
+    que transforma "há uma mata aqui" em "a passada tem duas partes".
+    """
+    if not buracos:
+        return vaos
+    resultado: list[tuple[float, float]] = []
+    for inicio, fim in vaos:
+        cursor = inicio
+        for buraco_inicio, buraco_fim in buracos:
+            if buraco_fim <= cursor or buraco_inicio >= fim:
+                continue
+            if buraco_inicio > cursor:
+                resultado.append((cursor, buraco_inicio))
+            cursor = max(cursor, buraco_fim)
+            if cursor >= fim:
+                break
+        if cursor < fim:
+            resultado.append((cursor, fim))
+    return resultado
+
+
+def _ordena_vaos(
+    vaos: list[tuple[float, float]], fim_anterior: float | None
+) -> list[tuple[float, float]]:
+    """Ordena e orienta os vãos de uma linha para andar o mínimo entre eles.
+
+    É o vaivém, generalizado para a linha partida: entra-se pela ponta mais
+    perto de onde a passada anterior acabou e segue-se numa direção só. Sem
+    isto, uma linha cortada ao meio por uma moita faria o rover ir até o fim do
+    primeiro pedaço, atravessar o talhão inteiro e voltar — manobra que custa
+    mais que a passada.
+
+    Com um vão só por linha, que é o caso do talhão sem obstáculo, isto devolve
+    exatamente a alternância de sempre.
+    """
+    if not vaos:
+        return []
+    ordenados = sorted(vaos)
+    if fim_anterior is None:
+        return ordenados
+
+    daqui = abs(fim_anterior - ordenados[0][0])
+    dali = abs(fim_anterior - ordenados[-1][1])
+    if daqui <= dali:
+        return ordenados
+    return [(fim, inicio) for inicio, fim in reversed(ordenados)]
 
 
 def to_local(point: Point, origin_lon: float, origin_lat: float) -> Point:
@@ -357,9 +474,25 @@ def _on_segment(point: Point, start: Point, end: Point) -> bool:
 
 
 def _segments_intersect(a1: Point, a2: Point, b1: Point, b2: Point) -> bool:
-    """Se dois segmentos se cruzam propriamente (sem contar toque em vértice)."""
+    """Se dois segmentos se cruzam **propriamente**: não conta toque em vértice.
+
+    A checagem de orientação nula precisa vir antes da comparação de sinais.
+    Sem ela, dois segmentos que apenas compartilham uma ponta — como duas
+    arestas vizinhas de um mesmo contorno — são lidos como cruzamento sempre que
+    o vértice entre eles é **reflexo**, porque aí as duas orientações restantes
+    saem positivas e ``(d > 0) != (0 > 0)`` vira verdadeiro nos dois pares.
+
+    O efeito disso em produção era grave e invisível: :func:`edges_cross` acusava
+    cruzamento em qualquer talhão côncavo, e o geofence bloqueava toda missão
+    nele. Um talhão retangular nunca tem vértice reflexo — foi o que manteve o
+    defeito escondido enquanto a demonstração era um retângulo.
+    """
     d1 = _orientation(b1, b2, a1)
     d2 = _orientation(b1, b2, a2)
     d3 = _orientation(a1, a2, b1)
     d4 = _orientation(a1, a2, b2)
+    if d1 == 0.0 or d2 == 0.0 or d3 == 0.0 or d4 == 0.0:
+        # Ponta compartilhada ou pontos colineares: encostar não é atravessar.
+        # Quem responde por contenção é polygon_contains_polygon.
+        return False
     return ((d1 > 0) != (d2 > 0)) and ((d3 > 0) != (d4 > 0))

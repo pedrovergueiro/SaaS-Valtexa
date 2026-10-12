@@ -1,0 +1,6 @@
+# gerado por scripts — tudo aqui se refaz com `python gerar.py` / `python gerar_pacote.py`
+__pycache__/
+*.pyc
+chassi-gaiola/fontes/
+chassi-gaiola/saida/.perfil-navegador/
+pacote-rev-e/saida/.perfil-navegador/

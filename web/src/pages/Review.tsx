@@ -1,16 +1,35 @@
 import { ChevronLeft, ChevronRight, Keyboard, ScanSearch, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { useFields, useReviewDiagnosis, useReviewQueue } from '@/api/queries'
+import { useFields, useReviewDiagnosis, useReviewQueue, type ReviewOrder } from '@/api/queries'
 import type { DiagnosisOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
+import { AiSignalsPanel, primarySignals } from '@/components/AiSignals'
 import { AuthImage } from '@/components/AuthImage'
-import { Badge, Button, Card, CardHeader, Empty, ErrorBox, FormField, Meter, PageHeader, Spinner } from '@/components/ui'
+import { Badge, Button, Card, CardHeader, Empty, ErrorBox, FormField, Meter, PageHeader, Spinner, Tabs } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/format'
 import { agreement, disease, KNOWN_LABELS } from '@/lib/labels'
 
 const NOVELTY_THRESHOLD = 1.0
+
+const ORDER_KEY = 'valtexa.review.order'
+
+/** A ordem escolhida volta na próxima visita; sem armazenamento, fica a padrão. */
+function storedOrder(): ReviewOrder {
+  try {
+    return localStorage.getItem(ORDER_KEY) === 'valor' ? 'valor' : 'novidade'
+  } catch {
+    return 'novidade'
+  }
+}
+
+const SUBTITLE: Record<ReviewOrder, string> = {
+  novidade:
+    'O que a IA não fechou sozinha, do que mais destoa do conhecido para o que menos. Seu rótulo pode ser uma doença que o modelo nunca viu.',
+  valor:
+    'O que mais ensina ao próximo treino primeiro — fora do escopo, discordância, incerteza, classe rara —, com o motivo de cada item.',
+}
 
 /**
  * A fila do agrônomo.
@@ -22,7 +41,8 @@ const NOVELTY_THRESHOLD = 1.0
  */
 export default function Review() {
   const { can } = useAuth()
-  const queue = useReviewQueue()
+  const [order, setOrder] = useState<ReviewOrder>(storedOrder)
+  const queue = useReviewQueue(order)
   const fields = useFields()
   const [index, setIndex] = useState(0)
   const items = queue.data ?? []
@@ -33,12 +53,34 @@ export default function Review() {
     if (index >= items.length && items.length > 0) setIndex(items.length - 1)
   }, [index, items.length])
 
+  const changeOrder = (value: ReviewOrder) => {
+    setOrder(value)
+    setIndex(0)
+    try {
+      localStorage.setItem(ORDER_KEY, value)
+    } catch {
+      // Sem armazenamento a escolha vale só nesta visita.
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Fila do agrônomo"
-        subtitle="O que a IA não fechou sozinha, do que mais destoa do conhecido para o que menos. Seu rótulo pode ser uma doença que o modelo nunca viu."
-        actions={<Badge tone={items.length ? 'warning' : 'good'}>{items.length} aguardando</Badge>}
+        subtitle={SUBTITLE[order]}
+        actions={
+          <>
+            <Tabs<ReviewOrder>
+              value={order}
+              onChange={changeOrder}
+              items={[
+                { value: 'novidade', label: 'Novidade' },
+                { value: 'valor', label: 'Valor para o treino' },
+              ]}
+            />
+            <Badge tone={items.length ? 'warning' : 'good'}>{items.length} aguardando</Badge>
+          </>
+        }
       />
 
       <ErrorBox error={queue.error} className="mb-4" />
@@ -70,9 +112,17 @@ export default function Review() {
                     <AuthImage path={`/v1/observations/${item.observation_id}/image`} alt="" className="size-12 shrink-0 rounded-lg" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-medium">{disease(item.label)}</span>
-                      <span className="block truncate text-[12px] text-muted">{fieldName.get(item.field_id) ?? '—'}</span>
+                      <span className="block truncate text-[12px] text-muted">
+                        {order === 'valor' && item.priority_reasons?.[0]
+                          ? item.priority_reasons[0]
+                          : (fieldName.get(item.field_id) ?? '—')}
+                      </span>
                     </span>
-                    {item.novelty_score != null && (
+                    {order === 'valor' && item.priority_score != null ? (
+                      <span className="num text-[11px] text-muted" title="Valor para o treino">
+                        {fmt.number(item.priority_score, 2)}
+                      </span>
+                    ) : item.novelty_score != null && (
                       <span className="num text-[11px] text-muted" title="Pontuação de novidade">
                         {fmt.number(item.novelty_score, 2)}
                       </span>
@@ -122,6 +172,8 @@ function ReviewItem({
   const valid = /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(label)
   const novel = (item.novelty_score ?? 0) > NOVELTY_THRESHOLD
   const machine = (item.detections ?? []).filter((detection) => detection.source !== 'human')
+  const signals = primarySignals(item.detections)
+  const reasons = item.priority_reasons ?? []
 
   const submit = (confirmed: boolean, forcedLabel?: string) =>
     review.mutate({ id: item.id, label: forcedLabel ?? label, confirmed, notes })
@@ -164,6 +216,16 @@ function ReviewItem({
           <CardHeader title="Por que está aqui" />
           <div className="flex flex-col gap-4 px-5 pb-5 text-[13px]">
             <p className="text-ink-2">{item.rationale ?? 'Sem justificativa registrada.'}</p>
+            {reasons.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {reasons.map((reason) => (
+                  <Badge key={reason} tone="info">
+                    {reason}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {signals && <AiSignalsPanel signals={signals} />}
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="font-medium">Novidade</span>

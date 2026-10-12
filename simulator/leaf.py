@@ -25,19 +25,27 @@ Color = tuple[float, float, float]
 # Por rótulo: semi-eixos (ao longo e através da nervura, em pixels), cor da
 # lesão, cor do halo e quantidade mínima e máxima.
 LESIONS: dict[str, tuple[tuple[float, float], Color, Color | None, tuple[int, int]]] = {
+    # Milho
     "Common_Rust": ((2.3, 1.7), (146, 66, 28), (196, 184, 86), (45, 80)),
-    "Rust": ((2.3, 1.7), (178, 96, 30), (206, 190, 90), (40, 70)),
     "Gray_Leaf_Spot": ((9.0, 2.2), (168, 160, 134), (186, 176, 108), (10, 18)),
     "Blight": ((27.0, 6.0), (152, 142, 106), (126, 128, 82), (2, 4)),
+    # Café — os sinais visuais descritos em VALTEXA-B/MODELS.md
+    "Rust": ((3.0, 2.6), (178, 96, 30), (206, 190, 90), (30, 60)),
+    "Cercospora_Leaf_Spot": ((5.0, 4.6), (120, 86, 54), (214, 200, 96), (6, 14)),
+    "Phoma_Leaf_Spot": ((8.0, 5.0), (62, 52, 44), (150, 140, 96), (2, 5)),
 }
 GENERIC = ((4.0, 3.2), (112, 72, 40), (200, 186, 92), (8, 14))
 HEALTHY = {"Healthy", "healthy"}
-CHEWED = {"Spodoptera_frugiperda"}
-"""Pragas que comem a folha: furos de borda escura, raspagem e excremento."""
+CHEWED = {"Spodoptera_frugiperda", "Leaf_Miner_Damage"}
+"""Danos de inseto: não são mancha de fungo, são galeria, furo e raspagem.
+
+Bicho-mineiro entra aqui e não em LESIONS de propósito — o sintoma é dano
+mecânico, e desenhá-lo como mancha circular ensinaria o olho errado.
+"""
 
 
 def leaf_png(label: str, novelty: float = 0.4, seed: int = 0) -> bytes:
-    """Folha de milho em close, com a lesão ou o dano típico do rótulo."""
+    """Folha em close, com a lesão ou o dano típico do rótulo."""
     rng = random.Random(f"{label}:{seed}")
     angle = math.radians(rng.uniform(-14.0, 14.0))
     cos_a, sin_a = math.cos(angle), math.sin(angle)

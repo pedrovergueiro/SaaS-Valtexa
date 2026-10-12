@@ -7,6 +7,7 @@ import { keys, useApiMutation, useDeviceModels, useDevices, useFarms } from '@/a
 import type { DeviceOut, ProvisioningTokenOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge, Button, Card, Empty, ErrorBox, FormField, Meter, Modal, PageHeader, Skeleton, Tabs } from '@/components/ui'
+import { fleetStateLabel, fleetStateTone, fleetSummary, modelInUse, modelStatus } from '@/lib/fleet'
 import { fmt } from '@/lib/format'
 import {
   connectivity,
@@ -51,6 +52,8 @@ export default function Fleet() {
           )
         }
       />
+
+      {rows.length > 0 && <FleetSummaryRow devices={rows} />}
 
       <div className="mb-4">
         <Tabs<Filter>
@@ -103,6 +106,20 @@ export default function Fleet() {
   )
 }
 
+/** Quantos robôs em cada estado — o que o protocolo diz deles, não o que alguém digitou. */
+export function FleetSummaryRow({ devices }: { devices: readonly { fleet_state: string }[] }) {
+  const resumo = fleetSummary(devices).filter((item) => item.count > 0)
+  return (
+    <div className="mb-4 flex flex-wrap gap-2" aria-label="Robôs por estado">
+      {resumo.map((item) => (
+        <Badge key={item.state} tone={fleetStateTone(item.state)}>
+          {fleetStateLabel(item.state)}: <span className="num">{item.count}</span>
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
 function DeviceCard({ device }: { device: DeviceOut }) {
   const Icon = KIND_ICON[device.kind] ?? Bot
   return (
@@ -117,10 +134,13 @@ function DeviceCard({ device }: { device: DeviceOut }) {
             {deviceKind(device.kind)} · {device.serial_number}
           </div>
         </div>
-        <Badge tone={connectivityTone(device.connectivity)} pulse={device.connectivity === 'ok'}>
-          {connectivity(device.connectivity)}
-        </Badge>
+        <span title={device.fleet_state_reason}>
+          <Badge tone={fleetStateTone(device.fleet_state)} pulse={device.fleet_state === 'em_missao'}>
+            {device.fleet_state_label}
+          </Badge>
+        </span>
       </div>
+      <div className="-mt-2 text-[12px] text-ink-2">{device.fleet_state_reason}</div>
 
       {device.kind !== 'dock' && (
         <div>
@@ -136,8 +156,20 @@ function DeviceCard({ device }: { device: DeviceOut }) {
         </div>
       )}
 
+      {device.kind !== 'dock' && (
+        <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-2">
+          <span className="num">IA: {modelInUse(device.ai_model_key, device.ai_model_version)}</span>
+          {device.model_status !== 'sem_dado' && (
+            <Badge tone={modelStatus(device.model_status).tone}>{modelStatus(device.model_status).label}</Badge>
+          )}
+        </div>
+      )}
+
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted">
-        <Badge tone={deviceStatusTone(device.status)}>{deviceStatus(device.status)}</Badge>
+        <span className="flex items-center gap-2">
+          <Badge tone={deviceStatusTone(device.status)}>{deviceStatus(device.status)}</Badge>
+          <Badge tone={connectivityTone(device.connectivity)}>{connectivity(device.connectivity)}</Badge>
+        </span>
         <span>visto {fmt.ago(device.last_seen_at)}</span>
       </div>
       {device.active_mission_id && (

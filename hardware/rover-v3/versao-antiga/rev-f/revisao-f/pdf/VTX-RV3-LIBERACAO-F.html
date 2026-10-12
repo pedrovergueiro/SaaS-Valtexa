@@ -1,0 +1,78 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>VTX-RV3 · Liberação para fabricação — Revisão F</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; margin: 0; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #15402a;
+     border-bottom: 2.4pt solid #1f6b3a; padding-bottom: 2.5mm; }
+h2 { font-size: 13.5pt; margin: 9mm 0 3mm; color: #1f6b3a; page-break-after: avoid;
+     border-bottom: .6pt solid #cfd8d2; padding-bottom: 1.5mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #15402a; page-break-after: avoid; }
+p { margin: 0 0 2.8mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm;
+        font-size: 9pt; page-break-inside: avoid; }
+th { background: #1f6b3a; color: #fff; text-align: left; padding: 1.6mm 2mm;
+     font-weight: 600; font-size: 8.6pt; }
+td { border-bottom: .4pt solid #dde3df; padding: 1.5mm 2mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8f7; }
+code { font: 9pt 'Cascadia Mono', Consolas, monospace; background: #eef2ef;
+       padding: .3mm 1mm; border-radius: 1mm; }
+pre { background: #f4f6f5; border-left: 2.5pt solid #1f6b3a; padding: 2.5mm 3mm;
+      margin: 2mm 0 4mm; overflow-x: auto; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.45; }
+blockquote { border-left: 2.5pt solid #c9a227; background: #fdf9ec; margin: 2mm 0 4mm;
+             padding: 2mm 3mm; }
+blockquote p { margin: 0; }
+hr { border: 0; border-top: .6pt solid #cfd8d2; margin: 6mm 0; }
+strong { font-weight: 650; color: #0d2b1c; }
+.rodape { margin-top: 8mm; padding-top: 2.5mm; border-top: .6pt solid #cfd8d2;
+          font-size: 8pt; color: #6a7570; }
+</style></head><body><h1>VTX-RV3 · Liberação para fabricação — Revisão F</h1>
+<p><strong>Aprovação:</strong> engenheiro da UNIFEI, informada em 11/10/2026</p>
+<p><strong>Escopo decidido:</strong> <strong>Parte A completa</strong> — grupos Q, C, S (incluindo S-01 e S-03), G, K, M, F</p>
+<p><strong>Situação do documento:</strong> mecanismo pronto · <strong>selo ainda não aplicado</strong></p>
+<hr>
+<h2>1 · O que falta para o selo mudar</h2>
+<p>Dois campos, e nenhum deles eu posso preencher:</p>
+<table><thead><tr><th>Campo</th><th>Para quê</th></tr></thead><tbody><tr><td><strong>Nome do engenheiro</strong></td><td>vai em <code>VERIFICADO · ENG. MECÂNICO / CREA</code>, no carimbo das 27 folhas</td></tr><tr><td><strong>CREA</strong></td><td>o registro profissional é o que dá valor à assinatura</td></tr></tbody></table>
+<p>Com os dois, a liberação é um comando:</p>
+<pre><code># em chassi-gaiola/folhas.py
+LIBERACAO = dict(nome=&#x27;...&#x27;, crea=&#x27;...&#x27;, data=&#x27;11/10/2026&#x27;,
+                 escopo=&#x27;Parte A completa (grupos Q, C, S, G, K, M, F)&#x27;)</code></pre>
+<p>e <code>python gerar.py</code> reemite as 27 folhas com <strong>LIBERADO PARA FABRICAÇÃO</strong> no selo e os campos preenchidos no carimbo.</p>
+<p><strong>Por que não preenchi com um nome genérico:</strong> o pedido de revisão determina, textualmente,</p>
+<p><em>&quot;não invente uma assinatura ou uma aprovação profissional&quot;</em> e <em>&quot;não altere os campos de aprovação para indicar uma liberação inexistente&quot;</em>. Um carimbo com nome inventado num desenho que vai para o chão de fábrica não é formalidade — é o documento que responde &quot;quem respondeu por isto&quot; quando alguma coisa falha.</p>
+<p>O mecanismo tem guarda: <code>LIBERACAO</code> incompleta levanta erro, e <code>LIBERACAO = None</code> mantém o selo de não liberado nas 27 folhas. <strong>Esquecer de informar nunca libera por omissão.</strong></p>
+<hr>
+<h2>2 · O que o escopo escolhido significa</h2>
+<p><strong>O protótipo é de suportes rígidos.</strong> As 12 peças S-01 (4) e S-03 (8) entram na fabricação.</p>
+<p>Isso <strong>não cancela a suspensão pneumática</strong> — põe a máquina andando antes de ela existir em desenho. Quando a pneumática entrar, essas 12 peças são substituídas; S-02 permanece, porque é a interface do motor-roda e não muda.</p>
+<p>A folha 02 foi reescrita para dizer exatamente isso, no lugar do aviso anterior de &quot;não fabricar&quot;.</p>
+<hr>
+<h2>3 · O que a assinatura está assumindo</h2>
+<p>Esta é a parte que o engenheiro precisa ler antes de assinar. Nenhum destes itens impede cortar metal; todos ficam sob a responsabilidade de quem libera.</p>
+<h3>3.1 · Nenhum FEA foi rodado</h3>
+<p>A folha 25 especifica <strong>8 casos de carga</strong> com condições de contorno, malha e critérios de aceite — e nenhum foi executado. A folha 15 cobre, à mão, longarinas, suporte do motor-roda, parafusos M8, chapa de fundo, nervura, torque e tombamento, com fator dinâmico 3. O próprio caderno diz que isso <em>&quot;serve para dimensionar, não para liberar&quot;</em>.</p>
+<table><thead><tr><th>Caso</th><th>O que ficaria sem verificação</th></tr></thead><tbody><tr><td>1 · Estático 1 g</td><td>flecha de referência do quadro (critério L/500)</td></tr><tr><td>2 · Vertical 3 g</td><td>σ &lt; 110 MPa na ZTA em impacto de buraco</td></tr><tr><td>3 · Lateral 2 g</td><td>escorregamento contra obstáculo</td></tr><tr><td>4 · <strong>Torção</strong></td><td>rigidez torcional — <strong>o quadro não tem diagonais</strong>; a rigidez vem dos dois anéis, dos 16 montantes e da chapa de fundo como diafragma</td></tr><tr><td>5 · Tração e frenagem</td><td>σ nos suportes S, 35 N·m por roda</td></tr><tr><td>6 · Mastro</td><td>1ª frequência ≥ 7,5 Hz, com 8 câmeras a até 1,78 m</td></tr><tr><td>7 · Bateria</td><td>36,5 kg × 3 g na amarração</td></tr><tr><td>8 · Içamento</td><td>pontos de levantamento, não definidos</td></tr></tbody></table>
+<p>O caso 4 é o que eu destacaria: a folha 25 lista três alternativas de reforço (diagonais, chapa de fundo 2→3 mm, vão entre anéis 30→60) <strong>se o FEA mostrar que falta rigidez</strong> — e sem o FEA não se sabe se falta.</p>
+<h3>3.2 · Material do quadro em aberto, e fabricar fecha a questão</h3>
+<p>A sugestão 2.1 do fabricante (aço 1020 25×25×1,5) está calculada: <strong>132 % da rigidez, 101 % da resistência soldada, +4,49 kg, economia de R$ 27 a 47 em matéria-prima</strong>.</p>
+<p>Fabricar o quadro em alumínio agora <strong>encerra a discussão por fato consumado</strong>. Pode ser exatamente a intenção — protótipo em alumínio, série em aço —, mas é decisão, e fica registrada aqui como tal.</p>
+<h3>3.3 · Planicidade da S-02 sem confirmação do fabricante do motor</h3>
+<p>O desenho especifica <strong>0,1 mm</strong>; a Rev F propõe <strong>0,2 mm</strong>, pelo argumento de que a planicidade está 2,3× mais apertada que a perpendicularidade na mesma face. <strong>O datasheet do MPW86 não publica a planicidade admitida pela contrapeça</strong> (P-04).</p>
+<p>Liberando hoje, fabrica-se com <strong>0,1 mm</strong> — o valor atual do desenho. É o lado seguro, e custa alívio de tensões antes do faceamento e inspeção individual nas 4 peças.</p>
+<h3>3.4 · Massa 12 % acima da baseline</h3>
+<table><thead><tr><th></th><th>kg</th></tr></thead><tbody><tr><td>Baseline declarada</td><td>97,80</td></tr><tr><td><strong>Parte A como será fabricada</strong></td><td><strong>110,07</strong></td></tr><tr><td>Diferença</td><td><strong>+12,27</strong></td></tr></tbody></table>
+<p>Quatro números de massa circulam no projeto (85,04 · 82,49 · 110,07 · 122,79) e nenhum é oficial (P-02). O rover vai pesar o que pesa; o que não se pode é afirmar que cumpre a baseline.</p>
+<hr>
+<h2>4 · Prontidão, grupo por grupo</h2>
+<table><thead><tr><th>Grupo</th><th>Peças</th><th>kg</th><th>Estado</th></tr></thead><tbody><tr><td><strong>G</strong> gaiola</td><td>49</td><td>2,42</td><td>pronto, <strong>sem ressalva</strong></td></tr><tr><td><strong>K</strong> carenagens e tampas</td><td>9</td><td>4,60</td><td>pronto, <strong>sem ressalva</strong></td></tr><tr><td><strong>F</strong> fixadores</td><td>740</td><td>≈1,4</td><td>pronto, <strong>sem ressalva</strong></td></tr><tr><td><strong>Q</strong> quadro</td><td>52</td><td>5,52</td><td>desenhado · material em aberto · FEA 1-4, 8</td></tr><tr><td><strong>C</strong> chapa de fundo</td><td>3</td><td>4,21</td><td>desenhado · FEA caso 4 (diafragma)</td></tr><tr><td><strong>S-02</strong> chapa do motor</td><td>4</td><td>1,89</td><td>desenhado · P-04 planicidade · material · fadiga</td></tr><tr><td><strong>S-01/S-03</strong></td><td>12</td><td>2,65</td><td>desenhado · <strong>substituídas quando a pneumática entrar</strong></td></tr><tr><td><strong>M</strong> base dos mastros</td><td>4</td><td>0,48</td><td>desenhado · FEA caso 6</td></tr><tr><td>W suspensão pneumática</td><td>—</td><td>—</td><td><strong>sem desenho — fora desta liberação</strong></td></tr></tbody></table>
+<p>Reproduzir: <code>python revisao-f/liberacao.py</code></p>
+<hr>
+<h2>5 · O que não é liberado, e não poderia ser</h2>
+<p><strong>A suspensão pneumática não tem desenho.</strong> Não há geometria de fole, de suporte W-18 nem de roteamento pneumático; nenhum dos 9 componentes tem modelo comercial escolhido, e as massas são de faixa de catálogo. Não é questão de aprovação — não há o que fabricar.</p>
+<p>E há um ponto que a liberação do chassi rígido <strong>não resolve e não deve esconder</strong>: os 8 casos do FEA foram escritos para suspensão rígida. Quando a pneumática entrar, o apoio deixa de ser nos 4 furos Ø88 e passa a ser a rigidez do fole — <strong>os casos precisam ser reescritos</strong> (P-12), não reaproveitados.</p>
+<hr>
+<h2>6 · Depois de aplicar o selo</h2>
+<table><thead><tr><th>Ação</th><th>Quando</th></tr></thead><tbody><tr><td>Reemitir as 27 folhas e os 4 PDFs</td><td>imediato, <code>python gerar.py</code></td></tr><tr><td>Regerar o pacote de cotação</td><td><code>python gerar_pacote.py</code></td></tr><tr><td>Enviar DXF + PDF ao fornecedor</td><td>os 26 DXF estão prontos e inalterados desde a Rev E</td></tr><tr><td>Registrar a decisão de acabamento</td><td>4 opções na folha 02; a C foi a marcada pelo fabricante</td></tr><tr><td>Fechar o nível de certificado</td><td>3.1 para S-02, 2.2 no resto (proposta da Rev F)</td></tr></tbody></table><div class="rodape">VALTEXA · Rover V3 · Revisão F · gerado de <code>VTX-RV3-LIBERACAO-F.md</code> · EMITIDO PARA COTAÇÃO E VALIDAÇÃO</div></body></html>

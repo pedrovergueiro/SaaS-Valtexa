@@ -1,0 +1,24 @@
+﻿Código;Descrição;Material;Qtd;Aplicação
+F-01;Parafuso M8×55 ISO 4762;Inox A4-70;16;Suporte → quadro, através da chapa e da bucha
+F-02;Porca M8 autotravante DIN 985;Inox A4;16;
+F-03;Arruela lisa M8 ISO 7089;Inox A4;32;
+F-04;Porca-rebite M6 passante, cabeça reduzida Ø ≤ 12;Inox A4;48;24 no anel inferior (chapa) + 24 no anel superior (sapatas)
+F-05;Parafuso M6×16 ISO 7380;Inox A4-70;48;
+F-06;Porca-rebite M5 passante, cabeça reduzida Ø ≤ 10;Inox A4;132;Paredes externas dos tubos
+F-07;Parafuso M5×12 ISO 7380;Inox A4-70;128;Cabeça baixa e lisa: não prende galho
+F-08;Parafuso M5×16 ISO 7380;Inox A4-70;4;Suporte do LiDAR
+F-09;Rebite de repuxo Ø4,8×10;Alumínio;12;Nervuras C-02 → chapa C-01
+F-10;Parafuso M4×14 ISO 4762 + trava química média;Inox A4-70;28;MPW86 → suporte (engajamento 4 ≤ 5 mm)
+F-11;Passa-cabo de borracha para furo Ø32;EPDM;4;Cabos dos motores
+F-12;Arruela larga M6 ISO 7093 (Ø18);Inox A4;48;Sobre furo de folga Ø13
+F-13;Arruela larga M5 ISO 7093 (Ø15);Inox A4;132;Sobre furo de folga Ø11
+F-20;Parafuso U M6 para tubo Ø25 (com 2 porcas);Inox A4;8;Suportes M-20 na haste
+F-21;Parafuso U M6 para tubo Ø34 (com 2 porcas);Inox A4;4;Suportes M-20 na luva
+F-22;Parafuso M6×20 ISO 7380 + porca-rebite M6;Inox A4;24;Batentes B-01 e bandejas E-01/E-02 na malha da chapa
+F-23;Cinta de poliéster 25 mm com catraca, LC ≥ 250 daN;Poliéster;2;Amarração da bateria
+F-24;Parafuso M6×12 passante (travamento da haste);Inox A4-70;4;Haste na luva
+F-25;Parafuso M5×16 + porca;Inox A4;8;E-10 e E-11 na tampa traseira
+F-26;Parafuso M5×16 + porca-rebite M5;Inox A4;4;Suporte da antena GNSS na tampa
+F-27;Parafuso M6×16 ISO 7380;Inox A4;12;Berço do IMU e suporte da câmera de raiz
+F-28;Parafuso M4×12 + porca-rebite M4;Inox A4;6;Janela de policarbonato
+F-29;Parafuso M4×10;Inox A4;20;Carenagens N-09, faróis e antena

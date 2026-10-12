@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from valtexa.models import (
+    ActorType,
     Connectivity,
     Device,
     DeviceEvent,
@@ -32,6 +33,7 @@ from valtexa.models import (
     TelemetrySample,
     as_utc,
 )
+from valtexa.services import audit, saude_rover
 from valtexa.services import events as bus
 
 logger = logging.getLogger(__name__)
@@ -164,6 +166,32 @@ def ingest_events(
                 subject_id=device.id,
                 payload={"type": row.type, **row.payload},
             )
+            # Falha crítica também na trilha, e não só na tabela de eventos do
+            # dispositivo. São públicos diferentes: `device_event` é a série
+            # temporal que o técnico abre para diagnosticar o robô; a trilha é
+            # onde se pergunta "o que aconteceu nesta missão, e quem respondia
+            # por ela". Parada de emergência e falha de enlace são as duas
+            # primeiras perguntas de qualquer apuração — e, até aqui, a trilha
+            # não as respondia.
+            audit.record(
+                session,
+                tenant_id=device.tenant_id,
+                action="device.fault",
+                subject_type=SubjectType.DEVICE,
+                subject_id=device.id,
+                actor_type=ActorType.DEVICE,
+                actor_id=device.id,
+                actor_label=device.serial_number,
+                new_state=row.type,
+                reason=str(row.payload.get("message") or row.type),
+                payload={
+                    "type": row.type,
+                    "mission_id": row.mission_id,
+                    "occurred_at": row.occurred_at.isoformat() if row.occurred_at else None,
+                    "sequence": row.sequence_number,
+                    **row.payload,
+                },
+            )
 
     return IngestResult(accepted, duplicated, rejected, tuple(errors))
 
@@ -223,15 +251,32 @@ def _update_device_snapshot(device: Device, sample: dict, now: datetime) -> None
     """
     device.last_seen_at = now
     device.connectivity = Connectivity.OK
+    if int(sample.get("sequence_number") or 0) < device.last_sequence_number:
+        # Lote antigo chegando depois (descarga offline): o retrato do robô já é
+        # mais novo que esta amostra. Ela fica gravada na série; o retrato não volta.
+        return
     for field_name, key in (
         ("last_lat", "lat"),
         ("last_lon", "lon"),
         ("last_alt_m", "alt_m"),
         ("battery_percent", "battery_percent"),
+        ("temperature_c", "temperature_c"),
+        ("link_quality", "link_quality"),
+        ("storage_total_bytes", "storage_total_bytes"),
+        ("storage_free_bytes", "storage_free_bytes"),
     ):
         value = sample.get(key)
         if value is not None:
             setattr(device, field_name, value)
+    horas = sample.get("operating_hours")
+    if horas is not None and (device.operating_hours is None or horas > device.operating_hours):
+        # Horímetro só sobe: uma amostra antiga chegando atrasada (sincronização
+        # offline) não pode fazer o robô "desoperar".
+        device.operating_hours = float(horas)
+    # A lista de falhas é a da amostra mais recente, inteira: vazia encerra o ERRO.
+    device.active_faults = list(sample.get("faults") or [])
+    # Saúde padronizada (Parte 7): CPU, memória, acelerador, câmeras, fila...
+    saude_rover.aplicar(device, sample, _parse_time(sample.get("recorded_at"), now))
     bump_watermark(device, sample.get("sequence_number"))
 
 

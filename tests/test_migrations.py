@@ -58,6 +58,29 @@ def test_migracoes_reproduzem_os_modelos(url: str) -> None:
     assert _schema(url) == expected
 
 
+def test_migracoes_criam_os_indices_dos_modelos(url: str) -> None:
+    """Achado da Parte 9: a comparação de colunas não via índice esquecido.
+
+    Banco de produção é feito pelo Alembic; o dos testes, por ``create_all``. Um
+    índice que só o modelo declara existe nos testes e falta em produção.
+    """
+    command.upgrade(db.alembic_config(url), "head")
+    engine = create_engine(url)
+    inspector = inspect(engine)
+    migrado = {
+        (tabela, indice["name"])
+        for tabela in inspector.get_table_names() if tabela != "alembic_version"
+        for indice in inspector.get_indexes(tabela)
+    }
+    engine.dispose()
+    declarado = {
+        (table.name, index.name)
+        for table in Base.metadata.sorted_tables
+        for index in table.indexes
+    }
+    assert declarado - migrado == set()
+
+
 def test_ida_e_volta(url: str) -> None:
     config = db.alembic_config(url)
     command.upgrade(config, "head")

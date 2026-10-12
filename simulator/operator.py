@@ -68,6 +68,9 @@ class OperatorClient:
     def patch(self, path: str, json: dict | None = None) -> dict:
         return self._send("PATCH", path, json=json)
 
+    def put(self, path: str, json: dict | None = None) -> dict:
+        return self._send("PUT", path, json=json)
+
     def try_post(self, path: str, json: dict | None = None, params: dict | None = None) -> dict:
         """Como :meth:`post`, mas devolve o erro em vez de levantar.
 

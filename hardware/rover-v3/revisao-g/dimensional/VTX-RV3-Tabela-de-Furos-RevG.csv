@@ -1,0 +1,309 @@
+﻿Código;Peça;Furo nº;a mm;b mm;Ø mm;Plano do perfil;Folha
+Q-05;Bucha de compressão;1;350.0;168.0;12.0;XY;04, 06
+Q-05;Bucha de compressão;2;350.0;168.0;8.5;XY;04, 06
+M-02;Chapa de reforço da base;1;0.0;280.0;6.0;XY;17
+M-01;Luva do mastro;1;0.0;280.0;34.0;XY;17
+M-01;Luva do mastro;2;0.0;280.0;25.0;XY;17
+C-01;Chapa de fundo;1;-508.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;2;-200.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;3;-100.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;4;0.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;5;100.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;6;200.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;7;508.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;8;-508.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;9;-200.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;10;-100.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;11;0.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;12;100.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;13;200.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;14;508.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;15;508.0;-100.0;13.0;XY;08, 11
+C-01;Chapa de fundo;16;508.0;100.0;13.0;XY;08, 11
+C-01;Chapa de fundo;17;350.0;0.0;13.0;XY;08, 11
+C-01;Chapa de fundo;18;120.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;19;120.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;20;-508.0;-100.0;13.0;XY;08, 11
+C-01;Chapa de fundo;21;-508.0;100.0;13.0;XY;08, 11
+C-01;Chapa de fundo;22;-350.0;0.0;13.0;XY;08, 11
+C-01;Chapa de fundo;23;-120.0;283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;24;-120.0;-283.0;13.0;XY;08, 11
+C-01;Chapa de fundo;25;350.0;168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;26;350.0;250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;27;508.0;168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;28;508.0;250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;29;350.0;-168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;30;350.0;-250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;31;508.0;-168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;32;508.0;-250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;33;-350.0;168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;34;-350.0;250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;35;-508.0;168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;36;-508.0;250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;37;-350.0;-168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;38;-350.0;-250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;39;-508.0;-168.0;8.5;XY;08, 11
+C-01;Chapa de fundo;40;-508.0;-250.0;8.5;XY;08, 11
+C-01;Chapa de fundo;41;120.0;-225.0;4.9;XY;08, 11
+C-01;Chapa de fundo;42;120.0;-135.0;4.9;XY;08, 11
+C-01;Chapa de fundo;43;120.0;-45.0;4.9;XY;08, 11
+C-01;Chapa de fundo;44;120.0;45.0;4.9;XY;08, 11
+C-01;Chapa de fundo;45;120.0;135.0;4.9;XY;08, 11
+C-01;Chapa de fundo;46;120.0;225.0;4.9;XY;08, 11
+C-01;Chapa de fundo;47;-120.0;-225.0;4.9;XY;08, 11
+C-01;Chapa de fundo;48;-120.0;-135.0;4.9;XY;08, 11
+C-01;Chapa de fundo;49;-120.0;-45.0;4.9;XY;08, 11
+C-01;Chapa de fundo;50;-120.0;45.0;4.9;XY;08, 11
+C-01;Chapa de fundo;51;-120.0;135.0;4.9;XY;08, 11
+C-01;Chapa de fundo;52;-120.0;225.0;4.9;XY;08, 11
+C-01;Chapa de fundo;53;-470.0;-120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;54;-470.0;120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;55;-250.0;-120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;56;-250.0;120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;57;250.0;-120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;58;250.0;120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;59;470.0;-120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;60;470.0;120.0;10.0;XY;08, 11
+C-01;Chapa de fundo;61;300.0;80.0;32.0;XY;08, 11
+C-01;Chapa de fundo;62;300.0;-80.0;32.0;XY;08, 11
+C-01;Chapa de fundo;63;-300.0;80.0;32.0;XY;08, 11
+C-01;Chapa de fundo;64;-300.0;-80.0;32.0;XY;08, 11
+C-01;Chapa de fundo;65;245.0;40.0;9.0;XY;08, 11
+C-01;Chapa de fundo;66;245.0;-40.0;9.0;XY;08, 11
+C-01;Chapa de fundo;67;-245.0;40.0;9.0;XY;08, 11
+C-01;Chapa de fundo;68;-245.0;-40.0;9.0;XY;08, 11
+C-01;Chapa de fundo;69;40.0;185.0;9.0;XY;08, 11
+C-01;Chapa de fundo;70;40.0;-185.0;9.0;XY;08, 11
+C-01;Chapa de fundo;71;-40.0;185.0;9.0;XY;08, 11
+C-01;Chapa de fundo;72;-40.0;-185.0;9.0;XY;08, 11
+C-01;Chapa de fundo;73;170.0;240.0;9.0;XY;08, 11
+C-01;Chapa de fundo;74;170.0;-240.0;9.0;XY;08, 11
+C-01;Chapa de fundo;75;-170.0;240.0;9.0;XY;08, 11
+C-01;Chapa de fundo;76;-170.0;-240.0;9.0;XY;08, 11
+C-01;Chapa de fundo;77;320.0;220.0;9.0;XY;08, 11
+C-01;Chapa de fundo;78;320.0;-220.0;9.0;XY;08, 11
+C-01;Chapa de fundo;79;-320.0;220.0;9.0;XY;08, 11
+C-01;Chapa de fundo;80;-320.0;-220.0;9.0;XY;08, 11
+C-01;Chapa de fundo;81;278.0;25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;82;278.0;-25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;83;322.0;25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;84;322.0;-25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;85;-278.0;25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;86;-278.0;-25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;87;-322.0;25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;88;-322.0;-25.0;9.0;XY;08, 11
+C-01;Chapa de fundo;89;400.0;125.0;9.0;XY;08, 11
+C-01;Chapa de fundo;90;400.0;-125.0;9.0;XY;08, 11
+C-01;Chapa de fundo;91;470.0;125.0;9.0;XY;08, 11
+C-01;Chapa de fundo;92;470.0;-125.0;9.0;XY;08, 11
+C-01;Chapa de fundo;93;382.0;-72.0;6.5;XY;08, 11
+C-01;Chapa de fundo;94;382.0;72.0;6.5;XY;08, 11
+C-01;Chapa de fundo;95;430.0;-72.0;6.5;XY;08, 11
+C-01;Chapa de fundo;96;430.0;72.0;6.5;XY;08, 11
+C-01;Chapa de fundo;97;478.0;-72.0;6.5;XY;08, 11
+C-01;Chapa de fundo;98;478.0;72.0;6.5;XY;08, 11
+C-01;Chapa de fundo;99;425.0;209.0;102.0;XY;08, 11
+C-01;Chapa de fundo;100;425.0;-209.0;102.0;XY;08, 11
+C-01;Chapa de fundo;101;-425.0;209.0;102.0;XY;08, 11
+C-01;Chapa de fundo;102;-425.0;-209.0;102.0;XY;08, 11
+W-02;Chapa de montagem do motor-roda;1;350.0;100.0;88.0;XZ;07, 29, 33
+W-02;Chapa de montagem do motor-roda;2;350.0;147.5;4.5;XZ;07, 29, 33
+W-02;Chapa de montagem do motor-roda;3;312.86;129.62;4.5;XZ;07, 29, 33
+W-02;Chapa de montagem do motor-roda;4;303.69;89.43;4.5;XZ;07, 29, 33
+W-02;Chapa de montagem do motor-roda;5;329.39;57.2;4.5;XZ;07, 29, 33
+W-02;Chapa de montagem do motor-roda;6;370.61;57.2;4.5;XZ;07, 29, 33
+W-02;Chapa de montagem do motor-roda;7;396.31;89.43;4.5;XZ;07, 29, 33
+W-02;Chapa de montagem do motor-roda;8;387.14;129.62;4.5;XZ;07, 29, 33
+W-04;Alojamento da bucha do pivô;1;500.0;190.0;34.0;XZ;07, 28
+W-04;Alojamento da bucha do pivô;2;500.0;190.0;23.0;XZ;07, 28
+W-08;Disco do prato do fole;1;425.0;209.0;92.0;XY;07, 31
+W-09;Orelha do prato do fole;1;425.0;190.0;12.0;XZ;07, 31
+W-10;Pino do prato;1;425.0;190.0;12.0;XZ;07, 31
+W-05;Orelha da torre do pivô;1;500.0;190.0;20.0;XZ;07, 30
+W-07;Eixo do pivô;1;500.0;190.0;20.0;XZ;07, 30
+W-06;Berço do pivô;1;508.0;168.0;8.5;XY;07, 30
+W-06;Berço do pivô;2;508.0;250.0;8.5;XY;07, 30
+W-11;Berço do fole;1;350.0;168.0;8.5;XY;07, 31
+W-11;Berço do fole;2;350.0;250.0;8.5;XY;07, 31
+W-11;Berço do fole;3;508.0;168.0;8.5;XY;07, 31
+W-11;Berço do fole;4;508.0;250.0;8.5;XY;07, 31
+W-11;Berço do fole;5;425.0;209.0;14.0;XY;07, 31
+W-11;Berço do fole;6;399.0;209.0;12.0;XY;07, 31
+W-12;Tubo do colar de vedação;1;425.0;209.0;100.0;XY;07, 31
+W-12;Tubo do colar de vedação;2;425.0;209.0;94.0;XY;07, 31
+W-13;Flange do colar;1;425.0;209.0;94.0;XY;07, 31
+W-13;Flange do colar;2;455.0;260.96;4.9;XY;07, 31
+W-13;Flange do colar;3;395.0;260.96;4.9;XY;07, 31
+W-13;Flange do colar;4;365.0;209.0;4.9;XY;07, 31
+W-13;Flange do colar;5;395.0;157.04;4.9;XY;07, 31
+W-13;Flange do colar;6;455.0;157.04;4.9;XY;07, 31
+G-05;Sapata;1;465.0;283.0;13.0;XY;09, 11, 12
+G-05;Sapata;2;488.0;283.0;13.0;XY;09, 11, 12
+G-06;Suporte do LiDAR;1;230.0;-40.0;5.5;XY;10, 11
+G-06;Suporte do LiDAR;2;230.0;40.0;5.5;XY;10, 11
+G-06;Suporte do LiDAR;3;330.0;-40.0;5.5;XY;10, 11
+G-06;Suporte do LiDAR;4;330.0;40.0;5.5;XY;10, 11
+G-06;Suporte do LiDAR;5;255.0;-25.0;4.5;XY;10, 11
+G-06;Suporte do LiDAR;6;255.0;25.0;4.5;XY;10, 11
+G-06;Suporte do LiDAR;7;305.0;-25.0;4.5;XY;10, 11
+G-06;Suporte do LiDAR;8;305.0;25.0;4.5;XY;10, 11
+G-06;Suporte do LiDAR;9;280.0;0.0;30.0;XY;10, 11
+G-08;Coxim antivibração;1;255.0;-25.0;15.0;XY;10
+K-01;Carenagem lateral (meia);1;40.0;265.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);2;40.0;325.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);3;40.0;387.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);4;150.0;265.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);5;150.0;325.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);6;150.0;387.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);7;240.0;265.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);8;240.0;325.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);9;240.0;387.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);10;360.0;265.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);11;360.0;325.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);12;360.0;387.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);13;450.0;265.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);14;450.0;325.0;11.0;XZ;11
+K-01;Carenagem lateral (meia);15;450.0;387.0;11.0;XZ;11
+K-02;Carenagem frontal;1;-200.0;265.0;11.0;YZ;11
+K-02;Carenagem frontal;2;-200.0;325.0;11.0;YZ;11
+K-02;Carenagem frontal;3;-200.0;387.0;11.0;YZ;11
+K-02;Carenagem frontal;4;0.0;265.0;11.0;YZ;11
+K-02;Carenagem frontal;5;0.0;325.0;11.0;YZ;11
+K-02;Carenagem frontal;6;0.0;387.0;11.0;YZ;11
+K-02;Carenagem frontal;7;200.0;265.0;11.0;YZ;11
+K-02;Carenagem frontal;8;200.0;325.0;11.0;YZ;11
+K-02;Carenagem frontal;9;200.0;387.0;11.0;YZ;11
+K-02;Carenagem frontal;10;150.0;358.5;20.0;YZ;11
+K-02;Carenagem frontal;11;-150.0;358.5;20.0;YZ;11
+K-03;Carenagem traseira;1;-200.0;265.0;11.0;YZ;11
+K-03;Carenagem traseira;2;-200.0;325.0;11.0;YZ;11
+K-03;Carenagem traseira;3;-200.0;387.0;11.0;YZ;11
+K-03;Carenagem traseira;4;0.0;265.0;11.0;YZ;11
+K-03;Carenagem traseira;5;0.0;325.0;11.0;YZ;11
+K-03;Carenagem traseira;6;0.0;387.0;11.0;YZ;11
+K-03;Carenagem traseira;7;200.0;265.0;11.0;YZ;11
+K-03;Carenagem traseira;8;200.0;325.0;11.0;YZ;11
+K-03;Carenagem traseira;9;200.0;387.0;11.0;YZ;11
+K-04;Tampa superior dianteira;1;95.0;288.0;11.0;XY;11
+K-04;Tampa superior dianteira;2;95.0;-288.0;11.0;XY;11
+K-04;Tampa superior dianteira;3;195.0;288.0;11.0;XY;11
+K-04;Tampa superior dianteira;4;195.0;-288.0;11.0;XY;11
+K-04;Tampa superior dianteira;5;300.0;288.0;11.0;XY;11
+K-04;Tampa superior dianteira;6;300.0;-288.0;11.0;XY;11
+K-04;Tampa superior dianteira;7;405.0;288.0;11.0;XY;11
+K-04;Tampa superior dianteira;8;405.0;-288.0;11.0;XY;11
+K-04;Tampa superior dianteira;9;495.0;288.0;11.0;XY;11
+K-04;Tampa superior dianteira;10;495.0;-288.0;11.0;XY;11
+K-04;Tampa superior dianteira;11;513.0;-250.0;11.0;XY;11
+K-04;Tampa superior dianteira;12;513.0;-100.0;11.0;XY;11
+K-04;Tampa superior dianteira;13;513.0;100.0;11.0;XY;11
+K-04;Tampa superior dianteira;14;513.0;250.0;11.0;XY;11
+K-04;Tampa superior dianteira;15;40.0;-230.0;11.0;XY;11
+K-04;Tampa superior dianteira;16;40.0;-150.0;11.0;XY;11
+K-04;Tampa superior dianteira;17;40.0;0.0;11.0;XY;11
+K-04;Tampa superior dianteira;18;40.0;150.0;11.0;XY;11
+K-04;Tampa superior dianteira;19;40.0;230.0;11.0;XY;11
+K-04;Tampa superior dianteira;20;230.0;-200.0;11.0;XY;11
+K-04;Tampa superior dianteira;21;230.0;200.0;11.0;XY;11
+K-04;Tampa superior dianteira;22;330.0;-200.0;11.0;XY;11
+K-04;Tampa superior dianteira;23;330.0;200.0;11.0;XY;11
+K-04;Tampa superior dianteira;24;230.0;-40.0;11.0;XY;11
+K-04;Tampa superior dianteira;25;230.0;40.0;11.0;XY;11
+K-04;Tampa superior dianteira;26;330.0;-40.0;11.0;XY;11
+K-04;Tampa superior dianteira;27;330.0;40.0;11.0;XY;11
+K-04;Tampa superior dianteira;28;280.0;0.0;30.0;XY;11
+K-05;Tampa superior traseira;1;-95.0;288.0;11.0;XY;11
+K-05;Tampa superior traseira;2;-95.0;-288.0;11.0;XY;11
+K-05;Tampa superior traseira;3;-195.0;288.0;11.0;XY;11
+K-05;Tampa superior traseira;4;-195.0;-288.0;11.0;XY;11
+K-05;Tampa superior traseira;5;-300.0;288.0;11.0;XY;11
+K-05;Tampa superior traseira;6;-300.0;-288.0;11.0;XY;11
+K-05;Tampa superior traseira;7;-405.0;288.0;11.0;XY;11
+K-05;Tampa superior traseira;8;-405.0;-288.0;11.0;XY;11
+K-05;Tampa superior traseira;9;-495.0;288.0;11.0;XY;11
+K-05;Tampa superior traseira;10;-495.0;-288.0;11.0;XY;11
+K-05;Tampa superior traseira;11;-513.0;-250.0;11.0;XY;11
+K-05;Tampa superior traseira;12;-513.0;-100.0;11.0;XY;11
+K-05;Tampa superior traseira;13;-513.0;100.0;11.0;XY;11
+K-05;Tampa superior traseira;14;-513.0;250.0;11.0;XY;11
+K-05;Tampa superior traseira;15;-40.0;-230.0;11.0;XY;11
+K-05;Tampa superior traseira;16;-40.0;-150.0;11.0;XY;11
+K-05;Tampa superior traseira;17;-40.0;0.0;11.0;XY;11
+K-05;Tampa superior traseira;18;-40.0;150.0;11.0;XY;11
+K-05;Tampa superior traseira;19;-40.0;230.0;11.0;XY;11
+K-05;Tampa superior traseira;20;-230.0;-200.0;11.0;XY;11
+K-05;Tampa superior traseira;21;-230.0;200.0;11.0;XY;11
+K-05;Tampa superior traseira;22;-330.0;-200.0;11.0;XY;11
+K-05;Tampa superior traseira;23;-330.0;200.0;11.0;XY;11
+K-05;Tampa superior traseira;24;-395.0;-45.0;11.0;XY;11
+K-05;Tampa superior traseira;25;-395.0;45.0;11.0;XY;11
+K-05;Tampa superior traseira;26;-305.0;-45.0;11.0;XY;11
+K-05;Tampa superior traseira;27;-305.0;45.0;11.0;XY;11
+K-05;Tampa superior traseira;28;-350.0;0.0;20.0;XY;11
+K-05;Tampa superior traseira;29;-460.0;0.0;22.5;XY;11
+K-05;Tampa superior traseira;30;-430.0;30.0;5.5;XY;11
+K-05;Tampa superior traseira;31;-430.0;-30.0;5.5;XY;11
+K-05;Tampa superior traseira;32;-490.0;30.0;5.5;XY;11
+K-05;Tampa superior traseira;33;-490.0;-30.0;5.5;XY;11
+K-06;Faixa central;1;-40.0;-150.0;5.5;XY;11
+K-06;Faixa central;2;-40.0;0.0;5.5;XY;11
+K-06;Faixa central;3;-40.0;150.0;5.5;XY;11
+K-06;Faixa central;4;40.0;-150.0;5.5;XY;11
+K-06;Faixa central;5;40.0;0.0;5.5;XY;11
+K-06;Faixa central;6;40.0;150.0;5.5;XY;11
+M-10;Haste do mastro;1;0.0;280.0;25.0;XY;18
+M-10;Haste do mastro;2;0.0;280.0;21.0;XY;18
+M-11;Bainha anti-galho;1;0.0;280.0;29.0;XY;18
+M-11;Bainha anti-galho;2;0.0;280.0;25.0;XY;18
+M-12;Ponta cônica;1;0.0;280.0;29.0;XY;18
+M-20;Suporte da câmera;1;22.0;472.0;7.0;XZ;19
+M-20;Suporte da câmera;2;22.0;428.0;7.0;XZ;19
+M-20;Suporte da câmera;3;-22.0;472.0;7.0;XZ;19
+M-20;Suporte da câmera;4;-22.0;428.0;7.0;XZ;19
+M-20;Suporte da câmera;5;15.0;465.0;4.5;XZ;19
+M-20;Suporte da câmera;6;15.0;435.0;4.5;XZ;19
+M-20;Suporte da câmera;7;-15.0;465.0;4.5;XZ;19
+M-20;Suporte da câmera;8;-15.0;435.0;4.5;XZ;19
+E-01;Bandeja lateral;1;170.0;240.0;7.0;XY;21
+E-01;Bandeja lateral;2;-170.0;240.0;7.0;XY;21
+E-01;Bandeja lateral;3;100.0;232.0;5.5;XY;21
+E-01;Bandeja lateral;4;-100.0;232.0;5.5;XY;21
+E-02;Bandeja de extremidade;1;400.0;125.0;7.0;XY;21
+E-02;Bandeja de extremidade;2;470.0;125.0;7.0;XY;21
+E-10;Reforço do E-STOP;1;-460.0;0.0;22.5;XY;21
+E-10;Reforço do E-STOP;2;-430.0;30.0;5.5;XY;21
+E-10;Reforço do E-STOP;3;-430.0;-30.0;5.5;XY;21
+E-10;Reforço do E-STOP;4;-490.0;30.0;5.5;XY;21
+E-10;Reforço do E-STOP;5;-490.0;-30.0;5.5;XY;21
+N-01;Suporte da antena GNSS;1;-395.0;-45.0;11.0;XY;22
+N-01;Suporte da antena GNSS;2;-395.0;45.0;11.0;XY;22
+N-01;Suporte da antena GNSS;3;-305.0;-45.0;11.0;XY;22
+N-01;Suporte da antena GNSS;4;-305.0;45.0;11.0;XY;22
+N-01;Suporte da antena GNSS;5;-375.0;-25.0;4.5;XY;22
+N-01;Suporte da antena GNSS;6;-375.0;25.0;4.5;XY;22
+N-01;Suporte da antena GNSS;7;-325.0;-25.0;4.5;XY;22
+N-01;Suporte da antena GNSS;8;-325.0;25.0;4.5;XY;22
+N-01;Suporte da antena GNSS;9;-350.0;0.0;20.0;XY;22
+N-02;Berço do IMU;1;278.0;-25.0;6.6;XY;22
+N-02;Berço do IMU;2;278.0;25.0;6.6;XY;22
+N-02;Berço do IMU;3;322.0;-25.0;6.6;XY;22
+N-02;Berço do IMU;4;322.0;25.0;6.6;XY;22
+N-02;Berço do IMU;5;280.0;-15.0;3.4;XY;22
+N-02;Berço do IMU;6;280.0;15.0;3.4;XY;22
+N-02;Berço do IMU;7;320.0;-15.0;3.4;XY;22
+N-02;Berço do IMU;8;320.0;15.0;3.4;XY;22
+N-02;Berço do IMU;9;300.0;0.0;10.0;XY;22
+N-03;Espaçador do berço;1;278.0;-25.0;12.0;XY;22
+N-03;Espaçador do berço;2;278.0;-25.0;6.6;XY;22
+N-04;Janela da câmera de raiz;1;382.0;-72.0;4.5;XY;22
+N-04;Janela da câmera de raiz;2;382.0;72.0;4.5;XY;22
+N-04;Janela da câmera de raiz;3;430.0;-72.0;4.5;XY;22
+N-04;Janela da câmera de raiz;4;430.0;72.0;4.5;XY;22
+N-04;Janela da câmera de raiz;5;478.0;-72.0;4.5;XY;22
+N-04;Janela da câmera de raiz;6;478.0;72.0;4.5;XY;22
+N-05;Barra de proteção da janela;1;413.0;244.0;8.0;XZ;22
+N-08;Reforço do farol;1;150.0;358.5;20.0;YZ;22
+N-08;Reforço do farol;2;128.0;345.5;4.5;YZ;22
+N-08;Reforço do farol;3;128.0;371.5;4.5;YZ;22
+N-08;Reforço do farol;4;172.0;345.5;4.5;YZ;22
+N-08;Reforço do farol;5;172.0;371.5;4.5;YZ;22

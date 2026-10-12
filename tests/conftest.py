@@ -43,7 +43,13 @@ from valtexa.models import (  # noqa: E402
     Tenant,
 )
 from valtexa.seed import seed_demo, sync_device_models  # noqa: E402
-from valtexa.services import storage  # noqa: E402
+from valtexa.services import (  # noqa: E402
+    coordenacao,
+    edge_sync,
+    model_registry,
+    plans,
+    storage,
+)
 from valtexa.services.hal import REFERENCE_MODELS  # noqa: E402
 
 DEMO_PASSWORD = "valtexa-demo-2026"
@@ -56,6 +62,14 @@ Com ele definido, os mesmos testes rodam contra o banco de produção em vez do
 SQLite. O esquema é apagado e recriado a cada teste: nunca aponte para um banco
 com dado que importe.
 """
+
+
+@pytest.fixture(autouse=True)
+def _coordenacao_limpa(monkeypatch: pytest.MonkeyPatch) -> coordenacao.Coordenacao:
+    """Limite de taxa e travas novos a cada teste (estado de processo não vaza)."""
+    nova = coordenacao.CoordenacaoEmMemoria()
+    monkeypatch.setattr(coordenacao, "coordenacao", nova)
+    return nova
 
 
 @pytest.fixture
@@ -85,10 +99,19 @@ def session(session_factory) -> Iterator[Session]:
 
 
 @pytest.fixture
+def registry(session: Session) -> Session:
+    """Sessão com o catálogo inicial do Model Registry, sem o resto da demonstração."""
+    model_registry.sincronizar_catalogo(session)
+    return session
+
+
+@pytest.fixture
 def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> storage.LocalObjectStore:
     """Armazenamento isolado. Substitui a instância global do processo."""
     local = storage.LocalObjectStore(tmp_path / "storage")
     monkeypatch.setattr(storage, "store", local)
+    # Os chunks dos uploads do robô também ficam no diretório do teste.
+    monkeypatch.setattr(edge_sync, "staging", edge_sync.LocalChunkStaging(tmp_path / "uploads"))
     return local
 
 
@@ -98,6 +121,8 @@ def demo(session_factory, monkeypatch: pytest.MonkeyPatch, store) -> dict:
     _bind_sessions(monkeypatch, session_factory)
     with session_factory() as session:
         sync_device_models(session)
+        plans.sincronizar_catalogo(session)
+        model_registry.sincronizar_catalogo(session)
         data = seed_demo(session)
     return data
 
@@ -148,6 +173,12 @@ def agronomist_token(client: TestClient) -> dict[str, str]:
 @pytest.fixture
 def operator_token(client: TestClient) -> dict[str, str]:
     return _login(client, "operador@valtexa.dev")
+
+
+@pytest.fixture
+def platform_token(client: TestClient) -> dict[str, str]:
+    """Equipe da ValTexa: a única que entra no painel administrativo."""
+    return _login(client, "equipe@valtexa.dev")
 
 
 def _login(client: TestClient, email: str) -> dict[str, str]:
@@ -207,3 +238,40 @@ def frota(session: Session) -> dict:
         "field": field_row,
         "device": device,
     }
+
+
+@pytest.fixture
+def equipe(client: TestClient, session_factory):
+    """Fábrica de contas da equipe da ValTexa, uma por papel de plataforma.
+
+    ``equipe(PlatformRole.COMERCIAL)`` cria a conta (sem associação a cliente
+    nenhum, como na vida real), entra e devolve os cabeçalhos. O ``X-Tenant-Id``
+    vem preenchido com o cliente de demonstração só como contexto das rotas de
+    plataforma — não concede nada no cliente.
+    """
+    from valtexa.models import PlatformRole, User
+    from valtexa.security.passwords import hash_password
+
+    criados: dict[str, dict[str, str]] = {}
+
+    def _fabrica(papel: PlatformRole) -> dict[str, str]:
+        email = f"{papel.value}@equipe.valtexa.dev"
+        if email not in criados:
+            with session_factory() as sessao:
+                sessao.add(
+                    User(
+                        email=email,
+                        full_name=f"Equipe {papel.value}",
+                        password_hash=hash_password(DEMO_PASSWORD),
+                        platform_role=papel,
+                    )
+                )
+                sessao.commit()
+            response = client.post(
+                "/v1/auth/login", json={"email": email, "password": DEMO_PASSWORD}
+            )
+            assert response.status_code == 200, response.text
+            criados[email] = {"Authorization": f"Bearer {response.json()['access_token']}"}
+        return dict(criados[email])
+
+    return _fabrica

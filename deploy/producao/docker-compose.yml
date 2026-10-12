@@ -1,0 +1,207 @@
+# ValTexa em produção (Parte 9) — um host com Docker, para o piloto.
+#
+# API (com o console em /), worker, IA, Postgres, Redis, MinIO (S3), Prometheus e
+# Caddy (TLS automático e balanceamento entre as réplicas da API).
+#
+# Nenhum segredo aqui nem em variável de ambiente: cada um é um ARQUIVO em
+# ./segredos/ (fora do Git), montado em /run/secrets/ pelo Docker. A plataforma lê
+# /run/secrets/<campo> sozinha (SECRETS_DIR); Postgres e MinIO leem *_FILE; a IA e o
+# Redis recebem o valor pelo comando de entrada. Passo a passo: docs/DEPLOY.md.
+#
+#   ./gerar-segredos.sh            # uma vez: cria ./segredos/* com valores fortes
+#   DOMINIO=app.exemplo.com.br docker compose up -d --build
+#
+# Em nuvem gerenciada (RDS, ElastiCache, S3 de verdade), apague os serviços db,
+# redis e minio e aponte os arquivos database_url, redis_url e as variáveis S3_* para
+# eles — o código não muda.
+
+x-segredos-da-plataforma: &segredos-da-plataforma
+  - session_secret
+  - command_signing_secret
+  - ota_signing_secret
+  - inference_service_token
+  - metrics_token
+  - database_url
+  - redis_url
+  - aws_credentials
+  - platform_admin_password
+
+x-plataforma: &plataforma
+  build:
+    context: ../..
+  image: valtexa/plataforma:${VERSAO:-local}
+  restart: unless-stopped
+  secrets: *segredos-da-plataforma
+  environment: &ambiente-da-plataforma
+    ENVIRONMENT: production
+    SECRETS_DIR: /run/secrets
+    LOG_FORMAT: json
+    CORS_ORIGINS: https://${DOMINIO:?defina DOMINIO}
+    CONSOLE_URL: https://${DOMINIO}
+    SIMULATED_INFERENCE: "false"
+    INFERENCE_ENABLED: "true"
+    INFERENCE_URL: http://ia:8000
+    STORAGE_BACKEND: s3
+    S3_BUCKET: ${S3_BUCKET:-valtexa}
+    S3_PREFIX: valtexa
+    S3_ENDPOINT_URL: http://minio:9000
+    S3_REGION: us-east-1
+    S3_ADDRESSING_STYLE: path
+    # MinIO sem camada remota não aceita transição de classe: desligadas aqui.
+    # Na AWS, apague estas duas linhas (padrão: STANDARD_IA em 30 d, GLACIER_IR em 365 d).
+    S3_INFREQUENT_AFTER_DAYS: ""
+    S3_ARCHIVE_AFTER_DAYS: ""
+    AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
+    EVENT_WORKER_IN_API: "false"
+  depends_on:
+    db: {condition: service_healthy}
+    redis: {condition: service_healthy}
+    minio: {condition: service_healthy}
+  networks: [interna]
+
+services:
+  proxy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-dados:/data
+    depends_on: [api]
+    networks: [interna, publica]
+
+  api:
+    <<: *plataforma
+    # Migrações rodam na subida (lifespan): com réplicas, a primeira migra e as
+    # outras esperam o lock do Alembic no Postgres. Para migração grande, rode antes
+    # o serviço 'migrar' (docs/DEPLOY.md).
+    deploy:
+      replicas: ${REPLICAS_API:-2}
+    command: ["uvicorn", "valtexa.main:app", "--host", "0.0.0.0", "--port", "8080",
+              "--proxy-headers", "--forwarded-allow-ips", "*"]
+
+  worker:
+    <<: *plataforma
+    # Um só. Dois por engano (deploy sobreposto) não duplicam tarefa: a marca de
+    # "uma vez por ciclo" fica no Redis (valtexa/services/coordenacao.py).
+    command: ["python", "-m", "valtexa.worker"]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck: {disable: true}
+
+  armazenamento:
+    # Uma vez por deploy: cria o bucket (se faltar) e grava a política de lifecycle.
+    <<: *plataforma
+    restart: "no"
+    command: ["sh", "-c", "python -c \"import boto3,os; c=boto3.client('s3',endpoint_url=os.environ['S3_ENDPOINT_URL']); b=os.environ['S3_BUCKET']; c.head_bucket(Bucket=b)\" 2>/dev/null || python -c \"import boto3,os; boto3.client('s3',endpoint_url=os.environ['S3_ENDPOINT_URL']).create_bucket(Bucket=os.environ['S3_BUCKET'])\"; python -m valtexa.services.storage --ciclo-de-vida"]
+    depends_on:
+      minio: {condition: service_healthy}
+    healthcheck: {disable: true}
+    profiles: [preparar]
+
+  ia:
+    build:
+      context: ../../../VALTEXA-B
+    image: valtexa/ia:${VERSAO:-local}
+    restart: unless-stopped
+    secrets: [inference_service_token]
+    # O token de serviço vem do arquivo; a IA não fica exposta fora da rede interna.
+    entrypoint: ["sh", "-c", "SERVICE_TOKEN=\"$$(cat /run/secrets/inference_service_token)\" exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    environment:
+      MODELS_DIR: /app/models
+      FIELDS_DIR: /app/fields
+    volumes:
+      # Os PESOS não estão no repositório: copie-os para ./modelos (docs/DEPLOY.md).
+      - ./modelos:/app/models:ro
+      - ia-talhoes:/app/fields
+    networks: [interna]
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    secrets: [postgres_password]
+    environment:
+      POSTGRES_USER: valtexa
+      POSTGRES_DB: valtexa
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U valtexa"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [interna]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    secrets: [redis_password]
+    # Sem persistência de propósito: o Redis guarda só limite de taxa e travas
+    # (perder no reinício = um balde que recomeça cheio).
+    command: ["sh", "-c", "exec redis-server --save '' --appendonly no --requirepass \"$$(cat /run/secrets/redis_password)\""]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/redis_password)\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [interna]
+
+  minio:
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    secrets: [minio_root_user, minio_root_password]
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+    volumes: [minio-dados:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Console do MinIO só no localhost do host (túnel SSH para usar).
+    ports: ["127.0.0.1:9001:9001"]
+    networks: [interna]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    secrets: [metrics_token, inference_service_token]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observabilidade/regras.yml:/etc/prometheus/regras.yml:ro
+      - prometheus-dados:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [interna]
+
+secrets:
+  session_secret: {file: ./segredos/session_secret}
+  command_signing_secret: {file: ./segredos/command_signing_secret}
+  ota_signing_secret: {file: ./segredos/ota_signing_secret}
+  inference_service_token: {file: ./segredos/inference_service_token}
+  metrics_token: {file: ./segredos/metrics_token}
+  database_url: {file: ./segredos/database_url}
+  redis_url: {file: ./segredos/redis_url}
+  aws_credentials: {file: ./segredos/aws_credentials}
+  platform_admin_password: {file: ./segredos/platform_admin_password}
+  postgres_password: {file: ./segredos/postgres_password}
+  redis_password: {file: ./segredos/redis_password}
+  minio_root_user: {file: ./segredos/minio_root_user}
+  minio_root_password: {file: ./segredos/minio_root_password}
+
+networks:
+  interna: {internal: false}
+  publica: {}
+
+volumes:
+  pgdata:
+  minio-dados:
+  prometheus-dados:
+  caddy-dados:
+  ia-talhoes:

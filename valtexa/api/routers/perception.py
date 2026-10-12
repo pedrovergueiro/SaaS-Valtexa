@@ -8,13 +8,17 @@ entra no treino da versão seguinte.
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import UTC, datetime
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from valtexa.api.arquivos import resposta_de_arquivo
 from valtexa.api.deps import Principal, get_scoped, require, scoped
+from valtexa.api.routers.edge_arquivos import link_de_download
 from valtexa.db import get_session
 from valtexa.models import (
     ActorType,
@@ -31,10 +35,19 @@ from valtexa.schemas import (
     DetectionOut,
     DiagnosisOut,
     DiagnosisReview,
+    LinkDeArquivoOut,
     ObservationOut,
 )
 from valtexa.security import rbac
-from valtexa.services import audit, decision_engine, events, storage
+from valtexa.services import (
+    audit,
+    collections,
+    dataset,
+    decision_engine,
+    events,
+    review_priority,
+    storage,
+)
 
 router = APIRouter(tags=["percepção"])
 
@@ -90,8 +103,9 @@ def observation_image(
     """Devolve o arquivo, para o agrônomo olhar antes de diagnosticar.
 
     A imagem é servida por esta rota e não por URL direta do armazenamento
-    porque o acesso precisa passar pelo escopo do cliente. Um link assinado
-    direto ao bucket vazaria a foto para quem tivesse o endereço.
+    porque o acesso precisa passar pelo escopo do cliente. O link assinado
+    direto ao bucket existe em ``.../image/url`` (Parte 9): emitido só depois do
+    mesmo escopo, curto (``S3_PRESIGN_SECONDS``) e preso à chave do objeto.
     """
     observation = get_scoped(session, Observation, observation_id, principal)
     if not observation.image_asset_id:
@@ -104,7 +118,27 @@ def observation_image(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "Arquivo ausente no armazenamento."
         ) from exc
-    return Response(content=data, media_type=asset.content_type)
+    return resposta_de_arquivo(data, asset.content_type, nome=f"observacao-{observation_id}")
+
+
+@router.get(
+    "/observations/{observation_id}/image/url",
+    response_model=LinkDeArquivoOut,
+    summary="Link de download da imagem: URL assinada e curta do object storage (com S3)",
+)
+def observation_image_url(
+    observation_id: str,
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
+    session: Session = Depends(get_session),
+) -> LinkDeArquivoOut:
+    """O escopo do cliente é conferido antes de assinar (Parte 9, seção 38)."""
+    observation = get_scoped(session, Observation, observation_id, principal)
+    if not observation.image_asset_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Observação sem imagem.")
+    asset = get_scoped(session, Asset, observation.image_asset_id, principal)
+    return link_de_download(
+        asset, f"/v1/observations/{observation_id}/image", f"observacao-{observation_id}"
+    )
 
 
 @router.get("/diagnoses", response_model=list[DiagnosisOut], summary="Diagnósticos")
@@ -127,6 +161,21 @@ def list_diagnoses(
     return [_diagnosis_out(session, row) for row in session.scalars(statement)]
 
 
+@router.get("/diagnoses/{diagnosis_id}", response_model=DiagnosisOut, summary="Um diagnóstico")
+def get_diagnosis(
+    diagnosis_id: str,
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
+    session: Session = Depends(get_session),
+) -> DiagnosisOut:
+    """O diagnóstico com as análises e o que cada uma disse além do rótulo.
+
+    A lista de observações não traz ``signals`` — num quadro do rover eles
+    carregam os recortes por zona e as plantas, pesado demais para o mapa inteiro.
+    O console busca aqui quando alguém abre uma observação.
+    """
+    return _diagnosis_out(session, get_scoped(session, Diagnosis, diagnosis_id, principal))
+
+
 @router.get(
     "/review/queue",
     response_model=list[DiagnosisOut],
@@ -134,6 +183,14 @@ def list_diagnoses(
 )
 def review_queue(
     limit: int = 50,
+    order: Literal["novidade", "valor"] = Query(
+        default="novidade",
+        description=(
+            "'novidade': o que mais destoa primeiro. 'valor': o que mais ensina ao próximo "
+            "treino primeiro — fora do escopo, discordância, incerteza, classe rara —, com "
+            "o motivo de cada item."
+        ),
+    ),
     principal: Principal = Depends(require(rbac.DIAGNOSIS_READ)),
     session: Session = Depends(get_session),
 ) -> list[DiagnosisOut]:
@@ -146,16 +203,63 @@ def review_queue(
     analisador de fato independente, **nada** é validado sozinho. Ver
     :func:`valtexa.services.ai_pipeline.default_analyzers`.
     """
-    statement = scoped(
+    pending = (
         select(Diagnosis)
         .where(Diagnosis.status.in_([DiagnosisStatus.NEEDS_REVIEW, DiagnosisStatus.INCONCLUSIVE]))
         .where(Diagnosis.reviewed_at.is_(None))
-        .order_by(Diagnosis.novelty_score.desc().nullslast(), Diagnosis.created_at.desc())
-        .limit(min(limit, 200)),
+    )
+    if order == "valor":
+        return _review_by_value(session, principal, pending, min(limit, 200))
+    statement = scoped(
+        pending.order_by(
+            Diagnosis.novelty_score.desc().nullslast(), Diagnosis.created_at.desc()
+        ).limit(min(limit, 200)),
         Diagnosis,
         principal,
     )
     return [_diagnosis_out(session, row) for row in session.scalars(statement)]
+
+
+REVIEW_VALUE_WINDOW = 1000
+"""Quantos pendentes, dos mais recentes, entram na ordenação por valor."""
+
+
+def _review_by_value(session: Session, principal: Principal, pending, limit: int):
+    """A fila ordenada pelo que mais ensina — ver :mod:`valtexa.services.review_priority`."""
+    candidates = list(
+        session.scalars(
+            scoped(
+                pending.order_by(Diagnosis.created_at.desc()).limit(REVIEW_VALUE_WINDOW),
+                Diagnosis,
+                principal,
+            )
+        )
+    )
+    reviewed = Counter(
+        session.scalars(
+            scoped(
+                select(Diagnosis.reviewed_label).where(Diagnosis.reviewed_label.is_not(None)),
+                Diagnosis,
+                principal,
+            )
+        )
+    )
+    # Uma consulta para as análises primárias de todos, e não uma por item.
+    ids = [row.primary_detection_id for row in candidates if row.primary_detection_id]
+    query = select(Detection).where(Detection.id.in_(ids))
+    primaries = {detection.id: detection for detection in session.scalars(query)} if ids else {}
+    ranked = [
+        (review_priority.priority(row, primaries.get(row.primary_detection_id), reviewed), row)
+        for row in candidates
+    ]
+    ranked.sort(key=lambda item: item[0].score, reverse=True)
+    out = []
+    for prio, row in ranked[:limit]:
+        item = _diagnosis_out(session, row)
+        item.priority_score = prio.score
+        item.priority_reasons = prio.reasons
+        out.append(item)
+    return out
 
 
 @router.post(
@@ -224,6 +328,18 @@ def review(
             "agreed": payload.label == diagnosis.label,
         },
     )
+
+    # O rótulo do agrônomo vira amostra do dataset proprietário. É o único
+    # caminho pelo qual uma doença fora do catálogo entra no treino — e é por
+    # isso que ele acontece aqui, na mesma transação do veredito: uma anotação
+    # que se perdesse por falha depois do commit seria uma perda irrecuperável,
+    # porque ninguém revisa a mesma imagem duas vezes.
+    dataset.record_review(session, diagnosis, principal.user)
+
+    # Se a imagem veio de uma coleta, o veredito fecha aquele arquivo. É assim
+    # que uma coleta aérea — que nenhum modelo sabe analisar — chega a
+    # "analisada": por decisão de gente, registrada com nome.
+    collections.on_diagnosis_reviewed(session, diagnosis)
 
     # A revisão muda o insumo da decisão, então a decisão é refeita. A anterior
     # continua no banco: apagar apagaria o porquê da recomendação antiga.
@@ -302,6 +418,7 @@ def _observation_out(row: Observation, diagnosis: Diagnosis | None) -> Observati
         zone_id=row.zone_id,
         mission_id=row.mission_id,
         device_id=row.device_id,
+        collection_id=row.collection_id,
         captured_at=row.captured_at,
         lat=row.lat,
         lon=row.lon,
@@ -350,6 +467,7 @@ def _diagnosis_out(session: Session, row: Diagnosis) -> DiagnosisOut:
                 probabilities=item.probabilities,
                 latency_ms=item.latency_ms,
                 error=item.error,
+                signals=item.signals or {},
             )
             for item in detections
         ],

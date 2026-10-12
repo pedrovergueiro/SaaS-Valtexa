@@ -81,7 +81,23 @@ class Observation(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     mission_id: Mapped[str | None] = mapped_column(
         String(32), ForeignKey("mission.id", ondelete="SET NULL"), index=True
     )
-    device_id: Mapped[str] = mapped_column(String(32), ForeignKey("device.id"), nullable=False)
+    device_id: Mapped[str | None] = mapped_column(
+        String(32),
+        ForeignKey("device.id"),
+        doc=(
+            "O robô que olhou. Nulo quando ninguém da frota olhou: no MVP a "
+            "imagem aérea vem de um operador terceirizado, e inventar um "
+            "dispositivo para ela registraria no banco um voo da ValTexa que "
+            "não aconteceu. Nesse caso quem responde pela origem é "
+            "``collection_id``."
+        ),
+    )
+    collection_id: Mapped[str | None] = mapped_column(
+        String(32),
+        ForeignKey("collection.id", ondelete="SET NULL"),
+        index=True,
+        doc="O lote de onde a imagem veio, quando a entrada foi por coleta.",
+    )
     sequence_number: Mapped[int | None] = mapped_column(
         BigInteger, doc="Sequência do robô, para deduplicar reenvio offline."
     )
@@ -165,6 +181,14 @@ class Detection(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     probabilities: Mapped[dict] = mapped_column(default=dict)
     bbox: Mapped[list | None] = mapped_column(doc="[x, y, w, h] normalizado, quando houver.")
     latency_ms: Mapped[float | None] = mapped_column(Float)
+    signals: Mapped[dict] = mapped_column(
+        default=dict,
+        doc=(
+            "O que a IA disse além do rótulo: veredito do portão de enquadramento "
+            "(in_scope, scene), conjunto conformal e, num quadro do rover, o resumo "
+            "dos recortes por zona da planta."
+        ),
+    )
     error: Mapped[str | None] = mapped_column(
         Text, doc="Preenchido quando o analisador falhou. Falha nunca vira concordância."
     )

@@ -148,6 +148,24 @@ criptografia com lixo.
 `GET /v1/device/time` (sem assinatura), ajuste e repita. Não é opcional: sem
 relógio alinhado nada é aceito.
 
+### Recibo assinado da resposta (Parte 13 — Rover pela base da fazenda)
+
+Opcional, pedido pelo robô com `X-Valtexa-Recibo: 1` (fora do texto canônico). Em
+`POST`/`PUT`/`PATCH`/`DELETE` de `/v1/device/**`, a plataforma devolve
+`X-Valtexa-Recibo-Assinatura`: Ed25519 (a mesma chave dos comandos) sobre
+
+```
+VALTEXA-ED25519-RECIBO-V1
+<X-Valtexa-Nonce do pedido>
+<status HTTP>
+<sha256 do corpo da resposta, hex minúsculo>
+```
+
+O Rover que fala pela base (`RedeViaBase`) só aceita um 2xx que muda estado com esse
+recibo; sem ele, trata como "sem rede" e o dado fica na fila. Assim um intermediário não
+fabrica "aceito" (o robô apagaria o que não chegou) nem reaproveita o recibo de outro
+pedido. `GET` não leva recibo: missão, comando e teleop já vêm em envelope assinado.
+
 ---
 
 ## 5. Sequência
@@ -200,6 +218,13 @@ Máximo `MAX_TELEMETRY_BATCH` (500) por requisição. Resposta:
 Campos desconhecidos são ignorados; campos ausentes ficam nulos. Uma amostra sem
 `sequence_number` é rejeitada **sem derrubar o lote**.
 
+Campos de saúde da frota (Parte 3, todos opcionais): `storage_total_bytes`,
+`storage_free_bytes` e `operating_hours` (horímetro — só sobe; um valor menor é
+ignorado). A amostra **mais recente** define o retrato do robô na frota:
+`faults` não vazio deixa o robô em **ERRO**; uma amostra com `faults: []` encerra.
+Uma amostra com sequência abaixo da marca d'água (lote antigo chegando pela
+descarga) entra na série, mas não volta o retrato.
+
 ### `POST /v1/device/events`
 
 ```json
@@ -223,10 +248,14 @@ pode ser repetida à vontade, o que é o comportamento correto quando a conexão
 cai no meio.
 
 ```json
-{"sync_id": "sync-2026-09-09-01", "samples": [...], "events": [...]}
+{"sync_id": "sync-2026-09-09-01", "samples": [...], "events": [...], "remaining": 2400}
 ```
 
 Limite: `MAX_SYNC_BATCH` (1000) registros somados.
+
+`remaining` (opcional) é quantos registros ainda ficaram no robô depois deste lote.
+Maior que zero deixa o robô **SINCRONIZANDO** na frota; `0` (ou ausente) encerra a
+descarga e grava `last_sync_at`.
 
 ### `POST /v1/device/observations` — `multipart/form-data`
 
@@ -352,6 +381,49 @@ real.
 
 Troca uma requisição assinada por um token curto, para poupar assinaturas em
 enlace caro. Não substitui a assinatura em nada que mude o mundo físico.
+
+No corpo (opcional) o robô informa o software que roda — é daí que a frota sabe
+as versões (brief, seção 22); ninguém as digita:
+
+```json
+{"runtime_version": "0.4.0", "edge_ai_version": "0.2.1",
+ "model_key": "coffee-foliar", "model_version": "1.0.0", "dnaty_version": "2.2.1",
+ "firmware_version": "1.3.0", "hardware_version": "Rover Edge V1"}
+```
+
+Campo ausente não apaga o anterior. Cada troca vira `device.versions_reported` na
+trilha do cliente, com o antes e o depois.
+
+### `GET /v1/device/models`
+
+O que o robô deve rodar: para cada talhão da fazenda dele, a versão em **PRODUÇÃO**
+do Model Registry (liberada para o cliente), com `artifact_uri`, `artifact_sha256`
+(otimizado pelo dNATY quando houver, senão o original), `dnaty_version` e
+`target_hardware`. **Um robô nunca recebe modelo fora do registry.** Sem hash no
+registry, `artifact_sha256` vem nulo: o firmware não carrega nada. Talhão sem
+modelo vem com `model_key` nulo e `reason`.
+
+### Sincronização do Rover Runtime (Parte 4)
+
+Resultados da Edge AI, eventos e arquivos em chunks, idempotentes por ID e hash, com
+retomada de upload — contrato completo em [`docs/SYNC.md`](../../docs/SYNC.md) (raiz):
+
+| Rota | Para quê |
+|---|---|
+| `POST /v1/device/edge/records` | lote de resultados/eventos `{id, kind, type, sha256, body}`; responde `accepted`, `duplicated`, `conflicts`, `rejected` |
+| `POST /v1/device/uploads` | abre ou reabre um upload; devolve `received_chunks` |
+| `PUT /v1/device/uploads/{id}/chunks/{i}` | um chunk, corpo bruto (assinado como qualquer corpo) |
+| `GET /v1/device/uploads/{id}` | estado |
+| `POST /v1/device/uploads/{id}/complete` | confere o SHA-256 do arquivo e guarda no object storage |
+
+### Estado de frota (derivado)
+
+DISPONÍVEL, EM MISSÃO, SINCRONIZANDO, MANUTENÇÃO, OFFLINE, BLOQUEADO e ERRO saem do
+protocolo, em `valtexa/services/fleet_state.py`, nesta precedência: suspenso,
+aposentado ou sem credencial válida → BLOQUEADO; em manutenção → MANUTENÇÃO; sem
+contato há mais de 5 min → OFFLINE; falha na última telemetria → ERRO; missão
+ativa → EM MISSÃO; `remaining > 0` no último `/sync` → SINCRONIZANDO; senão
+DISPONÍVEL. Telemetria, `/sync` e abertura de sessão contam como contato.
 
 ---
 

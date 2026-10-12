@@ -39,11 +39,16 @@ export default function Missions() {
         title="Missões"
         subtitle="Planejar, aprovar, autorizar, despachar. A missão é o único contrato de execução: sem assinatura válida, o robô não obedece."
         actions={
-          can('mission:create') && (
-            <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setParams({ nova: '1' })}>
-              Nova missão
-            </Button>
-          )
+          <>
+            <Link to="/missoes/comparar">
+              <Button>Comparar missões</Button>
+            </Link>
+            {can('mission:create') && (
+              <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setParams({ nova: '1' })}>
+                Nova missão
+              </Button>
+            )}
+          </>
         }
       />
 

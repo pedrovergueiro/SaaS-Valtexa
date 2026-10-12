@@ -44,8 +44,25 @@ DISEASE_LABELS = frozenset(
         "Phoma_Leaf_Spot",
         "Southern_Rust",
         "Tar_Spot",
+        # banana (banana-foliar)
+        "Sigatoka",
+        "Fusarium_Wilt",  # mal-do-Panamá
+        "Cordana",
+        "Pestalotiopsis",
+        # citros (citrus-foliar)
+        "Algal_Leaf_Spot",
+        "Anthracnose",
+        "Black_Spot",  # pinta-preta
+        "Canker",  # cancro cítrico
+        "Greening",  # HLB
+        "Melanose",
+        "Scab",  # verrugose
+        "Sooty_Mold",  # fumagina
     }
 )
+"""``Curl_Leaf`` (enrolamento da folha de citros) fica de fora de propósito: é
+sintoma, não doença — pulgão, ácaro, vírus ou nutrição enrolam a folha. Cai em
+``OTHER``, e quem nomeia a causa é o agrônomo."""
 
 PEST_LABELS = frozenset(
     {
@@ -62,6 +79,13 @@ PEST_LABELS = frozenset(
         "Leaf_Miner_Damage",  # dano do bicho-mineiro, classe do modelo de café
         "Leucoptera_coffeella",  # bicho-mineiro
         "Hypothenemus_hampei",  # broca-do-café
+        # citros
+        "Leafminer",  # larva-minadora, classe do modelo de citros
+        "Mites",  # ácaros, classe do modelo de citros
+        "Phyllocnistis_citrella",  # larva-minadora-dos-citros
+        "Diaphorina_citri",  # psilídeo, vetor do greening
+        # banana
+        "Cosmopolites_sordidus",  # moleque-da-bananeira
     }
 )
 

@@ -9,6 +9,10 @@ requires-python = ">=3.11"
 # e 100 mantém as assinaturas do FastAPI e as mensagens em português legíveis.
 line-length = 100
 target-version = "py311"
+# `hardware/` é o projeto mecânico do Rover — gerador de DXF e de folha de
+# desenho, com convenções próprias e nenhuma linha em comum com a plataforma.
+# Medi-lo com a régua do servidor web só produz ruído que ninguém vai corrigir.
+exclude = ["hardware"]
 
 [tool.ruff.lint]
 select = [
@@ -35,6 +39,7 @@ ignore = ["B008"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+pythonpath = ["."]
 filterwarnings = [
     # Aviso do nosso código é erro: não deixamos dívida de depreciação passar.
     "error::DeprecationWarning",

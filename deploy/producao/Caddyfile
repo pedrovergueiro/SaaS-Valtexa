@@ -1,0 +1,25 @@
+# TLS automático (Let's Encrypt) e balanceamento entre as réplicas da API.
+{$DOMINIO} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	# /metrics fica na rede interna (o Prometheus raspa direto as réplicas).
+	@metricas path /metrics
+	respond @metricas 404
+	reverse_proxy {
+		dynamic a {
+			name api
+			port 8080
+			refresh 10s
+		}
+		lb_policy round_robin
+		health_uri /health
+		health_interval 15s
+	}
+	request_body {
+		# Coerente com MAX_ASSET_MB (64) + folga do multipart.
+		max_size 80MB
+	}
+}

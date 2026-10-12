@@ -1,0 +1,17 @@
+﻿Ponto;X mm;Y mm;Z mm
+Origem (ISO 8855);0;0;0 — solo, centro do polígono das 4 rodas
+Centro geométrico do chassi;0;0;295
+Eixo das rodas dianteiras;+350;±265;100
+Eixo das rodas traseiras;−350;±265;100
+Face de montagem do motor;±350;±234;100 (datum B)
+Furo Ø88 da face;±350;±234;100
+Chapa de fundo (face inferior);0;0;248
+Anel inferior do quadro;0;0;250…280
+Anel superior do quadro;0;0;310…340
+Deck (topo do quadro);0;0;340
+Topo da proteção do corpo;0;0;400
+Topo das tampas;0;0;398.2
+Faixa central (ponto mais alto do corpo);0;0;399.4
+Anel da gaiola;0;±288;377…397
+Centro de gravidade (calculado);≈0;≈0;287.9
+Topo do mastro;0;—;1782

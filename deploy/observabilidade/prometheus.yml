@@ -1,0 +1,41 @@
+# Prometheus da ValTexa — exemplo (Parte 7, brief seção 35).
+#
+# Nenhum segredo aqui: os tokens vêm de ARQUIVOS montados no contêiner
+# (credentials_file), criados na hora do deploy e fora do Git:
+#   segredos/metrics_token  = o METRICS_TOKEN do SaaS
+#   segredos/ia_token       = o SERVICE_TOKEN da IA (o mesmo que o SaaS usa)
+# Ver README.md desta pasta.
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    ambiente: producao
+
+rule_files:
+  - /etc/prometheus/regras.yml
+
+scrape_configs:
+  # SaaS: cada réplica da API expõe /metrics. As métricas HTTP são da réplica
+  # (some com sum by (route)); as do banco (filas, frota, IA, alertas) saem iguais
+  # em todas — use max by (...) nelas, ou raspe só uma réplica no job abaixo.
+  - job_name: valtexa-saas
+    metrics_path: /metrics
+    scheme: https
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/segredos/metrics_token
+    static_configs:
+      - targets: ["api.valtexa.example:443"]   # troque pelo endereço real
+    # Com Kubernetes, troque static_configs por kubernetes_sd_configs (role: pod)
+    # filtrando o rótulo app=valtexa-api.
+
+  # IA (VALTEXA-B): o mesmo token de serviço que o SaaS manda à IA.
+  - job_name: valtexa-ia
+    metrics_path: /metrics
+    scheme: http
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/segredos/ia_token
+    static_configs:
+      - targets: ["ia.interno:8000"]           # rede interna; a IA não fica na internet

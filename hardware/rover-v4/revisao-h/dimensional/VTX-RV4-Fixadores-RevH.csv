@@ -1,0 +1,50 @@
+﻿Código;Descrição;Material;Qtd;Aplicação
+F-01;Parafuso M8×65 ISO 4762;Inox A4-70;8;Estação X 508: berço do fole → bucha → chapa de fundo → berço do pivô
+F-02;Porca M8 autotravante DIN 985;Inox A4;16;
+F-03;Arruela lisa M8 ISO 7089;Inox A4;32;
+F-30;Parafuso M8×50 ISO 4762;Inox A4-70;8;Estação X 350: berço do fole → bucha → chapa de fundo
+F-04;Porca-rebite M6 passante, cabeça reduzida Ø ≤ 12;Inox A4;48;24 no anel inferior (chapa) + 24 no anel superior (sapatas)
+F-05;Parafuso M6×16 ISO 7380;Inox A4-70;48;
+F-06;Porca-rebite M5 passante, cabeça reduzida Ø ≤ 10;Inox A4;138;Paredes externas dos tubos
+F-07;Parafuso M5×12 ISO 7380;Inox A4-70;134;Cabeça baixa e lisa: não prende galho
+F-08;Parafuso M5×16 ISO 7380;Inox A4-70;4;Suporte do LiDAR
+F-09;Rebite de repuxo Ø4,8×10;Alumínio;12;Nervuras C-02 → chapa C-01
+F-10;Parafuso M4×14 ISO 4762 + trava química média;Inox A4-70;28;MPW86 → chapa W-02 (engajamento 4 ≤ 5 mm)
+F-31;Bucha autolubrificante Ø23/Ø20 × 20, PTFE/bronze;Compósito;8;Duas por pivô, dentro do alojamento W-04
+F-32;Anel elástico externo Ø20 DIN 471;Inox;8;Trava do eixo W-07
+F-33;Anel elástico externo Ø12 DIN 471;Inox;8;Trava do pino W-09
+F-34;Junta de vedação Ø140/Ø94, NBR 2 mm;NBR;8;Duas por colar W-12: contra a chapa de fundo e contra o berço
+F-35;Rebite de repuxo Ø4,8×10 (flange do colar);Alumínio;24;Colar W-12 → chapa C-01
+F-36;Conexão engate rápido Ø6 × R1/8 + tubo PU Ø6;Latão/PU;4;Uma por fole
+F-11;Passa-cabo de borracha para furo Ø32;EPDM;4;Cabos dos motores
+F-12;Arruela larga M6 ISO 7093 (Ø18);Inox A4;48;Sobre furo de folga Ø13
+F-13;Arruela larga M5 ISO 7093 (Ø15);Inox A4;138;Sobre furo de folga Ø11
+F-20;Parafuso M6×45 ISO 4762 + porca autotravante;Inox A4-70;12;Braçadeira T-01: 2 por posto de mastro
+F-21;Parafuso M5×16 ISO 7380;Inox A4-70;36;Adaptador T-03 na face VMS-60: 4 por posto, 9 postos
+F-40;Pino cilíndrico Ø8 h6 × 16 ISO 2338;Inox 304;9;Pino de REFERÊNCIA da face VMS-60 — é ele que preserva a calibração
+F-41;Pino cilíndrico Ø6 h6 × 14 ISO 2338;Inox 304;9;Pino anti-giro da face VMS-60
+F-42;Pino cilíndrico Ø6 h6 × 20 ISO 2338;Inox 304;6;Pino de índice de inclinação, passo de 10°
+F-43;Parafuso M8×30 ISO 4762;Inox A4-70;6;Eixo do índice do prato T-02
+F-44;Parafuso M4×12 + porca-rebite M4;Inox A4;36;Câmera no adaptador T-03 — furação conforme o modelo (P-06)
+F-45;Conector M12 fêmea de painel, 8 vias, codificação X;Inox/PBT;9;Um por posto de sensor: Ethernet + PoE no mesmo conector
+F-46;Passa-cabo de borracha para furo Ø32;EPDM;1;Cabo do terminal satelital, no berço T-07
+F-59;Passa-cabo de borracha para furo Ø20;EPDM;2;Saída lateral da luva M-01, um por mastro (o Ø32 do V3 não cabia: a luva é Ø42)
+F-60;Passa-cabo de borracha para furo Ø12;EPDM;6;Entrada de cabo no tubo M-10, 30 mm abaixo de cada posto de OAK-D
+F-22;Parafuso M6×20 ISO 7380 + porca-rebite M6;Inox A4;24;Batentes B-01 e bandejas E-01/E-02 na malha da chapa
+F-23;Cinta de poliéster 25 mm com catraca, LC ≥ 250 daN;Poliéster;2;Amarração da bateria
+F-24;Parafuso M6×12 passante (travamento da haste);Inox A4-70;4;Haste na luva
+F-25;Parafuso M5×16 + porca;Inox A4;8;E-10 e E-11 na tampa traseira
+F-26;Parafuso M5×16 + porca-rebite M5;Inox A4;4;Suporte da antena GNSS na tampa
+F-58;Parafuso M5×16 + porca-rebite M5;Inox A4;6;Berço T-07 do terminal satelital na tampa
+F-27;Parafuso M6×16 ISO 7380;Inox A4;12;Berço do IMU e suporte da câmera de raiz
+F-28;Parafuso M4×12 + porca-rebite M4;Inox A4;6;Janela de policarbonato
+F-29;Parafuso M4×10;Inox A4;20;Protetores T-05 (2 por peça), faróis e antena
+F-50;Parafuso M6×45 ISO 4762 + porca autotravante;Inox A4-70;8;OPCIONAL · braçadeira T-01 dos 4 postos térmicos: 2 por posto
+F-51;Parafuso M5 imperdível com manípulo, aperto manual;Inox A4;16;OPCIONAL · módulo térmico na face VMS-60: 4 por posto. Modelo A COTAR
+F-52;Pino cilíndrico Ø8 h6 × 16 ISO 2338;Inox 304;4;OPCIONAL · pino de REFERÊNCIA dos postos térmicos
+F-53;Pino cilíndrico Ø6 h6 × 14 ISO 2338;Inox 304;4;OPCIONAL · pino anti-giro dos postos térmicos
+F-54;Pino cilíndrico Ø6 h6 × 20 ISO 2338;Inox 304;4;OPCIONAL · pino de índice de inclinação dos postos térmicos
+F-55;Parafuso M8×30 ISO 4762;Inox A4-70;4;OPCIONAL · eixo do índice do prato T-02 térmico
+F-56;Parafuso M4×10;Inox A4;8;OPCIONAL · protetores T-05 dos postos térmicos
+F-57;Parafuso M6×12 passante (travamento do adaptador de antena);Inox A4-70;2;OPCIONAL · T-10 no topo do mastro: 1 por mastro com antena, aperto transversal
+F-61;Passa-cabo de borracha para furo Ø12;EPDM;4;OPCIONAL · entrada de cabo no tubo M-10, nos 4 postos térmicos

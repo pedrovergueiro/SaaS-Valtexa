@@ -1,0 +1,60 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Rover V4 — espaço interno e interferência entre peças</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; margin: 0; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #15402a;
+     border-bottom: 2.4pt solid #1f6b3a; padding-bottom: 2.5mm; }
+h2 { font-size: 13.5pt; margin: 9mm 0 3mm; color: #1f6b3a; page-break-after: avoid;
+     border-bottom: .6pt solid #cfd8d2; padding-bottom: 1.5mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #15402a; page-break-after: avoid; }
+p { margin: 0 0 2.8mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm;
+        font-size: 9pt; page-break-inside: avoid; }
+th { background: #1f6b3a; color: #fff; text-align: left; padding: 1.6mm 2mm;
+     font-weight: 600; font-size: 8.6pt; }
+td { border-bottom: .4pt solid #dde3df; padding: 1.5mm 2mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8f7; }
+code { font: 9pt 'Cascadia Mono', Consolas, monospace; background: #eef2ef;
+       padding: .3mm 1mm; border-radius: 1mm; }
+pre { background: #f4f6f5; border-left: 2.5pt solid #1f6b3a; padding: 2.5mm 3mm;
+      margin: 2mm 0 4mm; overflow-x: auto; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.45; }
+blockquote { border-left: 2.5pt solid #c9a227; background: #fdf9ec; margin: 2mm 0 4mm;
+             padding: 2mm 3mm; }
+blockquote p { margin: 0; }
+hr { border: 0; border-top: .6pt solid #cfd8d2; margin: 6mm 0; }
+strong { font-weight: 650; color: #0d2b1c; }
+.rodape { margin-top: 8mm; padding-top: 2.5mm; border-top: .6pt solid #cfd8d2;
+          font-size: 8pt; color: #6a7570; }
+</style></head><body><h1>Rover V4 — espaço interno e interferência entre peças</h1>
+<blockquote><p><strong>VTX-RV4 · Revisão H · 12/10/2026</strong> EMITIDO PARA COTAÇÃO E VALIDAÇÃO — NÃO LIBERADO PARA FABRICAÇÃO  Documento <strong>gerado</strong> de <code>revisao-h/espaco.py</code> sobre a geometria de <code>chassi-gaiola/modelo.py</code>. Não editar à mão: a próxima geração sobrescreve.</p></blockquote>
+<h2>Duas perguntas, as duas medidas</h2>
+<p><strong>As peças se batem?</strong> Mede-se, par a par, se duas caixas envolventes se interpenetram. O que nasce interpenetrado por projeto — bucha dentro do tubo, colar atravessando a chapa, pino atravessando a parede — está na lista de encaixes previstos, cada um com a razão. Qualquer par fora dessa lista é defeito.</p>
+<p><strong>O que cabe lá dentro?</strong> Varre-se o compartimento numa grade de 8 mm e mede-se a altura livre célula por célula, descontando TODAS as peças do modelo.</p>
+<h3>Por que isso precisou ser medido</h3>
+<p>Imagens conceituais em circulação afirmavam <strong>95,6 L</strong> de volume interno útil, calculados como 850 × 450 × 250 mm. Nenhuma das três cotas existe no projeto: o compartimento tem 1046 de comprimento, 536 de largura livre e altura que <strong>varia de ponto a ponto</strong>, porque as barras G-03 da gaiola descem a Z 377 e atravessam o rover em |X| 230 e 330.</p>
+<p>O número real, medido, é o da seção seguinte.</p>
+<h2>Interferência entre peças</h2>
+<p>276 peças fornecidas, 37950 pares verificados.</p>
+<p><strong>Encaixes previstos: 17</strong></p>
+<table><thead><tr><th>par</th><th>profundidade</th><th>razão</th></tr></thead><tbody><tr><td>C-01 × W-12</td><td>2,0 mm</td><td>colar do fole atravessa a passagem Ø102 da chapa de fundo</td></tr><tr><td>M-01 × M-10</td><td>32,0 mm</td><td>haste do mastro dentro da luva</td></tr><tr><td>M-10 × M-11</td><td>32,0 mm</td><td>bainha anti-galho sobre a haste</td></tr><tr><td>M-10 × T-10</td><td>26,0 mm</td><td>adaptador da antena encaixado 40 mm no furo do topo da haste</td></tr><tr><td>M-11 × T-10</td><td>26,0 mm</td><td>adaptador da antena dentro do furo da haste, sob o último trecho da bainha</td></tr><tr><td>N-06 × N-07</td><td>3,0 mm</td><td>aba soldada na face inclinada da câmera de raiz</td></tr><tr><td>Q-02 × Q-05</td><td>12,0 mm</td><td>bucha de compressão dentro do tubo da travessa</td></tr><tr><td>Q-03 × Q-05</td><td>12,0 mm</td><td>bucha de compressão dentro do tubo da travessa</td></tr><tr><td>W-01 × W-04</td><td>30,0 mm</td><td>alojamento da bucha atravessa o tubo do braço</td></tr><tr><td>W-01 × W-07</td><td>20,0 mm</td><td>eixo do pivô atravessa o braço, dentro das buchas de W-04</td></tr><tr><td>W-01 × W-08</td><td>8,0 mm</td><td>prato do fole alojado no rasgo da parede superior do braço</td></tr><tr><td>W-01 × W-09</td><td>8,0 mm</td><td>orelhas do prato alojadas DENTRO do tubo do braço, que é vazado</td></tr><tr><td>W-01 × W-10</td><td>12,0 mm</td><td>pino do prato atravessa as paredes do braço</td></tr><tr><td>W-02 × W-08</td><td>8,0 mm</td><td>prato e chapa do motor se cruzam na caixa, não no sólido</td></tr><tr><td>W-04 × W-07</td><td>20,0 mm</td><td>eixo do pivô dentro do alojamento da bucha</td></tr><tr><td>W-05 × W-07</td><td>6,0 mm</td><td>eixo do pivô atravessa as duas orelhas da torre</td></tr><tr><td>W-09 × W-10</td><td>8,0 mm</td><td>pino dentro das orelhas do prato</td></tr></tbody></table>
+<p><strong>Defeitos: nenhum</strong></p>
+<h2>Volume interno</h2>
+<table><thead><tr><th>Grandeza</th><th>Valor</th></tr></thead><tbody><tr><td>Caixa bruta do compartimento (1046 × 596 × 150)</td><td>93,51 L</td></tr><tr><td><strong>Volume livre, descontada toda peça</strong></td><td><strong>76,58 L</strong></td></tr><tr><td>Maior altura livre contínua em qualquer ponto</td><td>148 mm</td></tr></tbody></table>
+<h3>Volume aproveitável por altura de componente</h3>
+<table><thead><tr><th>Componente de até</th><th>Volume aproveitável</th></tr></thead><tbody><tr><td>30 mm</td><td>76,58 L</td></tr><tr><td>60 mm</td><td>68,18 L</td></tr><tr><td>90 mm</td><td>66,19 L</td></tr><tr><td>120 mm</td><td>56,85 L</td></tr></tbody></table>
+<h3>Área de piso por faixa de altura livre</h3>
+<table><thead><tr><th>Faixa de altura livre</th><th>Área de piso</th></tr></thead><tbody><tr><td>0 a 20 mm</td><td>34 cm²</td></tr><tr><td>20 a 40 mm</td><td>709 cm²</td></tr><tr><td>40 a 60 mm</td><td>483 cm²</td></tr><tr><td>60 a 80 mm</td><td>12 cm²</td></tr><tr><td>80 a 100 mm</td><td>193 cm²</td></tr><tr><td>100 a 120 mm</td><td>818 cm²</td></tr><tr><td>120 a 140 mm</td><td>502 cm²</td></tr><tr><td>140 a 160 mm</td><td>3407 cm²</td></tr></tbody></table>
+<h2>Teto de altura por zona — para a folha de compra</h2>
+<p>É o jeito útil de entregar esta conferência: em vez de reprovar um componente estimado, dizer qual é o teto real da zona, para que a cota entre na folha de compra junto com a ficha técnica que falta.</p>
+<table><thead><tr><th>Zona</th><th>Altura máxima de componente</th><th>Área</th><th>Onde</th></tr></thead><tbody><tr><td>Bateria</td><td><strong>87 mm</strong></td><td>1813 cm²</td><td>Centro do compartimento, entre os batentes B-01</td></tr><tr><td>Bandeja lateral esquerda</td><td><strong>88 mm</strong></td><td>205 cm²</td><td>Sobre a chapa, ao lado da bateria</td></tr><tr><td>Bandeja lateral direita</td><td><strong>88 mm</strong></td><td>205 cm²</td><td>Idem, espelhada</td></tr><tr><td>Bandeja dianteira esquerda</td><td><strong>145 mm</strong></td><td>63 cm²</td><td>Entre a janela de raiz e o colar do fole</td></tr><tr><td>Bandeja traseira esquerda</td><td><strong>145 mm</strong></td><td>63 cm²</td><td>Idem, traseira</td></tr><tr><td>Grupo pneumático</td><td><strong>37 mm</strong></td><td>418 cm²</td><td>Compressor, reservatório, secador e manifold</td></tr></tbody></table>
+<h2>Cada componente cabe em algum lugar contíguo?</h2>
+<p>Varredura da grade inteira, nas duas orientações. É a pergunta certa — diferente de &quot;a altura média da zona dá&quot;.</p>
+<table><thead><tr><th>Componente</th><th>L×W×H</th><th>origem do dado</th><th>veredito</th><th>posição</th></tr></thead><tbody><tr><td>Bateria LiFePO4 estimada</td><td>460×350×130</td><td>ESTIMATIVA</td><td><strong>NÃO CABE</strong></td><td>nenhuma área contígua no compartimento</td></tr><tr><td>Jetson Orin NX + carrier</td><td>180×110×45</td><td>ESTIMATIVA</td><td><strong>CABE</strong></td><td>X -91…89 · Y -266…-156 (livre 87 mm)</td></tr><tr><td>Driver dos motores (4 canais)</td><td>200×120×55</td><td>ESTIMATIVA</td><td><strong>CABE</strong></td><td>X -99…101 · Y -266…-146 (livre 87 mm)</td></tr><tr><td>BMS</td><td>140×90×35</td><td>ESTIMATIVA</td><td><strong>CABE</strong></td><td>X -43…47 · Y -266…-126 (livre 87 mm)</td></tr><tr><td>Conversor DC/DC 12 V</td><td>110×50×40</td><td>ESTIMATIVA</td><td><strong>CABE</strong></td><td>X -27…23 · Y -266…-156 (livre 88 mm)</td></tr><tr><td>Roteador / modem</td><td>110×50×35</td><td>ESTIMATIVA</td><td><strong>CABE</strong></td><td>X -27…23 · Y -266…-156 (livre 88 mm)</td></tr><tr><td>Compressor 12 V</td><td>210×110×120</td><td>FAIXA</td><td><strong>CABE</strong></td><td>X -107…103 · Y -162…-52 (livre 127 mm)</td></tr><tr><td>Reservatório 2 L</td><td>300×110×110</td><td>FAIXA</td><td><strong>CABE</strong></td><td>X -147…153 · Y -162…-52 (livre 127 mm)</td></tr></tbody></table>
+<h2>O que isto responde e o que continua aberto</h2>
+<p><strong>Responde</strong>: o volume interno real, a altura livre ponto a ponto, e se os componentes estimados cabem onde o projeto os quer.</p>
+<p><strong>Continua aberto</strong>: as dimensões dos componentes. Toda linha da tabela acima é ESTIMATIVA ou FAIXA de catálogo — nenhuma é ficha técnica de peça escolhida. Enquanto for assim, as bandejas E-01/E-02 e os adaptadores T-03 <strong>não são cotas de fabricação, são provisões</strong>. É a pendência P-05/P-13, e nenhuma conta deste documento a fecha.</p>
+<h3>O achado que a Rev H produziu aqui</h3>
+<p>A bandeja de extremidade <strong>E-02 encolheu</strong>. Ela ia de |Y| 105 a 250 e colidia frontalmente com o colar do fole, que ocupa |Y| 159…259. A faixa que sobra, entre a janela da câmera de raiz (|Y| ≤ 95) e o colar, é de 100 a 152 mm. A bandeja perdeu mais da metade da área, e isso é preço de ter suspensão — não erro de desenho.</p><div class="rodape">VALTEXA · Rover V4 · Revisão H · gerado de <code>VTX-RV4-ESPACO-H.md</code> · EMITIDO PARA COTAÇÃO E VALIDAÇÃO</div></body></html>

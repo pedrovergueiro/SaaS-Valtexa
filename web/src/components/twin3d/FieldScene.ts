@@ -62,8 +62,17 @@ type Tween = {
   duration: number
 }
 
-const MARKER_LIFT = 0.8
-const MARKER_PX: Record<Category, number> = { pest: 18, disease: 16, review: 13, other: 12, healthy: 7 }
+const MARKER_LIFT = 1.2
+/**
+ * Tamanho do marcador em pixels, fixo na tela.
+ *
+ * Contido de propósito. Num talhão de 24 ha visto de longe, cada planta tem
+ * menos de um pixel; um marcador de 18 px cobre dezenas de plantas e a tela
+ * vira um campo de símbolos flutuando sobre um tapete escuro — que foi
+ * exatamente o que apareceu quando a demonstração passou de 6 para 24 ha.
+ * O que precisa estar legível é a lavoura; o marcador aponta, não domina.
+ */
+const MARKER_PX: Record<Category, number> = { pest: 11, disease: 10, review: 8, other: 8, healthy: 5 }
 const PICK_PX = 16
 
 /** Plano do talhão → mundo do three.js. */

@@ -16,6 +16,9 @@ export interface paths {
         /**
          * Autentica um usuário
          * @description Troca e-mail e senha por um token de sessão.
+         *
+         *     Falhas seguidas bloqueiam a conta (e o endereço) por um tempo — ver
+         *     :mod:`valtexa.services.login_guard`.
          */
         post: operations["login_v1_auth_login_post"];
         delete?: never;
@@ -37,6 +40,9 @@ export interface paths {
          *
          *     O frontend usa ``capabilities`` para esconder o que o papel não permite —
          *     mas esconder é conveniência, não segurança: cada rota confere de novo.
+         *
+         *     Numa sessão de suporte, ``support_session`` traz quem entrou, por quê, em
+         *     que modo e até quando: é o conteúdo da faixa que o console mostra no topo.
          */
         get: operations["me_v1_auth_me_get"];
         put?: never;
@@ -57,6 +63,18 @@ export interface paths {
         /**
          * Clientes a que o usuário tem acesso
          * @description Não exige cliente ativo: é a rota que o console usa para escolher um.
+         *
+         *     Para a equipe da ValTexa devolve **todos** os clientes ativos, e não só
+         *     aqueles em que há associação. Sem isso, quem administra a plataforma e não é
+         *     membro de fazenda nenhuma — que é o caso normal — fazia login, caía na tela
+         *     de escolher cliente e não via nenhum para escolher: trancado para fora do
+         *     próprio sistema.
+         *
+         *     Esses vêm com ``access="plataforma"`` e papel ``viewer`` — o mesmo que
+         *     ``/auth/me`` devolve para eles —, e **não** dão acesso ao dado do cliente:
+         *     servem às rotas de plataforma (importar coleta, relevo). Ver a lavoura exige
+         *     sessão de suporte. Até a fase 2 a lista dizia ``admin`` e a API concedia
+         *     escrita total, sem rastro de entrada.
          */
         get: operations["list_memberships_v1_auth_memberships_get"];
         put?: never;
@@ -95,9 +113,70 @@ export interface paths {
         put?: never;
         /**
          * Cria um cliente
-         * @description Só a equipe da ValTexa cria clientes.
+         * @description Só a equipe da ValTexa cria clientes (superadmin ou comercial).
          */
         post: operations["create_tenant_v1_tenants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Troca a própria senha
+         * @description Troca a senha de quem está autenticado, conferindo a atual.
+         *
+         *     **Trocar a senha derruba as outras sessões.** É o motivo pelo qual se troca
+         *     a senha às pressas: alguém entrou, e trocar a senha sem cortar o acesso que
+         *     já está aberto não resolveria nada.
+         *
+         *     A sessão de quem está trocando sobrevive, de propósito. Ser deslogado pelo
+         *     próprio ato de se proteger é o tipo de atrito que faz as pessoas não
+         *     trocarem a senha.
+         */
+        post: operations["change_password_v1_auth_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{user_id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redefine a senha de um usuário do cliente
+         * @description Redefine a senha de quem perdeu o acesso.
+         *
+         *     É o caminho de recuperação desta plataforma. Não há envio de e-mail e, por
+         *     isso, não há link de redefinição — quem administra o cliente define a senha
+         *     nova e a entrega por outro canal.
+         *
+         *     **Todas** as sessões do alvo caem, sem exceção: aqui quem redefine é outra
+         *     pessoa, e o caso típico é alguém que perdeu o acesso ou foi desligado. Uma
+         *     sessão preservada seria exatamente a que se quer cortar.
+         *
+         *     Só alcança quem é **membro do cliente ativo**. Um administrador de fazenda
+         *     não redefine a senha de alguém de outro cliente, nem a de quem é da equipe
+         *     da ValTexa: quem enxerga todos os clientes não pode ter a senha trocada por
+         *     um deles.
+         */
+        post: operations["reset_password_v1_users__user_id__password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -158,6 +237,103 @@ export interface paths {
         patch: operations["update_user_v1_users__user_id__patch"];
         trace?: never;
     };
+    "/v1/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Meus aparelhos conectados
+         * @description As sessões abertas de quem está autenticado.
+         *
+         *     A pergunta que isto responde é "tem mais alguém dentro da minha conta?" —
+         *     e ela não tinha resposta possível antes, porque não havia onde olhar.
+         */
+        get: operations["list_my_sessions_v1_auth_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Desconecta um aparelho meu
+         * @description Derruba uma sessão própria — inclusive a atual, que é o logout.
+         *
+         *     Só alcança sessão de quem pede. Derrubar a de outra pessoa é a rota de
+         *     administrador, logo abaixo, e exige ``user:manage``: encerrar a sessão de
+         *     alguém é ato administrativo e precisa deixar o nome de quem encerrou.
+         */
+        delete: operations["revoke_my_session_v1_auth_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sair de todos os aparelhos
+         * @description Derruba todas as sessões próprias, esta inclusive.
+         *
+         *     É o botão de quem perdeu o celular: não adianta derrubar uma a uma quando
+         *     não se sabe quais existem.
+         */
+        post: operations["logout_everywhere_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{user_id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Desconecta um usuário do cliente
+         * @description Corta o acesso de alguém agora, sem esperar o token vencer.
+         *
+         *     É o que faltava para um desligamento valer na hora. Antes, tirar a pessoa
+         *     do cliente deixava de pé o token que ela já tinha no navegador, por até doze
+         *     horas — e doze horas é tempo de sobra para levar embora o que se quiser.
+         *
+         *     Como a redefinição de senha, só alcança membro do cliente ativo, e não
+         *     alcança a equipe da ValTexa de dentro de um cliente.
+         */
+        delete: operations["revoke_user_sessions_v1_users__user_id__sessions_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/farms": {
         parameters: {
             query?: never;
@@ -174,6 +350,33 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/farms/{farm_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Altera uma propriedade
+         * @description Corrige o cadastro de uma propriedade, inclusive a localização.
+         *
+         *     Mover a fazenda é a alteração que mais precisa de rastro: a coordenada é o
+         *     que centra o mapa, e é dela que sai a imagem de satélite sobre a qual alguém
+         *     vai desenhar o contorno do talhão. Uma fazenda cadastrada 40 km ao lado
+         *     produz um contorno bonito sobre o mato de outra pessoa.
+         *
+         *     Por isso o antes e o depois vão para a auditoria, e não só o depois.
+         */
+        patch: operations["update_farm_v1_farms__farm_id__patch"];
         trace?: never;
     };
     "/v1/farms/{farm_id}/fields": {
@@ -194,6 +397,50 @@ export interface paths {
          *     polígono, e é ele que manda na dose e na cerca virtual.
          */
         post: operations["create_field_v1_farms__farm_id__fields_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/ai-models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Versões do modelo de diagnóstico para a cultura do talhão
+         * @description As versões que atendem este talhão, a recomendada primeiro.
+         *
+         *     Como escolher entre os modelos de um assistente: cada versão com o número de
+         *     campo e a licença dos dados de treino. Banana e citros têm a de ``campo``
+         *     (mais precisa, com dado não comercial) e a ``comercial`` (só CC BY).
+         */
+        get: operations["list_field_ai_models_v1_fields__field_id__ai_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/ai-model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Escolhe a versão do modelo de diagnóstico do talhão
+         * @description Vale para as próximas imagens — rover e coleta. As já analisadas não mudam.
+         */
+        put: operations["set_field_ai_model_v1_fields__field_id__ai_model_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -234,7 +481,40 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Configura um talhão
+         * @description Variedade, estágio, espaçamentos, número de linhas, fileiras de validação, observações.
+         *
+         *     Só o que vier no corpo muda; ``null`` explícito apaga o valor. O antes e o
+         *     depois vão para a auditoria: espaçamento muda a contagem de plantas da
+         *     fusão, e uma fileira de validação trocada muda o que se mede no campo.
+         */
+        patch: operations["update_field_v1_fields__field_id__patch"];
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/boundary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Redesenha o contorno do talhão
+         * @description Grava um contorno novo e recalcula a área.
+         *
+         *     O contorno é a base de tudo o que vem depois — cerca virtual, cobertura,
+         *     planejamento de rota, posição de poste. Por isso a mudança fica na
+         *     auditoria com o antes e o depois: um talhão que encolheu 3 ha entre uma
+         *     missão e outra precisa ter explicação.
+         */
+        patch: operations["update_boundary_v1_fields__field_id__boundary_patch"];
         trace?: never;
     };
     "/v1/fields/{field_id}/zones": {
@@ -459,8 +739,37 @@ export interface paths {
          *     Conveniência para enlaces caros: o token evita uma assinatura por amostra de
          *     telemetria. Ele **não** substitui a assinatura em nada que mude o mundo
          *     físico — essas rotas continuam exigindo Ed25519.
+         *
+         *     No corpo (opcional) o robô diz o software que está rodando: runtime, Edge AI,
+         *     modelo, dNATY (brief, seção 22). É daí que a frota sabe a versão de cada um;
+         *     ninguém a digita. Uma troca de versão fica na trilha do cliente.
          */
         post: operations["open_session_v1_device_session_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Modelos designados a este robô pelo registry
+         * @description Para cada talhão onde o robô trabalha, a versão em PRODUÇÃO que ele deve rodar.
+         *
+         *     Brief, seções 9 e 22: um robô nunca recebe modelo arbitrário. A resposta só
+         *     traz versão em PRODUÇÃO do Model Registry, liberada para o cliente, com o
+         *     hash que o robô confere antes de carregar. Sem artefato com hash no registry,
+         *     ``artifact_sha256`` vem nulo — e o robô não carrega nada.
+         */
+        get: operations["designated_models_v1_device_models_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -765,6 +1074,252 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/edge/records/{record_pk}/files/{upload_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um arquivo (original, reduzida, contexto) de um registro da Edge AI */
+        get: operations["record_file_v1_edge_records__record_pk__files__upload_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/edge/records/{record_pk}/files/{upload_id}/url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Link de download do arquivo: URL assinada e curta do object storage (com S3)
+         * @description Escopo do cliente primeiro; só então a URL assinada (Parte 9, seção 38).
+         *
+         *     A assinatura cobre a chave do objeto: trocar o caminho na URL para o objeto de
+         *     outro cliente invalida a assinatura. Sem S3, devolve a rota da API.
+         */
+        get: operations["record_file_url_v1_edge_records__record_pk__files__upload_id__url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/edge/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resultados da Edge AI e eventos do robô (idempotente por ID e hash) */
+        post: operations["post_records_v1_device_edge_records_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abre ou retoma um upload em chunks (diz quais chunks já chegaram) */
+        post: operations["open_upload_v1_device_uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/uploads/{upload_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado de um upload */
+        get: operations["get_upload_v1_device_uploads__upload_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/uploads/{upload_id}/chunks/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Envia um chunk (corpo bruto; idempotente: reenviar o mesmo índice sobrescreve) */
+        put: operations["put_chunk_v1_device_uploads__upload_id__chunks__index__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/uploads/{upload_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fecha o upload: confere o SHA-256 do arquivo inteiro e guarda no object storage */
+        post: operations["complete_upload_v1_device_uploads__upload_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/edge/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O que os robôs do cliente sincronizaram (resultados, eventos e arquivos) */
+        get: operations["list_records_v1_edge_records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ota/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pacotes OTA publicados */
+        get: operations["list_packages_v1_platform_ota_packages_get"];
+        put?: never;
+        /** Publica um pacote OTA (.tar) */
+        post: operations["publish_package_v1_platform_ota_packages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ota/deployments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Acompanhamento das atualizações */
+        get: operations["list_deployments_v1_platform_ota_deployments_get"];
+        put?: never;
+        /** Destina um pacote a robôs ou a um cliente */
+        post: operations["create_deployments_v1_platform_ota_deployments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ota/deployments/{deployment_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancela antes da instalação */
+        post: operations["cancel_deployment_v1_platform_ota_deployments__deployment_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/ota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Atualizações pendentes deste robô */
+        get: operations["device_pending_v1_device_ota_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/ota/{deployment_id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um pedaço do pacote */
+        get: operations["device_package_v1_device_ota__deployment_id__package_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/ota/{deployment_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O robô informa um passo da atualização */
+        post: operations["device_status_v1_device_ota__deployment_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/missions": {
         parameters: {
             query?: never;
@@ -917,6 +1472,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/missions/{mission_id}/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Corrige a rota à mão
+         * @description Substitui o percurso pelo que o operador desenhou no mapa.
+         *
+         *     Existe porque o planejador não conhece o terreno todo. Ele sabe a geometria
+         *     do talhão e o que a leitura de imagem viu; não sabe que aquela cabeceira
+         *     atola em maio, nem que o portão do fundo está trancado desde a safra
+         *     passada. Quem sabe é quem opera — e, até aqui, esse conhecimento não tinha
+         *     por onde entrar: a validação humana era aprovar ou recusar, nunca corrigir.
+         *
+         *     O que o operador **não** consegue fazer por aqui é furar a cerca virtual.
+         *     Uma passada que saia da área da missão ou atravesse obstáculo
+         *     intransponível é recusada com o número da passada. Ele conhece o terreno
+         *     melhor que o planejador; não conhece melhor que o limite do talhão, que é
+         *     contrato, nem que a mata, que é física.
+         */
+        patch: operations["edit_route_v1_missions__mission_id__route_patch"];
+        trace?: never;
+    };
+    "/v1/missions/{mission_id}/replan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recalcula a rota com premissas novas
+         * @description Refaz a rota pela máquina, e não à mão.
+         *
+         *     Dois usos, e os dois aparecem no mesmo dia de trabalho. O primeiro é mudar
+         *     premissa: a câmera é outra, as linhas correm noutro ângulo, o obstáculo
+         *     precisa de mais folga. O segundo é mais comum e menos óbvio — **aplicar uma
+         *     leitura de terreno que chegou depois**. A missão nasce antes de alguém rodar
+         *     o encaixe de contorno, então a rota original não contorna nada; replanejar
+         *     sem nenhum parâmetro é o que faz a mata entrar na conta.
+         */
+        post: operations["replan_v1_missions__mission_id__replan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/missions/{mission_id}/abort": {
         parameters: {
             query?: never;
@@ -986,6 +1600,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/missions/{mission_id}/plants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plantas vistas na missão e a incidência
+         * @description Fusão operacional por planta: quadros e câmeras da Edge AI + diagnóstico da nuvem.
+         *
+         *     ``status`` por planta: ``doente`` (nuvem confirmou), ``suspeita`` (a Edge AI
+         *     viu, a nuvem não fechou), ``revisar`` (com o agrônomo) ou ``sadia``.
+         */
+        get: operations["mission_plants_v1_missions__mission_id__plants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions/{mission_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Relatório da missão (seção 47) */
+        get: operations["mission_report_v1_missions__mission_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions/{mission_id}/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rota percorrida, eventos e plantas da missão
+         * @description O que o mapa desenha por missão (seção 46).
+         *
+         *     ``track``: posições dos quadros analisados pelo robô, na ordem (no máximo 2000;
+         *     ``track_points_total`` diz quantas eram). ``events``: resultados da Edge AI que são
+         *     evento e eventos com posição. ``plants``: estado de cada planta na fusão operacional.
+         */
+        get: operations["mission_map_v1_missions__mission_id__map_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions/{mission_id}/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compara com uma missão anterior */
+        get: operations["mission_comparison_v1_missions__mission_id__comparison_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/observations": {
         parameters: {
             query?: never;
@@ -1022,10 +1717,31 @@ export interface paths {
          * @description Devolve o arquivo, para o agrônomo olhar antes de diagnosticar.
          *
          *     A imagem é servida por esta rota e não por URL direta do armazenamento
-         *     porque o acesso precisa passar pelo escopo do cliente. Um link assinado
-         *     direto ao bucket vazaria a foto para quem tivesse o endereço.
+         *     porque o acesso precisa passar pelo escopo do cliente. O link assinado
+         *     direto ao bucket existe em ``.../image/url`` (Parte 9): emitido só depois do
+         *     mesmo escopo, curto (``S3_PRESIGN_SECONDS``) e preso à chave do objeto.
          */
         get: operations["observation_image_v1_observations__observation_id__image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observations/{observation_id}/image/url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Link de download da imagem: URL assinada e curta do object storage (com S3)
+         * @description O escopo do cliente é conferido antes de assinar (Parte 9, seção 38).
+         */
+        get: operations["observation_image_url_v1_observations__observation_id__image_url_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1043,6 +1759,30 @@ export interface paths {
         };
         /** Diagnósticos */
         get: operations["list_diagnoses_v1_diagnoses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/diagnoses/{diagnosis_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Um diagnóstico
+         * @description O diagnóstico com as análises e o que cada uma disse além do rótulo.
+         *
+         *     A lista de observações não traz ``signals`` — num quadro do rover eles
+         *     carregam os recortes por zona e as plantas, pesado demais para o mapa inteiro.
+         *     O console busca aqui quando alguém abre uma observação.
+         */
+        get: operations["get_diagnosis_v1_diagnoses__diagnosis_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1137,6 +1877,198 @@ export interface paths {
          *     aprovação do agrônomo e do parecer da camada de segurança.
          */
         post: operations["decide_v1_diagnoses__diagnosis_id__decide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/plants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diagnóstico de cada planta do talhão
+         * @description Uma entrada por planta: status, posterior por doença, incidência, câmeras que a viram.
+         *
+         *     ``status`` é ``sadia``, ``suspeita``, ``doente`` ou ``revisar``. Vazio até o
+         *     rover passar pelo talhão com a câmera no quadro.
+         */
+        get: operations["field_plants_v1_fields__field_id__plants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/plants/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mapa das plantas do talhão (GeoJSON) */
+        get: operations["field_plant_map_v1_fields__field_id__plants_map_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/plants/{plant_id}/evolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Histórico de uma planta entre passadas */
+        get: operations["plant_evolution_v1_fields__field_id__plants__plant_id__evolution_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/prevalence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prevalência das doenças no talhão
+         * @description Quanto de cada doença o talhão tem, estimado sem rótulo, contra o do treino do modelo.
+         */
+        get: operations["field_prevalence_v1_fields__field_id__prevalence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/plants/incidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fração de plantas doentes do talhão
+         * @description Plantas doentes / plantas vistas, corrigida pela sensibilidade e pelo alarme falso
+         *     por planta da calibração da fusão, com intervalo de 95% (``method`` diz se houve
+         *     calibração). Conta as sadias também: os quadros normais do Rover entram na fusão
+         *     pelas probabilidades dos recortes (``services.fusao_borda``).
+         */
+        get: operations["field_plant_incidence_v1_fields__field_id__plants_incidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/plants/prescription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Em quais plantas o tratamento se paga (recomendação)
+         * @description Prescrição planta a planta sobre a fusão calibrada: trata a planta quando ela, mais
+         *     o que infectaria, vale mais que o tratamento. **Recomendação** — nada é aplicado sem o
+         *     agrônomo aprovar uma missão de pulverização. 422 quando a bula, a carência ou o
+         *     registro proíbem; 404 sem passada do rover no talhão.
+         */
+        post: operations["field_plant_prescription_v1_fields__field_id__plants_prescription_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/validacao/{mission_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plantas da passada com o rótulo de campo ao lado */
+        get: operations["plantas_da_validacao_v1_fields__field_id__validacao__mission_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/validacao/{mission_id}/{plant_ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Anota o que a planta tem (agrônomo) */
+        put: operations["anota_planta_v1_fields__field_id__validacao__mission_id___plant_ref__put"];
+        post?: never;
+        /** Apaga o rótulo de uma planta */
+        delete: operations["apaga_rotulo_v1_fields__field_id__validacao__mission_id___plant_ref__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/validacao/{mission_id}/relatorio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rover contra agrônomo: sensibilidade e alarme falso por planta */
+        get: operations["relatorio_da_validacao_v1_fields__field_id__validacao__mission_id__relatorio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/validacao.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rótulos de campo no formato de calibração (--labels) */
+        get: operations["rotulos_para_calibrar_v1_fields__field_id__validacao_csv_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1433,6 +2365,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fields/{field_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Linha do tempo do talhão (ciclo completo)
+         * @description Missão → ocorrências → prescrição → aprovação → aplicação → verificação.
+         *
+         *     Do mais recente ao mais antigo; cada passo traz os IDs que ligam um ao outro.
+         */
+        get: operations["field_history_v1_fields__field_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fields/{field_id}/anomalies": {
         parameters: {
             query?: never;
@@ -1651,6 +2605,2196 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Coletas do talhão
+         * @description As coletas publicadas do cliente, da mais recente para a mais antiga.
+         */
+        get: operations["list_collections_v1_collections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uma coleta */
+        get: operations["get_collection_v1_collections__collection_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/collections/{collection_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Imagens da coleta
+         * @description As imagens e o que se concluiu de cada uma.
+         *
+         *     Os bytes vêm por ``GET /v1/assets/{id}``, como qualquer outra imagem da
+         *     plataforma — a autorização é a mesma e o cliente não ganha caminho novo.
+         */
+        get: operations["list_files_v1_collections__collection_id__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Todos os clientes
+         * @description A lista que abre o formulário de importação.
+         *
+         *     É a única rota da plataforma que atravessa clientes de propósito — e só a
+         *     atravessa para *listar*. Qualquer leitura de dado de lavoura continua
+         *     passando pelo filtro de tenant.
+         */
+        get: operations["list_tenants_v1_admin_tenants_get"];
+        put?: never;
+        /**
+         * Cadastra um cliente, com propriedade e primeiro talhao
+         * @description Cria cliente, propriedade e talhao numa transacao so.
+         *
+         *     As tres coisas juntas porque e assim que a informacao chega -- numa ligacao
+         *     com o produtor, nao em tres visitas ao sistema. E numa transacao so porque a
+         *     alternativa e pior: um cliente criado sem propriedade, depois de um erro no
+         *     meio, fica orfao no banco e alguem precisa limpa-lo a mao.
+         *
+         *     Propriedade e talhao sao opcionais. Da para cadastrar o cliente com o que se
+         *     sabe e voltar depois -- e o caso comum, porque o contorno do talhao se
+         *     desenha no editor, com a imagem de satelite na frente, e nao ao telefone.
+         */
+        post: operations["onboard_tenant_v1_admin_tenants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/tenants/{tenant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Altera o cadastro de um cliente
+         * @description Atualiza contato, endereco e contrato. O apelido nao muda.
+         *
+         *     O ``slug`` e a identidade publica do cliente e aparece em link e em token;
+         *     troca-lo quebraria o que ja foi compartilhado. Renomear a empresa e mudar
+         *     ``name``, que e o que as telas mostram.
+         */
+        patch: operations["update_tenant_v1_admin_tenants__tenant_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coletas do cliente */
+        get: operations["list_collections_v1_admin_collections_get"];
+        put?: never;
+        /**
+         * Cria uma coleta
+         * @description Abre o lote. O modelo que vai atendê-lo é resolvido já aqui.
+         *
+         *     Resolver agora é o que faz o painel dizer, no próprio formulário, que uma
+         *     coleta aérea de café não tem modelo treinado — em vez de o administrador
+         *     descobrir isso depois de subir 1.500 imagens.
+         */
+        post: operations["create_collection_v1_admin_collections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uma coleta */
+        get: operations["get_collection_v1_admin_collections__collection_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/collections/{collection_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Arquivos da coleta
+         * @description A lista que o painel usa para retomar um upload interrompido.
+         */
+        get: operations["list_files_v1_admin_collections__collection_id__files_get"];
+        put?: never;
+        /**
+         * Declara os arquivos da coleta
+         * @description Registra nome, tamanho e (opcionalmente) ``sha256`` de cada arquivo.
+         *
+         *     Declarar antes de mandar é o que dá barra de progresso honesta — o total é
+         *     conhecido desde o primeiro byte — e o que permite retomar: o painel pergunta
+         *     o que falta e continua de onde parou.
+         */
+        post: operations["declare_files_v1_admin_collections__collection_id__files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/collections/{collection_id}/files/{file_id}/chunk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Envia um pedaço de arquivo
+         * @description Grava um pedaço no deslocamento informado.
+         *
+         *     O corpo é binário cru, não ``multipart``: o pedaço já é um recorte de bytes,
+         *     e envolvê-lo num formulário custaria uma cópia em memória de cada pedaço sem
+         *     dar nada em troca.
+         *
+         *     Reenviar o mesmo pedaço é seguro — a rede cai justamente entre o servidor
+         *     gravar e o cliente receber a confirmação. Qualquer outro deslocamento é
+         *     recusado com 409 e ``received_bytes`` diz de onde continuar.
+         */
+        put: operations["upload_chunk_v1_admin_collections__collection_id__files__file_id__chunk_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/collections/{collection_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fecha o upload e enfileira o processamento
+         * @description Encerra o recebimento. Daqui em diante quem trabalha é o worker.
+         *
+         *     Arquivo incompleto não segura o lote: fica marcado e aparece no painel.
+         */
+        post: operations["complete_upload_v1_admin_collections__collection_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/collections/{collection_id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publica a coleta para o cliente
+         * @description Torna a coleta visível no console do cliente.
+         *
+         *     Não é automático: alguém da ValTexa afirma que o resultado está apresentável.
+         *     Uma coleta inteira sem modelo chegaria ao produtor como uma tela vazia.
+         */
+        post: operations["release_collection_v1_admin_collections__collection_id__release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fila de processamento */
+        get: operations["list_jobs_v1_admin_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/jobs/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tenta o trabalho de novo
+         * @description Devolve um trabalho falho à fila, zerando as tentativas.
+         *
+         *     Zerar é intencional: quem clica está afirmando que a causa foi tratada.
+         */
+        post: operations["retry_job_v1_admin_jobs__job_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/models/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catálogo ValTexa-B
+         * @description O que existe, e o que existe **só de nome** — uma linha por modelo, do registry.
+         *
+         *     A coluna que importa é ``trained``. ``aerial-canopy`` aparece aqui como não
+         *     treinado porque é o que ele é: sem isso, o painel daria a entender que a
+         *     plataforma analisa imagem aérea hoje. A versão completa, com estados e
+         *     métricas, está em ``GET /v1/platform/models``.
+         */
+        get: operations["model_catalog_v1_admin_models_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/models/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Versões de modelo
+         * @description Atalho antigo do console; o registry completo é ``GET /v1/platform/models``.
+         */
+        get: operations["list_model_versions_v1_admin_models_versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Datasets proprietários */
+        get: operations["list_datasets_v1_admin_datasets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/datasets/{dataset_id}/samples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Amostras do dataset */
+        get: operations["list_samples_v1_admin_datasets__dataset_id__samples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/datasets/{dataset_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cortes congelados */
+        get: operations["list_dataset_versions_v1_admin_datasets__dataset_id__versions_get"];
+        put?: never;
+        /**
+         * Congela um corte do dataset
+         * @description Fecha um corte reproduzível — o que vai para o treino.
+         *
+         *     A plataforma **não treina**. O que ela entrega é o conjunto exato, com a
+         *     contagem por rótulo à vista, para que o treino aconteça no VALTEXA-B e a
+         *     versão de modelo resultante possa apontar de volta para cá.
+         */
+        post: operations["freeze_dataset_version_v1_admin_datasets__dataset_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/fields/{field_id}/relief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mede o relevo do talhão e grava na leitura
+         * @description Amostra a altitude do talhão numa grade e guarda o resumo.
+         *
+         *     Até aqui o planejamento tratava toda lavoura como plana. A diferença
+         *     aparece em três lugares que custam dinheiro ou equipamento: a conta de
+         *     autonomia (subir consome muito mais), o ângulo de tombamento, e a direção
+         *     das passadas — curva de nível é mais segura e mais barata que subir e descer
+         *     a encosta.
+         *
+         *     **Sem fonte de elevação configurada, responde 501.** É deliberado: um zero
+         *     devolvido aqui seria lido como "terreno plano" e entraria no plano com a
+         *     autoridade de uma medição. Ver ``ELEVATION_URL`` em ``valtexa/config.py``.
+         *
+         *     O resultado fica gravado junto da leitura de imagem do talhão, em
+         *     ``field.terrain['relief']``, porque quem mede e quem usa estão em telas e
+         *     momentos diferentes — e remedir a cada planejamento seria pagar a consulta
+         *     de novo por um terreno que não mudou.
+         */
+        post: operations["read_relief_v1_admin_fields__field_id__relief_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/fields/{field_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Planeja a cobertura do talhão e diz onde precisa de poste
+         * @description Calcula rota, tempo, energia e a posição dos postes de recarga.
+         *
+         *     É a conta que decide se um talhão é operável antes de mandar um rover de
+         *     98 kg para dentro dele. Não escreve nada: planejar é pergunta, não ação, e
+         *     o mesmo talhão é replanejado dezenas de vezes enquanto se escolhe a direção
+         *     das linhas e a largura da faixa.
+         *
+         *     O plano sai marcado como **estimativa** enquanto o consumo vier do datasheet.
+         *     Ver ``valtexa/services/planner.py``.
+         */
+        post: operations["plan_field_v1_admin_fields__field_id__plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/boundary/refine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Encaixa um contorno desenhado a mão no limite real do talhão
+         * @description Manda o traço para o VALTEXA-B e devolve o contorno encaixado.
+         *
+         *     O trabalho de imagem mora lá, com numpy e Pillow, e não aqui: a plataforma
+         *     não carrega pilha de imagem de propósito — é o que permite escalar a API sem
+         *     GPU. Aqui fica a autorização, o escopo de cliente e a conversão de área.
+         *
+         *     Não escreve nada. Encaixar contorno é pergunta, e a mesma lavoura é
+         *     redesenhada várias vezes até o produtor aprovar o traço.
+         */
+        post: operations["refine_boundary_v1_admin_boundary_refine_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/drone-missions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Missão aérea autônoma — NÃO IMPLEMENTADO
+         * @description Recusa explícita, para a ausência aparecer.
+         *
+         *     O drone próprio da ValTexa é fase futura: não há planejamento de voo, não há
+         *     navegação, não há transmissão automática. Esta rota existe para que a
+         *     integração futura tenha um lugar combinado e para que quem procurar por ela
+         *     hoje receba um ``501`` em vez de encontrar uma tela que finge funcionar.
+         *
+         *     O caminho implementado para imagem aérea é o voo do operador terceirizado
+         *     seguido de ``POST /v1/admin/collections``.
+         */
+        post: operations["drone_mission_not_implemented_v1_admin_drone_missions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/support-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sessões de suporte (todas as da equipe) */
+        get: operations["list_support_sessions_v1_platform_support_sessions_get"];
+        put?: never;
+        /**
+         * Entra como cliente (sessão de suporte)
+         * @description Abre a sessão e devolve o token dela.
+         *
+         *     Motivo obrigatório, prazo de 5 min a 8 h (padrão 2 h), **somente leitura por
+         *     padrão**. ``assisted_reason`` abre já com escrita — e exige a capacidade de
+         *     modo assistido. Entrar fica na auditoria do cliente; cada requisição feita
+         *     com o token também.
+         */
+        post: operations["start_support_session_v1_platform_support_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/support-sessions/{support_session_id}/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Liga ou desliga a escrita (modo assistido)
+         * @description O modo assistido é explícito e tem motivo próprio; voltar à leitura também fica na trilha.
+         */
+        post: operations["change_support_mode_v1_platform_support_sessions__support_session_id__mode_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/support-sessions/{support_session_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sai do cliente (encerra a sessão de suporte)
+         * @description Registra a saída e derruba o token na hora. O superadmin encerra a de qualquer um.
+         */
+        post: operations["end_support_session_v1_platform_support_sessions__support_session_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/current/support-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quando a equipe da ValTexa entrou neste cliente
+         * @description O outro lado da sessão de suporte: o cliente vê quem entrou, por quê e quanto agiu.
+         */
+        get: operations["my_tenant_support_sessions_v1_tenants_current_support_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A equipe da ValTexa e seus papéis */
+        get: operations["list_platform_users_v1_platform_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/users/{user_id}/platform-role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Dá, troca ou tira o papel de plataforma de alguém
+         * @description Só o superadmin. Ninguém muda o próprio papel — evita trancar a plataforma por engano.
+         *
+         *     Tirar ou trocar o papel derruba as sessões abertas da pessoa: um papel
+         *     retirado precisa valer agora, não quando o token vencer.
+         */
+        put: operations["set_platform_role_v1_platform_users__user_id__platform_role_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auditoria de todos os clientes */
+        get: operations["platform_audit_v1_platform_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quem sou na equipe ValTexa
+         * @description Papel de plataforma e capacidades — o console monta o menu a partir disto.
+         */
+        get: operations["platform_me_v1_platform_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estado do processo, com o detalhe que o /health público esconde
+         * @description Qualquer papel da equipe: ambiente, banco, endereço da IA, eventos pendentes e
+         *     a lista de pendências para produção, por extenso.
+         */
+        get: operations["platform_health_v1_platform_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clientes com plano, assinatura, uso e consentimento
+         * @description Sem dado agronômico: cadastro, contrato e números de uso.
+         */
+        get: operations["platform_tenants_v1_platform_tenants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usuários globais: qualquer conta, com os clientes a que pertence */
+        get: operations["platform_accounts_v1_platform_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/accounts/{user_id}/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Bloqueia ou desbloqueia uma conta
+         * @description Só superadmin. Bloquear derruba todas as sessões na hora; ninguém bloqueia a si mesmo.
+         *
+         *     A conta não é apagada: o histórico dela na auditoria precisa continuar com nome.
+         */
+        put: operations["set_account_active_v1_platform_accounts__user_id__active_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/farms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fazendas do cliente em foco (ferramentas internas)
+         * @description O cadastro que o formulário de coleta e o planejamento precisam — sem resultado
+         *     agronômico. A lavoura por dentro continua exigindo sessão de suporte.
+         */
+        get: operations["admin_farms_v1_admin_farms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Talhões do cliente em foco (ferramentas internas) */
+        get: operations["admin_fields_v1_admin_fields_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Model Registry */
+        get: operations["list_models_v1_platform_models_get"];
+        put?: never;
+        /** Registra uma versão de modelo (entra em TREINAMENTO) */
+        post: operations["create_model_v1_platform_models_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/models/{model_version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uma versão do registry, com o histórico */
+        get: operations["get_model_v1_platform_models__model_version_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Corrige uma versão (dados técnicos só até a aprovação) */
+        patch: operations["update_model_v1_platform_models__model_version_id__patch"];
+        trace?: never;
+    };
+    "/v1/platform/models/{model_version_id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a versão no ciclo de vida
+         * @description Devolve as versões afetadas: a movida e, ao publicar, a que saiu de PRODUÇÃO.
+         *
+         *     Aprovar exige papel IA & Dados (ou superadmin) e não ser quem registrou: 403.
+         *     Transição fora do ciclo, sem motivo quando exige, sem métrica ou sem
+         *     artefato com hash: 409 com o motivo.
+         */
+        post: operations["transition_model_v1_platform_models__model_version_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/models/{model_version_id}/optimizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rodadas de otimização (original e otimizado) de uma versão */
+        get: operations["list_optimizations_v1_platform_models__model_version_id__optimizations_get"];
+        put?: never;
+        /**
+         * Registra uma rodada de otimização (o registry decide se aceita)
+         * @description Recusada também é gravada (201, ``accepted: false`` e os motivos).
+         *
+         *     Só antes da aprovação (TREINAMENTO/VALIDAÇÃO); benchmark de outro artefato,
+         *     otimizado igual ao original ou critério inválido: 409.
+         */
+        post: operations["create_optimization_v1_platform_models__model_version_id__optimizations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/model-releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Modelos liberados por cliente */
+        get: operations["list_releases_v1_platform_model_releases_get"];
+        put?: never;
+        /**
+         * Libera um modelo para um cliente
+         * @description Idempotente: liberar de novo o que já está liberado devolve a mesma liberação.
+         */
+        post: operations["create_release_v1_platform_model_releases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/model-releases/{release_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoga a liberação (fica no histórico) */
+        post: operations["revoke_release_v1_platform_model_releases__release_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/fleet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Frota de todos os clientes
+         * @description Retrato de frota de cada robô, com o cliente dono. Sem lavoura, sem imagem.
+         */
+        get: operations["platform_fleet_v1_platform_fleet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ai-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saúde da IA
+         * @description Medido nas detecções gravadas e no que os robôs informaram — nada estimado.
+         *
+         *     Detecções do analisador simulado (``model_version = sim-1``) aparecem marcadas
+         *     como ``simulated``: sem os pesos aqui, é isso que roda nos testes e na demo.
+         */
+        get: operations["ai_health_v1_platform_ai_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/bases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bases da fazenda: internet, filas, rádios, Rovers */
+        get: operations["lista_bases_v1_platform_bases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/bases/{device_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uma base da fazenda */
+        get: operations["uma_base_v1_platform_bases__device_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/fields/{field_id}/cobertura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O mapa de cobertura do rádio de um talhão (o último levantamento da base) */
+        get: operations["cobertura_do_talhao_v1_platform_fields__field_id__cobertura_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/video": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Liga ou renova o vídeo ao vivo (vence em segundos sem renovar) */
+        post: operations["assiste_v1_platform_rovers__device_id__video_post"];
+        /** Desliga o vídeo ao vivo */
+        delete: operations["para_de_assistir_v1_platform_rovers__device_id__video_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/video/{camera_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O último quadro ao vivo de uma câmera (JPEG) */
+        get: operations["quadro_ao_vivo_v1_platform_rovers__device_id__video__camera_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/painel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tudo de um rover numa resposta */
+        get: operations["painel_v1_platform_rovers__device_id__painel_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/comandos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comandos recentes e respostas */
+        get: operations["comandos_v1_platform_rovers__device_id__comandos_get"];
+        put?: never;
+        /** Manda um comando assinado ao rover */
+        post: operations["manda_v1_platform_rovers__device_id__comandos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/comandos/{command_id}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancela um comando ainda não entregue */
+        post: operations["cancela_v1_platform_rovers__device_id__comandos__command_id__cancelar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/teleop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Controle remoto: renova o ponto de ajuste (vale 1 s) */
+        post: operations["teleop_v1_platform_rovers__device_id__teleop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/teleop/parar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Controle remoto: pare */
+        post: operations["teleop_parar_v1_platform_rovers__device_id__teleop_parar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/modelos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versões do registry que podem ser fixadas neste rover */
+        get: operations["modelos_v1_platform_rovers__device_id__modelos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/modelo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Fixa (ou solta) o modelo de IA deste rover */
+        put: operations["fixa_modelo_v1_platform_rovers__device_id__modelo_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comandos assinados que o robô deve executar */
+        get: operations["device_commands_v1_device_commands_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/enlace/chave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** O robô publica a chave do rádio da fazenda (assinada pela identidade dele) */
+        put: operations["device_enlace_chave_v1_device_enlace_chave_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/base/pares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A base da fazenda busca as chaves de rádio dos robôs que ela atende */
+        get: operations["device_base_pares_v1_device_base_pares_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/base/cobertura/{field_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** A base manda o mapa de cobertura do rádio de um talhão (levantamento) */
+        put: operations["device_base_cobertura_v1_device_base_cobertura__field_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/video/{camera_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O robô manda um quadro ao vivo (JPEG) */
+        post: operations["device_video_v1_device_video__camera_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/commands/{command_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O robô devolve o resultado */
+        post: operations["device_command_result_v1_device_commands__command_id__result_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/teleop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ponto de ajuste do controle remoto, assinado */
+        get: operations["device_teleop_v1_device_teleop_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ensaios/catalogo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ensaios, limites do portão e fases */
+        get: operations["catalogo_v1_platform_ensaios_catalogo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/ensaios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resultados dos ensaios do rover */
+        get: operations["resultados_v1_platform_rovers__device_id__ensaios_get"];
+        put?: never;
+        /** Manda um ensaio ao rover (comando assinado) */
+        post: operations["manda_ensaio_v1_platform_rovers__device_id__ensaios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/ensaios/{command_id}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancela um ensaio (na fila ou já rodando no robô) */
+        post: operations["cancela_ensaio_v1_platform_rovers__device_id__ensaios__command_id__cancelar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/ensaios/{resultado_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um resultado, com a prévia que o robô mandou */
+        get: operations["resultado_v1_platform_rovers__device_id__ensaios__resultado_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/portoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portões de cada fase */
+        get: operations["portoes_v1_platform_rovers__device_id__portoes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/rovers/{device_id}/ensaios/validacao-agronomica": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** FASE 5: resultado a partir do relatório Rover contra agrônomo */
+        post: operations["validacao_agronomica_v1_platform_rovers__device_id__ensaios_validacao_agronomica_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/commands/{command_id}/progresso": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O robô conta o andamento do ensaio */
+        post: operations["device_progresso_v1_device_commands__command_id__progresso_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/ensaio/eco": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ensaio de rede: ida e volta (e descida) */
+        get: operations["device_eco_v1_device_ensaio_eco_get"];
+        put?: never;
+        /** Ensaio de rede: subida (descarta o corpo) */
+        post: operations["device_eco_subida_v1_device_ensaio_eco_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catálogo de planos */
+        get: operations["list_plans_v1_admin_plans_get"];
+        put?: never;
+        /** Cria um plano */
+        post: operations["create_plan_v1_admin_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Altera um plano
+         * @description Muda o plano para **todos** os clientes nele — por isso o antes e o depois na trilha.
+         */
+        patch: operations["update_plan_v1_admin_plans__plan_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/tenants/{tenant_id}/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plano, limites e uso de um cliente */
+        get: operations["get_tenant_subscription_v1_admin_tenants__tenant_id__subscription_get"];
+        /**
+         * Define o plano de um cliente
+         * @description Cria ou troca a assinatura. O que já existe no cliente não é apagado por ficar acima
+         *     de um limite novo: o limite vale para a próxima criação.
+         */
+        put: operations["set_tenant_subscription_v1_admin_tenants__tenant_id__subscription_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/current/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Meu plano, meus limites e meu uso */
+        get: operations["my_plan_v1_tenants_current_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/current/data-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uso dos meus dados no treino: o que vale e o histórico */
+        get: operations["my_consent_v1_tenants_current_data_consent_get"];
+        /**
+         * Permitir (ou não) o uso dos meus dados para melhorar os modelos
+         * @description Só o dono do cliente decide (``tenant:manage``). Vale a partir de agora;
+         *     dizer NÃO retira do treino as amostras que ainda não foram usadas.
+         */
+        put: operations["set_my_consent_v1_tenants_current_data_consent_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/tenants/{tenant_id}/data-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consentimento de um cliente */
+        get: operations["tenant_consent_v1_admin_tenants__tenant_id__data_consent_get"];
+        /** Registra o consentimento de um cliente a partir de termo assinado */
+        put: operations["set_tenant_consent_v1_admin_tenants__tenant_id__data_consent_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Minhas notificações neste cliente */
+        get: operations["list_notifications_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quantas não lidas (o número do sino) */
+        get: operations["unread_count_v1_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marca uma notificação como lida */
+        post: operations["mark_read_v1_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marca todas como lidas */
+        post: operations["mark_all_read_v1_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O que eu recebo, por qual canal e a partir de qual limite */
+        get: operations["my_preferences_v1_notifications_preferences_get"];
+        /** Muda a minha preferência de um tipo de aviso */
+        put: operations["set_my_preference_v1_notifications_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/role-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quem recebe o quê, por papel, neste cliente (gestor) */
+        get: operations["role_preferences_v1_notifications_role_preferences_get"];
+        /** Define o que um papel recebe neste cliente (gestor) */
+        put: operations["set_role_preference_v1_notifications_role_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notificações da equipe */
+        get: operations["platform_notifications_v1_platform_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Não lidas da equipe */
+        get: operations["platform_unread_count_v1_platform_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marca como lida (equipe) */
+        post: operations["platform_mark_read_v1_platform_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marca todas como lidas (equipe) */
+        post: operations["platform_mark_all_read_v1_platform_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preferências de aviso da equipe (as minhas) */
+        get: operations["platform_my_preferences_v1_platform_notifications_preferences_get"];
+        /** Muda a minha preferência (equipe) */
+        put: operations["platform_set_my_preference_v1_platform_notifications_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notifications/role-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O que cada papel da equipe recebe (superadmin) */
+        get: operations["platform_role_preferences_v1_platform_notifications_role_preferences_get"];
+        /** Define o que um papel da equipe recebe (superadmin) */
+        put: operations["platform_set_role_preference_v1_platform_notifications_role_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chamados deste cliente */
+        get: operations["list_tickets_v1_support_tickets_get"];
+        put?: never;
+        /** Abre um chamado */
+        post: operations["open_ticket_v1_support_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um chamado, com a conversa e o histórico (sem notas internas) */
+        get: operations["get_ticket_v1_support_tickets__ticket_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/tickets/{ticket_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Comenta no chamado */
+        post: operations["comment_ticket_v1_support_tickets__ticket_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/tickets/{ticket_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fecha o chamado (o problema foi resolvido) */
+        post: operations["close_ticket_v1_support_tickets__ticket_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/tickets/{ticket_id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reabre um chamado resolvido ou fechado */
+        post: operations["reopen_ticket_v1_support_tickets__ticket_id__reopen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chamados de todos os clientes */
+        get: operations["platform_list_tickets_v1_platform_tickets_get"];
+        put?: never;
+        /** Abre um chamado em nome de um cliente (telefone, e-mail) */
+        post: operations["platform_open_ticket_v1_platform_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um chamado, com notas internas e sessões de suporte */
+        get: operations["platform_get_ticket_v1_platform_tickets__ticket_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Atende: status, prioridade, responsável, incidente */
+        patch: operations["platform_update_ticket_v1_platform_tickets__ticket_id__patch"];
+        trace?: never;
+    };
+    "/v1/platform/tickets/{ticket_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Responde ao cliente (ou escreve nota interna) */
+        post: operations["platform_comment_ticket_v1_platform_tickets__ticket_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/support/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quem da equipe pode ser responsável por chamado */
+        get: operations["ticket_assignees_v1_platform_support_assignees_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Incidentes */
+        get: operations["list_incidents_v1_platform_incidents_get"];
+        put?: never;
+        /** Abre um incidente (e liga chamados a ele) */
+        post: operations["create_incident_v1_platform_incidents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/incidents/{incident_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um incidente e os chamados ligados */
+        get: operations["get_incident_v1_platform_incidents__incident_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Muda status, severidade ou a nota que os clientes leem */
+        patch: operations["update_incident_v1_platform_incidents__incident_id__patch"];
+        trace?: never;
+    };
+    "/v1/platform/incidents/{incident_id}/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Liga chamados ao incidente */
+        post: operations["link_incident_tickets_v1_platform_incidents__incident_id__tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saúde por componente, API, filas, usuários e IA */
+        get: operations["platform_overview_v1_platform_observability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability/api": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** API por rota: requisições, erros e latência */
+        get: operations["platform_api_stats_v1_platform_observability_api_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability/fleet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saúde dos robôs de todos os clientes */
+        get: operations["platform_fleet_health_v1_platform_observability_fleet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** IA: inferências, erros, latência, classes e drift por modelo */
+        get: operations["platform_ai_stats_v1_platform_observability_ai_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Alertas */
+        get: operations["platform_alerts_v1_platform_observability_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability/alerts/{alert_id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reconhece um alerta (alguém está cuidando) */
+        post: operations["platform_ack_alert_v1_platform_observability_alerts__alert_id__ack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability/alert-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Regras de alerta (padrão da plataforma) */
+        get: operations["platform_alert_rules_v1_platform_observability_alert_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/observability/alert-rules/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Ajusta a regra padrão (limite, janela, severidade, ligada) */
+        put: operations["platform_update_alert_rule_v1_platform_observability_alert_rules__kind__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/fleet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saúde dos robôs deste cliente */
+        get: operations["tenant_fleet_health_v1_observability_fleet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Alertas dos robôs deste cliente */
+        get: operations["tenant_alerts_v1_observability_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/alerts/{alert_id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reconhece um alerta de robô deste cliente */
+        post: operations["tenant_ack_alert_v1_observability_alerts__alert_id__ack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/alert-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Regras de alerta dos robôs (com a versão deste cliente, se houver) */
+        get: operations["tenant_alert_rules_v1_observability_alert_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/alert-rules/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Ajusta uma regra de robô só para este cliente */
+        put: operations["tenant_update_alert_rule_v1_observability_alert_rules__kind__put"];
+        post?: never;
+        /** Volta a regra deste cliente para a padrão */
+        delete: operations["tenant_reset_alert_rule_v1_observability_alert_rules__kind__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stream": {
         parameters: {
             query?: never;
@@ -1659,17 +4803,73 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Eventos do cliente em tempo real (Server-Sent Events)
-         * @description Os eventos de domínio do cliente, conforme acontecem.
+         * Eventos ao vivo do cliente (SSE)
+         * @description Abre um fluxo de eventos do cliente em que o usuário está.
          *
-         *     Conexão com prazo: o servidor encerra depois de ``timeout`` e o cliente
-         *     reconecta passando ``after``. Uma conexão eterna sobreviveria a um token
-         *     vencido e a um deploy; uma curta revalida as duas coisas a cada ciclo.
-         *
-         *     O cliente precisa mandar ``Authorization``, então ``EventSource`` do
-         *     navegador não serve — ele não aceita cabeçalho. O console lê com ``fetch``.
+         *     O escopo é o tenant do token, e não um parâmetro: um cliente não recebe nem
+         *     de raspão o evento de outro. É a mesma regra do resto da plataforma, e num
+         *     fluxo aberto ela importa ainda mais — aqui o servidor fala sem ser
+         *     perguntado, então o filtro errado vaza continuamente em vez de uma vez.
          */
         get: operations["stream_v1_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mapa/localizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Acha um lugar pelo endereço (fazenda, cidade, estrada) */
+        get: operations["busca_v1_mapa_localizar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mapa/satelite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Qual satélite o console usa (Google quando ligado, se não Esri) */
+        get: operations["satelite_v1_mapa_satelite_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Métricas no formato do Prometheus (protegido)
+         * @description As do processo (HTTP desta réplica) e as do banco (filas, frota, IA, alertas).
+         *
+         *     Com várias réplicas: raspe cada uma para as métricas HTTP e some no Prometheus
+         *     (``sum by (route)``); as do banco são iguais em todas (ver
+         *     ``deploy/observabilidade/prometheus.yml``).
+         */
+        get: operations["metrics_metrics_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1687,10 +4887,11 @@ export interface paths {
         };
         /**
          * Estado da plataforma
-         * @description Diagnóstico do processo.
+         * @description Diagnóstico público do processo.
          *
          *     Separa *liveness* de *readiness*: responder ``200`` diz que o processo está
-         *     de pé; ``database`` e ``inference`` dizem se ele consegue trabalhar.
+         *     de pé; ``database`` e ``inference`` dizem se ele consegue trabalhar. Sem
+         *     autenticação, então sem detalhe interno: o completo é ``/v1/platform/health``.
          */
         get: operations["health_health_get"];
         put?: never;
@@ -1709,6 +4910,205 @@ export interface components {
         AbortRequest: {
             /** Reason */
             reason: string;
+        };
+        /** AccountActiveUpdate */
+        AccountActiveUpdate: {
+            /** Is Active */
+            is_active: boolean;
+            /** Reason */
+            reason: string;
+        };
+        /** ActiveUsersOut */
+        ActiveUsersOut: {
+            /** Active 15M */
+            active_15m: number;
+            /** Active 24H */
+            active_24h: number;
+        };
+        /** AiDriftOut */
+        AiDriftOut: {
+            /** Source */
+            source: string;
+            /** Model Key */
+            model_key: string;
+            /** Recent */
+            recent: number;
+            /** Baseline */
+            baseline: number;
+            /**
+             * Distance
+             * @description Distância de variação total (0 a 1) entre a distribuição de classes recente e a base. Nulo se a amostra não basta (ver reason).
+             */
+            distance: number | null;
+            /** Reason */
+            reason: string | null;
+            /** Recent Classes */
+            recent_classes: {
+                [key: string]: number;
+            };
+            /** Baseline Classes */
+            baseline_classes: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * AiHealthModelOut
+         * @description Inferências de um modelo, medidas nas detecções gravadas.
+         */
+        AiHealthModelOut: {
+            /** Model Key */
+            model_key: string | null;
+            /** Model Version */
+            model_version: string | null;
+            /**
+             * Simulated
+             * @description Saída do analisador simulado, não de modelo real.
+             */
+            simulated: boolean;
+            /** Inferences */
+            inferences: number;
+            /** Errors */
+            errors: number;
+            /** Error Rate */
+            error_rate: number | null;
+            /** Abstentions */
+            abstentions: number;
+            /** Latency Ms Avg */
+            latency_ms_avg: number | null;
+            /** Latency Ms P95 */
+            latency_ms_p95: number | null;
+            /** Labels */
+            labels: {
+                [key: string]: number;
+            };
+            /** Last At */
+            last_at: string | null;
+        };
+        /**
+         * AiHealthOut
+         * @description Saúde da IA (brief, seção 34). O que não tem dado vem em ``no_data``, nunca inventado.
+         */
+        AiHealthOut: {
+            /** Window Days */
+            window_days: number;
+            /** Active Models */
+            active_models: components["schemas"]["ModelVersionOut"][];
+            /** Models */
+            models: components["schemas"]["AiHealthModelOut"][];
+            /** Rovers Reporting */
+            rovers_reporting: number;
+            /** Rovers Divergent */
+            rovers_divergent: number;
+            /** Rovers Outside Registry */
+            rovers_outside_registry: number;
+            /** Rovers Without Data */
+            rovers_without_data: number;
+            /**
+             * Outdated In Use
+             * @description Versões descontinuadas que algum robô ainda diz rodar ('chave@versão').
+             */
+            outdated_in_use: string[];
+            /**
+             * No Data
+             * @description Indicador → por que não há dado (drift, incidentes, FPS...).
+             */
+            no_data: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * AiModelChoiceOut
+         * @description Uma versão do modelo que atende a cultura do talhão — o que o seletor mostra.
+         */
+        AiModelChoiceOut: {
+            /** Key */
+            key: string;
+            /** Name */
+            name?: string | null;
+            /** Version */
+            version: string;
+            /** Variant */
+            variant: string;
+            /** Recommended */
+            recommended: boolean;
+            /** License */
+            license: string;
+            /**
+             * Field Performance
+             * @description Desempenho no campo em linguagem operacional (alto, bom, limitado). A métrica técnica fica no registry, só para a equipe (brief, seção 10).
+             */
+            field_performance?: string | null;
+            /** Caveat */
+            caveat?: string | null;
+            /**
+             * Selected
+             * @description Se é a versão em uso neste talhão.
+             */
+            selected: boolean;
+        };
+        /** AiModelStatOut */
+        AiModelStatOut: {
+            /**
+             * Source
+             * @description nuvem ou borda
+             */
+            source: string;
+            /** Model Key */
+            model_key: string;
+            /** Model Version */
+            model_version: string;
+            /**
+             * Simulated
+             * @default false
+             */
+            simulated: boolean;
+            /** Inferences */
+            inferences: number;
+            /** Errors */
+            errors?: number | null;
+            /** Error Rate */
+            error_rate?: number | null;
+            /** Abstentions */
+            abstentions?: number | null;
+            /** Latency Ms Avg */
+            latency_ms_avg?: number | null;
+            /** Latency Ms P95 */
+            latency_ms_p95?: number | null;
+            /** Classes */
+            classes: {
+                [key: string]: number;
+            };
+        };
+        /** AiObservabilityOut */
+        AiObservabilityOut: {
+            /** Window Hours */
+            window_hours: number;
+            service: components["schemas"]["AiServiceOut"];
+            /** Cloud */
+            cloud: components["schemas"]["AiModelStatOut"][];
+            /** Edge */
+            edge: components["schemas"]["AiModelStatOut"][];
+            /** Drift */
+            drift: components["schemas"]["AiDriftOut"][];
+            /** Drift Note */
+            drift_note: string;
+        };
+        /** AiServiceOut */
+        AiServiceOut: {
+            /**
+             * Status
+             * @description ok, fora, desligado ou simulado
+             */
+            status: string;
+            /** Detail */
+            detail?: string | null;
+            /** Checked At */
+            checked_at?: string | null;
+        };
+        /** AlertAckIn */
+        AlertAckIn: {
+            /** Note */
+            note?: string | null;
         };
         /**
          * AlertOut
@@ -1738,6 +5138,50 @@ export interface components {
              */
             at: string;
         };
+        /** AlertRuleIn */
+        AlertRuleIn: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Threshold */
+            threshold?: number | null;
+            /** Window Minutes */
+            window_minutes?: number | null;
+            /** Severity */
+            severity?: string | null;
+        };
+        /** AlertRuleOut */
+        AlertRuleOut: {
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /**
+             * Scope
+             * @description robo (aceita versão por cliente) ou plataforma
+             */
+            scope: string;
+            /** Unit */
+            unit: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Threshold */
+            threshold: number | null;
+            /** Window Minutes */
+            window_minutes: number | null;
+            /** Severity */
+            severity: string;
+            /** Default Threshold */
+            default_threshold: number | null;
+            /**
+             * Source
+             * @description padrao (regra da plataforma) ou cliente (versão própria)
+             */
+            source: string;
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** AnomalyOut */
         AnomalyOut: {
             /** Field Id */
@@ -1756,6 +5200,58 @@ export interface components {
             current_sample: number;
             /** Detail */
             detail: string;
+        };
+        /** ApiRouteStatOut */
+        ApiRouteStatOut: {
+            /** Method */
+            method: string;
+            /**
+             * Route
+             * @description Molde da rota (com {parâmetros}), não o caminho com id.
+             */
+            route: string;
+            /** Requests */
+            requests: number;
+            /** Server Errors */
+            server_errors: number;
+            /** Client Errors */
+            client_errors: number;
+            /** Error Rate */
+            error_rate: number | null;
+            /** Latency Ms Avg */
+            latency_ms_avg: number | null;
+            /**
+             * Latency Ms P50
+             * @description Aproximado pelos baldes do histograma.
+             */
+            latency_ms_p50: number | null;
+            /** Latency Ms P95 */
+            latency_ms_p95: number | null;
+            /** Latency Ms Max */
+            latency_ms_max: number | null;
+        };
+        /** ApiStatsOut */
+        ApiStatsOut: {
+            /** Window Minutes */
+            window_minutes: number;
+            /** Requests */
+            requests: number;
+            /** Server Errors */
+            server_errors: number;
+            /** Client Errors */
+            client_errors: number;
+            /** Error Rate */
+            error_rate: number | null;
+            /** Latency Ms Avg */
+            latency_ms_avg: number | null;
+            /** Latency Ms P50 */
+            latency_ms_p50: number | null;
+            /** Latency Ms P95 */
+            latency_ms_p95: number | null;
+            /** Latency Ms Max */
+            latency_ms_max: number | null;
+            /** Routes */
+            routes: components["schemas"]["ApiRouteStatOut"][];
         };
         /** ApplicationOut */
         ApplicationOut: {
@@ -1873,6 +5369,13 @@ export interface components {
             payload: {
                 [key: string]: unknown;
             };
+            /** Tenant Id */
+            tenant_id?: string | null;
+            /**
+             * Support Session Id
+             * @description Ação da equipe da ValTexa numa sessão de suporte ('entrar como cliente').
+             */
+            support_session_id?: string | null;
         };
         /** BatchCreate */
         BatchCreate: {
@@ -1895,6 +5398,100 @@ export interface components {
             expires_on: string | null;
             /** Quantity L */
             quantity_l: number | null;
+        };
+        /** BillingPlanCreate */
+        BillingPlanCreate: {
+            /** Max Hectares */
+            max_hectares?: number | null;
+            /** Max Farms */
+            max_farms?: number | null;
+            /** Max Fields */
+            max_fields?: number | null;
+            /** Max Devices */
+            max_devices?: number | null;
+            /** Max Users */
+            max_users?: number | null;
+            /** Max Missions Per Month */
+            max_missions_per_month?: number | null;
+            /** Max Storage Gb */
+            max_storage_gb?: number | null;
+            /** Retention Days */
+            retention_days?: number | null;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Features */
+            features?: string[];
+            /** Price Cents */
+            price_cents?: number | null;
+        };
+        /** BillingPlanOut */
+        BillingPlanOut: {
+            /** Max Hectares */
+            max_hectares?: number | null;
+            /** Max Farms */
+            max_farms?: number | null;
+            /** Max Fields */
+            max_fields?: number | null;
+            /** Max Devices */
+            max_devices?: number | null;
+            /** Max Users */
+            max_users?: number | null;
+            /** Max Missions Per Month */
+            max_missions_per_month?: number | null;
+            /** Max Storage Gb */
+            max_storage_gb?: number | null;
+            /** Retention Days */
+            retention_days?: number | null;
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Features */
+            features: string[];
+            /** Price Cents */
+            price_cents: number | null;
+        };
+        /**
+         * BillingPlanUpdate
+         * @description Alteração parcial: só o que vier é mudado. Mande ``null`` para tirar um limite.
+         */
+        BillingPlanUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Features */
+            features?: string[] | null;
+            /** Price Cents */
+            price_cents?: number | null;
+            /** Max Hectares */
+            max_hectares?: number | null;
+            /** Max Farms */
+            max_farms?: number | null;
+            /** Max Fields */
+            max_fields?: number | null;
+            /** Max Devices */
+            max_devices?: number | null;
+            /** Max Users */
+            max_users?: number | null;
+            /** Max Missions Per Month */
+            max_missions_per_month?: number | null;
+            /** Max Storage Gb */
+            max_storage_gb?: number | null;
+            /** Retention Days */
+            retention_days?: number | null;
         };
         /** Body_post_observation_v1_device_observations_post */
         Body_post_observation_v1_device_observations_post: {
@@ -1922,6 +5519,127 @@ export interface components {
              */
             file?: string | null;
         };
+        /**
+         * BoundaryRefineIn
+         * @description O contorno que o produtor desenhou a mão, para a IA encaixar.
+         */
+        BoundaryRefineIn: {
+            /**
+             * Polygon
+             * @description Anel [[lon, lat], ...] em WGS84, sem repetir o primeiro ponto no fim.
+             */
+            polygon: number[][];
+            /**
+             * Tolerance
+             * @description Quanto o contorno pode se afastar do traço, como fração do raio. Baixo trava perto do desenho; alto corrige mão trêmula.
+             * @default 0.35
+             */
+            tolerance: number;
+            /**
+             * Vertices
+             * @default 48
+             */
+            vertices: number;
+        };
+        /**
+         * BoundaryRefineOut
+         * @description O contorno encaixado, com o que é preciso para confiar nele ou não.
+         */
+        BoundaryRefineOut: {
+            /** Polygon */
+            polygon: number[][];
+            /** Area Ha */
+            area_ha: number;
+            /**
+             * Area Change
+             * @description Variação em relação ao que foi desenhado.
+             */
+            area_change: number;
+            /**
+             * Confidence
+             * @description Fração das direções com borda nítida.
+             */
+            confidence: number;
+            /**
+             * Hit Limit
+             * @description Fração que parou na tolerância, não numa borda.
+             */
+            hit_limit: number;
+            /** Meters Per Pixel */
+            meters_per_pixel: number;
+            rows?: components["schemas"]["RowsOut"] | null;
+            /** @description Cobertura e obstáculos lidos dentro do contorno. */
+            terrain?: components["schemas"]["TerrainOut"] | null;
+            /** Notes */
+            notes?: string[];
+            /**
+             * Method
+             * @description ``carreador``: cada lado encostou na estrada de terra (talhão de café). ``radial``: o encaixe antigo, para IA que ainda não tem o outro.
+             * @default radial
+             */
+            method: string;
+        };
+        /**
+         * CapturePlatform
+         * @description De onde a imagem foi tirada. Decide qual modelo pode analisá-la.
+         *
+         *     O mesmo vocabulário do ``Platform`` de VALTEXA-B (``app/registry.py``). Não é
+         *     detalhe de catalogação: uma foto aérea de dossel e uma foto de folha não
+         *     respondem à mesma pergunta, e mandar uma ao modelo da outra devolve uma das
+         *     classes do modelo errado com confiança alta e nada no resultado denunciando
+         *     o erro. Ver ``VALTEXA-B/MODELS.md``.
+         * @enum {string}
+         */
+        CapturePlatform: "ground" | "aerial" | "any";
+        /**
+         * CatalogModelOut
+         * @description Uma entrada do catálogo de VALTEXA-B, como a plataforma a conhece.
+         */
+        CatalogModelOut: {
+            /** Key */
+            key: string;
+            /** Crops */
+            crops: string[];
+            platform: components["schemas"]["CapturePlatform"];
+            /**
+             * Trained
+             * @description Falso: existe o nome, não existem os pesos.
+             */
+            trained: boolean;
+            /** Caveat */
+            caveat?: string | null;
+        };
+        /**
+         * ChargePostOut
+         * @description Um ponto do percurso onde falta energia para continuar.
+         */
+        ChargePostOut: {
+            /** Ordem */
+            ordem: number;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Metros No Percurso */
+            metros_no_percurso: number;
+            /** Bateria Na Chegada Percent */
+            bateria_na_chegada_percent: number;
+            /** Minutos De Recarga */
+            minutos_de_recarga: number;
+            /** Area Coberta Ha */
+            area_coberta_ha: number;
+            /** Motivo */
+            motivo: string;
+        };
+        /** ChaveDeEnlaceIn */
+        ChaveDeEnlaceIn: {
+            /** Nome */
+            nome: string;
+            /** Enlace Pub */
+            enlace_pub: string;
+            /** Assinatura */
+            assinatura: string;
+        };
         /** CheckpointOut */
         CheckpointOut: {
             /**
@@ -1942,6 +5660,28 @@ export interface components {
             /** Lon */
             lon: number | null;
         };
+        /**
+         * ChunkAccepted
+         * @description Resposta de um pedaço aceito. ``received_bytes`` é de onde continuar.
+         */
+        ChunkAccepted: {
+            /** File Id */
+            file_id: string;
+            /** Received Bytes */
+            received_bytes: number;
+            /** Size Bytes */
+            size_bytes: number;
+            state: components["schemas"]["CollectionFileState"];
+            /** Complete */
+            complete: boolean;
+        };
+        /** ChunkOut */
+        ChunkOut: {
+            /** Received */
+            received: number;
+            /** Total Chunks */
+            total_chunks: number;
+        };
         /** ClassCountOut */
         ClassCountOut: {
             /** Label */
@@ -1952,10 +5692,244 @@ export interface components {
             ratio: number;
         };
         /**
+         * CollectionCreate
+         * @description O formulário "Importar Coleta" do painel administrativo.
+         */
+        CollectionCreate: {
+            /** Field Id */
+            field_id: string;
+            /**
+             * Collected On
+             * Format: date
+             * @description Data do voo/percurso, não a do upload.
+             */
+            collected_on: string;
+            /** @default drone_third_party */
+            source: components["schemas"]["CollectionSource"];
+            /** @default aerial_image */
+            kind: components["schemas"]["CollectionKind"];
+            /**
+             * Operator Name
+             * @description Empresa ou piloto que fez o voo.
+             */
+            operator_name?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
+         * CollectionFileDeclare
+         * @description Um arquivo que virá. Declarado antes de qualquer byte.
+         */
+        CollectionFileDeclare: {
+            /** Filename */
+            filename: string;
+            /**
+             * Size Bytes
+             * @description Sem teto artificial: o limite é o do storage.
+             */
+            size_bytes: number;
+            /** Content Type */
+            content_type?: string | null;
+            /** Sha256 */
+            sha256?: string | null;
+            /** Captured At */
+            captured_at?: string | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /** Alt M */
+            alt_m?: number | null;
+        };
+        /** CollectionFileOut */
+        CollectionFileOut: {
+            /** Id */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Received Bytes */
+            received_bytes: number;
+            state: components["schemas"]["CollectionFileState"];
+            /** Sha256 */
+            sha256?: string | null;
+            /** Error */
+            error?: string | null;
+            /** Captured At */
+            captured_at?: string | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /** Asset Id */
+            asset_id?: string | null;
+            /** Observation Id */
+            observation_id?: string | null;
+            /** Diagnosis Id */
+            diagnosis_id?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Reviewed Label */
+            reviewed_label?: string | null;
+            /** Confidence */
+            confidence?: number | null;
+        };
+        /**
+         * CollectionFileState
+         * @description Ciclo de vida de um arquivo dentro da coleta.
+         * @enum {string}
+         */
+        CollectionFileState: "registered" | "uploading" | "stored" | "processing" | "analyzed" | "needs_review" | "no_model" | "failed" | "rejected";
+        /** CollectionFilesDeclare */
+        CollectionFilesDeclare: {
+            /** Files */
+            files: components["schemas"]["CollectionFileDeclare"][];
+        };
+        /**
+         * CollectionKind
+         * @description O que veio dentro da coleta.
+         * @enum {string}
+         */
+        CollectionKind: "aerial_image" | "orthomosaic" | "ground_image" | "other";
+        /** CollectionOut */
+        CollectionOut: {
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Farm Id */
+            farm_id: string;
+            /** Farm Name */
+            farm_name?: string | null;
+            /** Field Id */
+            field_id: string;
+            /** Field Name */
+            field_name?: string | null;
+            /** Crop */
+            crop?: string | null;
+            /**
+             * Collected On
+             * Format: date
+             */
+            collected_on: string;
+            source: components["schemas"]["CollectionSource"];
+            kind: components["schemas"]["CollectionKind"];
+            platform: components["schemas"]["CapturePlatform"];
+            state: components["schemas"]["CollectionState"];
+            /** Operator Name */
+            operator_name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Model Key
+             * @description Modelo que atende a coleta. Nulo: nenhum treinado atende.
+             */
+            model_key?: string | null;
+            /**
+             * No Model Reason
+             * @description Por que nenhum modelo atende. Não é erro: a imagem fica guardada e vai para a fila do agrônomo.
+             */
+            no_model_reason?: string | null;
+            progress: components["schemas"]["CollectionProgress"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Upload Completed At */
+            upload_completed_at?: string | null;
+            /** Processing Finished At */
+            processing_finished_at?: string | null;
+            /** Released At */
+            released_at?: string | null;
+        };
+        /**
+         * CollectionProgress
+         * @description O que a barra de progresso do painel mostra.
+         */
+        CollectionProgress: {
+            /** Files */
+            files: number;
+            /** Bytes Total */
+            bytes_total: number;
+            /** Bytes Received */
+            bytes_received: number;
+            /** Stored */
+            stored: number;
+            /** Processed */
+            processed: number;
+            /** Analyzed */
+            analyzed: number;
+            /** Needs Review */
+            needs_review: number;
+            /** No Model */
+            no_model: number;
+            /** Failed */
+            failed: number;
+            /** Upload Percent */
+            upload_percent: number;
+            /** Processing Percent */
+            processing_percent: number;
+        };
+        /**
+         * CollectionSource
+         * @description Quem produziu os arquivos.
+         *
+         *     ``DRONE_THIRD_PARTY`` é o MVP: operador terceirizado voa, entrega os
+         *     arquivos, e a ValTexa importa pelo painel. ``DRONE_OWNED`` existe no
+         *     vocabulário para a fase futura e **não tem caminho de ingestão implementado**
+         *     — ver :mod:`valtexa.services.collections`.
+         * @enum {string}
+         */
+        CollectionSource: "drone_third_party" | "rover" | "handheld" | "drone_owned";
+        /**
+         * CollectionState
+         * @description Ciclo de vida de uma coleta, do upload ao cliente.
+         *
+         *     Só avança. ``FAILED`` é terminal para o lote, não para os arquivos: um
+         *     arquivo com erro não derruba a coleta, ele fica em
+         *     :class:`CollectionFileState.FAILED` e aparece no painel.
+         * @enum {string}
+         */
+        CollectionState: "draft" | "uploading" | "upload_completed" | "processing_queued" | "ai_processing" | "results_generated" | "review_required" | "analyzed" | "available_to_client" | "failed" | "cancelled";
+        /** ComandoIn */
+        ComandoIn: {
+            /**
+             * Kind
+             * @description diagnostico, foto, modo, parar, config, recarregar_modelos, reiniciar
+             */
+            kind: string;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * Connectivity
          * @enum {string}
          */
         Connectivity: "ok" | "degraded" | "offline";
+        /** DashboardAiOut */
+        DashboardAiOut: {
+            /**
+             * Cloud Service
+             * @description ok, fora, simulado ou desligado.
+             */
+            cloud_service: string;
+            /** Cloud Inferences 24H */
+            cloud_inferences_24h: number;
+            /** Cloud Errors 24H */
+            cloud_errors_24h: number;
+            /** Edge Results 24H */
+            edge_results_24h: number;
+            /** Edge Models */
+            edge_models: components["schemas"]["EdgeModelUseOut"][];
+        };
         /** DashboardOut */
         DashboardOut: {
             /**
@@ -1987,6 +5961,187 @@ export interface components {
             alerts: components["schemas"]["AlertOut"][];
             /** Recent Missions */
             recent_missions: components["schemas"]["MissionBrief"][];
+            overview?: components["schemas"]["DashboardOverviewOut"] | null;
+        };
+        /**
+         * DashboardOverviewOut
+         * @description Os números da seção 45 que vão além da frota e da fila (Parte 8).
+         */
+        DashboardOverviewOut: {
+            /** Farms */
+            farms: number;
+            /** Fields */
+            fields: number;
+            /** Hectares */
+            hectares: number;
+            /**
+             * Occurrences 7D
+             * @description Resultados da Edge AI que são evento, 7 dias.
+             */
+            occurrences_7d: number;
+            /** Occurrences By Category 7D */
+            occurrences_by_category_7d: {
+                [key: string]: number;
+            };
+            /** Scouts Completed 30D */
+            scouts_completed_30d: number;
+            /** Hectares Scouted 30D */
+            hectares_scouted_30d: number;
+            /** Sync */
+            sync: components["schemas"]["SyncStatusOut"][];
+            /**
+             * Fleet Health
+             * @description ok, com_alerta, offline, inativo.
+             */
+            fleet_health: {
+                [key: string]: number;
+            };
+            ai_health: components["schemas"]["DashboardAiOut"];
+        };
+        /**
+         * DataConsentIn
+         * @description A pergunta do console: "Permitir utilização dos dados/imagens para melhoria dos
+         *     modelos?" — SIM (``true``) ou NÃO (``false``).
+         */
+        DataConsentIn: {
+            /** Allowed */
+            allowed: boolean;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** DataConsentOut */
+        DataConsentOut: {
+            /** Id */
+            id: string;
+            /** Allowed */
+            allowed: boolean;
+            /**
+             * Decided At
+             * Format: date-time
+             */
+            decided_at: string;
+            /** Decided By Label */
+            decided_by_label: string;
+            /** Source */
+            source: string;
+            /** Document Ref */
+            document_ref: string | null;
+            /** Notes */
+            notes: string | null;
+        };
+        /**
+         * DataConsentPlatformIn
+         * @description Registro feito pela ValTexa a partir de termo ou contrato assinado.
+         */
+        DataConsentPlatformIn: {
+            /** Allowed */
+            allowed: boolean;
+            /** Notes */
+            notes?: string | null;
+            /** Document Ref */
+            document_ref: string;
+        };
+        /** DataConsentStatus */
+        DataConsentStatus: {
+            /** Tenant Id */
+            tenant_id: string;
+            /**
+             * Allowed
+             * @description O que vale agora. Sem decisão registrada, é falso (NÃO).
+             */
+            allowed: boolean;
+            /** Decided */
+            decided: boolean;
+            current: components["schemas"]["DataConsentOut"] | null;
+            /** History */
+            history: components["schemas"]["DataConsentOut"][];
+        };
+        /** DatasetOut */
+        DatasetOut: {
+            /** Id */
+            id: string;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Crop */
+            crop: string;
+            platform: components["schemas"]["CapturePlatform"];
+            /** Samples */
+            samples: number;
+            /** Candidates */
+            candidates: number;
+            /** Disagreements */
+            disagreements: number;
+            /**
+             * Sem Modelo
+             * @description Amostras em que a máquina não opinou — o dataset de um modelo que não existe.
+             */
+            sem_modelo: number;
+            /** Labels */
+            labels: {
+                [key: string]: number;
+            };
+            /** Versions */
+            versions: number;
+        };
+        /** DatasetSampleOut */
+        DatasetSampleOut: {
+            /** Id */
+            id: string;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Asset Id */
+            asset_id: string;
+            /** Label */
+            label: string;
+            /** Machine Label */
+            machine_label?: string | null;
+            /** Machine Confidence */
+            machine_confidence?: number | null;
+            /** Disagreed */
+            disagreed: boolean;
+            /** Reviewer Label */
+            reviewer_label?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            state: components["schemas"]["DatasetSampleState"];
+            /** Collection Id */
+            collection_id?: string | null;
+        };
+        /**
+         * DatasetSampleState
+         * @description Situação de uma amostra dentro do dataset proprietário.
+         * @enum {string}
+         */
+        DatasetSampleState: "candidate" | "included" | "excluded";
+        /** DatasetVersionCreate */
+        DatasetVersionCreate: {
+            /** Version */
+            version: string;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** DatasetVersionOut */
+        DatasetVersionOut: {
+            /** Id */
+            id: string;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Version */
+            version: string;
+            /** Sample Count */
+            sample_count: number;
+            /** Label Counts */
+            label_counts: {
+                [key: string]: number;
+            };
+            /** Notes */
+            notes?: string | null;
+            /** Frozen At */
+            frozen_at?: string | null;
         };
         /** DecisionOut */
         DecisionOut: {
@@ -2030,6 +6185,47 @@ export interface components {
          * @enum {string}
          */
         DecisionOutcome: "no_action" | "observe" | "need_more_data" | "human_review" | "application_candidate";
+        /**
+         * DesignatedModelOut
+         * @description O que o robô deve rodar num talhão. Só versão em PRODUÇÃO do registry.
+         */
+        DesignatedModelOut: {
+            /** Field Id */
+            field_id: string;
+            /** Field Name */
+            field_name: string;
+            /** Crop */
+            crop: string;
+            /** Model Key */
+            model_key: string | null;
+            /** Version */
+            version: string | null;
+            state: components["schemas"]["ModelVersionState"] | null;
+            /**
+             * Artifact Uri
+             * @description Otimizado quando houver; senão o original. Nulo: o registry ainda não tem.
+             */
+            artifact_uri: string | null;
+            /**
+             * Artifact Sha256
+             * @description O robô confere este hash antes de carregar. Nulo = não carregue.
+             */
+            artifact_sha256: string | null;
+            /**
+             * Artifact Kind
+             * @description otimizado, original ou nulo.
+             */
+            artifact_kind: string | null;
+            /** Dnaty Version */
+            dnaty_version: string | null;
+            /** Target Hardware */
+            target_hardware: string | null;
+            /**
+             * Reason
+             * @description Por que não há modelo para o talhão, quando não há.
+             */
+            reason: string | null;
+        };
         /** DetectionOut */
         DetectionOut: {
             /** Id */
@@ -2056,6 +6252,13 @@ export interface components {
             latency_ms: number | null;
             /** Error */
             error: string | null;
+            /**
+             * Signals
+             * @description Portão de enquadramento, conjunto conformal e resumo do quadro do rover.
+             */
+            signals?: {
+                [key: string]: unknown;
+            };
         };
         /** DeviceEventIn */
         DeviceEventIn: {
@@ -2162,6 +6365,63 @@ export interface components {
             capabilities: {
                 [key: string]: unknown;
             };
+            /**
+             * Fleet State
+             * @description disponivel, em_missao, sincronizando, manutencao, offline, bloqueado ou erro — derivado do protocolo (contato, missão, /sync, falhas), nunca digitado.
+             */
+            fleet_state: string;
+            /** Fleet State Label */
+            fleet_state_label: string;
+            /** Fleet State Reason */
+            fleet_state_reason: string;
+            /** Hardware Version */
+            hardware_version?: string | null;
+            /** Runtime Version */
+            runtime_version?: string | null;
+            /** Edge Ai Version */
+            edge_ai_version?: string | null;
+            /** Ai Model Key */
+            ai_model_key?: string | null;
+            /** Ai Model Version */
+            ai_model_version?: string | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
+            /** Versions Reported At */
+            versions_reported_at?: string | null;
+            /** Temperature C */
+            temperature_c?: number | null;
+            /** Storage Total Bytes */
+            storage_total_bytes?: number | null;
+            /** Storage Free Bytes */
+            storage_free_bytes?: number | null;
+            /** Link Quality */
+            link_quality?: number | null;
+            /** Operating Hours */
+            operating_hours?: number | null;
+            /** Active Faults */
+            active_faults?: unknown[];
+            /**
+             * Sync Pending
+             * @default 0
+             */
+            sync_pending: number;
+            /** Last Sync At */
+            last_sync_at?: string | null;
+            /** Last Maintenance At */
+            last_maintenance_at?: string | null;
+            /** Maintenance Note */
+            maintenance_note?: string | null;
+            /**
+             * Model Status
+             * @description conforme (o modelo informado é um dos designados), divergente (é outro do registry), fora_do_registry (não existe no registry) ou sem_dado.
+             * @default sem_dado
+             */
+            model_status: string;
+            /**
+             * Designated Models
+             * @description Modelos que o registry designa a este robô, como 'chave@versão'.
+             */
+            designated_models?: string[];
         };
         /**
          * DeviceProvisionRequest
@@ -2205,6 +6465,11 @@ export interface components {
              * @description Usada pelo robô para verificar as missões que a nuvem assina.
              */
             platform_public_key: string;
+            /**
+             * Ota Public Key
+             * @description Usada pelo robô para verificar os pacotes de atualização (OTA).
+             */
+            ota_public_key: string;
             /** Protocol Version */
             protocol_version: string;
             /**
@@ -2212,6 +6477,30 @@ export interface components {
              * Format: date-time
              */
             server_time: string;
+        };
+        /**
+         * DeviceSessionIn
+         * @description O que o robô informa ao abrir a sessão: o software que está rodando.
+         *
+         *     Brief, seção 22: o robô sabe exatamente o modelo em uso e o registra. Todos os
+         *     campos são opcionais (um firmware antigo abre sessão sem corpo); um campo
+         *     ausente não apaga o valor anterior.
+         */
+        DeviceSessionIn: {
+            /** Firmware Version */
+            firmware_version?: string | null;
+            /** Hardware Version */
+            hardware_version?: string | null;
+            /** Runtime Version */
+            runtime_version?: string | null;
+            /** Edge Ai Version */
+            edge_ai_version?: string | null;
+            /** Model Key */
+            model_key?: string | null;
+            /** Model Version */
+            model_version?: string | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
         };
         /**
          * DeviceStatus
@@ -2223,6 +6512,11 @@ export interface components {
             status: components["schemas"]["DeviceStatus"];
             /** Reason */
             reason?: string | null;
+            /**
+             * Maintenance Note
+             * @description O que está sendo feito, ao pôr em manutenção. Aparece na frota.
+             */
+            maintenance_note?: string | null;
         };
         /** DeviceSummary */
         DeviceSummary: {
@@ -2284,6 +6578,16 @@ export interface components {
             created_at: string;
             /** Detections */
             detections?: components["schemas"]["DetectionOut"][];
+            /**
+             * Priority Score
+             * @description Com order=valor na fila: quanto este item ensina.
+             */
+            priority_score?: number | null;
+            /**
+             * Priority Reasons
+             * @description Com order=valor: por que o item está onde está, ex.: 'classe rara: Cordana'.
+             */
+            priority_reasons?: string[];
         };
         /**
          * DiagnosisReview
@@ -2311,6 +6615,147 @@ export interface components {
          * @enum {string}
          */
         DiagnosisStatus: "pending" | "ai_validated" | "needs_review" | "inconclusive" | "human_confirmed" | "human_rejected";
+        /** EdgeFileOut */
+        EdgeFileOut: {
+            /** Upload Id */
+            upload_id: string;
+            /** Role */
+            role: string | null;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Content Type */
+            content_type: string;
+            /** Status */
+            status: string;
+            /** Asset Id */
+            asset_id: string | null;
+        };
+        /** EdgeModelUseOut */
+        EdgeModelUseOut: {
+            /** Model Key */
+            model_key: string | null;
+            /** Model Version */
+            model_version: string | null;
+            /** Results 24H */
+            results_24h: number;
+        };
+        /** EdgeRecordBatch */
+        EdgeRecordBatch: {
+            /** Records */
+            records: components["schemas"]["EdgeRecordIn"][];
+            /**
+             * Remaining
+             * @description Itens que ainda esperam no robô; > 0 deixa a frota em SINCRONIZANDO.
+             */
+            remaining?: number | null;
+        };
+        /**
+         * EdgeRecordIn
+         * @description Um resultado da Edge AI ou um evento do robô, com o hash do corpo.
+         */
+        EdgeRecordIn: {
+            /**
+             * Id
+             * @description ID gerado no robô (UUID).
+             */
+            id: string;
+            /**
+             * Kind
+             * @description result | event
+             */
+            kind: string;
+            /** Type */
+            type: string;
+            /**
+             * Sha256
+             * @description SHA-256 do JSON canônico de body (ver docs/SYNC.md).
+             */
+            sha256: string;
+            /** Body */
+            body: {
+                [key: string]: unknown;
+            };
+        };
+        /** EdgeRecordOut */
+        EdgeRecordOut: {
+            /** Id */
+            id: string;
+            /** Record Id */
+            record_id: string;
+            /** Device Id */
+            device_id: string;
+            /** Kind */
+            kind: string;
+            /** Type */
+            type: string;
+            /** Mission Id */
+            mission_id: string | null;
+            /** Field Id */
+            field_id: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Severity */
+            severity: string | null;
+            /** Label */
+            label: string | null;
+            /** Confidence */
+            confidence: number | null;
+            /** Model Key */
+            model_key: string | null;
+            /** Model Version */
+            model_version: string | null;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Files */
+            files?: components["schemas"]["EdgeFileOut"][];
+        };
+        /** EdgeRecordsOut */
+        EdgeRecordsOut: {
+            /** Accepted */
+            accepted: string[];
+            /**
+             * Duplicated
+             * @description Mesmo ID e mesmo hash: já estava aqui.
+             */
+            duplicated: string[];
+            /**
+             * Conflicts
+             * @description Mesmo ID com outro hash: recusado.
+             */
+            conflicts: string[];
+            /** Rejected */
+            rejected: {
+                [key: string]: string;
+            }[];
+        };
+        /** EnsaioIn */
+        EnsaioIn: {
+            /**
+             * Ensaio
+             * @description calor, cameras, profundidade, gnss, imu, rede, energia, parada, homem_morto
+             */
+            ensaio: string;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            };
+        };
         /** EventBatch */
         EventBatch: {
             /** Sync Id */
@@ -2320,6 +6765,43 @@ export interface components {
         };
         /** FarmCreate */
         FarmCreate: {
+            /**
+             * Owner Name
+             * @description Proprietário ou produtor responsável.
+             */
+            owner_name?: string | null;
+            /**
+             * Owner Document
+             * @description CPF ou CNPJ do proprietário; aceita com pontuação, guarda só dígitos.
+             */
+            owner_document?: string | null;
+            /**
+             * City
+             * @description Município.
+             */
+            city?: string | null;
+            /**
+             * State
+             * @description UF, duas letras.
+             */
+            state?: string | null;
+            /**
+             * Main Crop
+             * @description Cultura principal da propriedade.
+             */
+            main_crop?: string | null;
+            /**
+             * Car Code
+             * @description Recibo do CAR (UF-1234567-<32 hex>); aceita com pontos.
+             */
+            car_code?: string | null;
+            /**
+             * Technical Lead
+             * @description Responsável técnico (agrônomo), com o registro no conselho se houver.
+             */
+            technical_lead?: string | null;
+            /** Notes */
+            notes?: string | null;
             /** Name */
             name: string;
             /** Center Lat */
@@ -2356,11 +6838,126 @@ export interface components {
             base_lon: number | null;
             /** Area Ha */
             area_ha: number | null;
+            /** Owner Name */
+            owner_name?: string | null;
+            /**
+             * Owner Document
+             * @description CPF/CNPJ só com dígitos para quem tem farm:manage; mascarado (***.***.***-12) para os demais papéis.
+             */
+            owner_document?: string | null;
+            /**
+             * Owner Document Masked
+             * @description Se owner_document veio mascarado nesta resposta.
+             * @default false
+             */
+            owner_document_masked: boolean;
+            /** City */
+            city?: string | null;
+            /** State */
+            state?: string | null;
+            /** Main Crop */
+            main_crop?: string | null;
+            /** Car Code */
+            car_code?: string | null;
+            /** Technical Lead */
+            technical_lead?: string | null;
+            /** Notes */
+            notes?: string | null;
             /**
              * Fields
              * @description Quantos talhões cadastrados.
              */
             fields: number;
+        };
+        /**
+         * FarmUpdate
+         * @description Alteração de uma propriedade já cadastrada.
+         *
+         *     Tudo opcional: o que não vier não é tocado. É o que permite corrigir só a
+         *     coordenada de uma fazenda que foi cadastrada no lugar errado sem reenviar o
+         *     resto do cadastro.
+         */
+        FarmUpdate: {
+            /**
+             * Owner Name
+             * @description Proprietário ou produtor responsável.
+             */
+            owner_name?: string | null;
+            /**
+             * Owner Document
+             * @description CPF ou CNPJ do proprietário; aceita com pontuação, guarda só dígitos.
+             */
+            owner_document?: string | null;
+            /**
+             * City
+             * @description Município.
+             */
+            city?: string | null;
+            /**
+             * State
+             * @description UF, duas letras.
+             */
+            state?: string | null;
+            /**
+             * Main Crop
+             * @description Cultura principal da propriedade.
+             */
+            main_crop?: string | null;
+            /**
+             * Car Code
+             * @description Recibo do CAR (UF-1234567-<32 hex>); aceita com pontos.
+             */
+            car_code?: string | null;
+            /**
+             * Technical Lead
+             * @description Responsável técnico (agrônomo), com o registro no conselho se houver.
+             */
+            technical_lead?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Center Lat */
+            center_lat?: number | null;
+            /** Center Lon */
+            center_lon?: number | null;
+            /** Base Lat */
+            base_lat?: number | null;
+            /** Base Lon */
+            base_lon?: number | null;
+            /** Timezone */
+            timezone?: string | null;
+            /** Area Ha */
+            area_ha?: number | null;
+        };
+        /**
+         * FieldAiModelUpdate
+         * @description Troca a versão do modelo de diagnóstico do talhão.
+         */
+        FieldAiModelUpdate: {
+            /**
+             * Ai Model
+             * @description Chave da versão (ex.: 'citrus-foliar-cc'); nulo volta à recomendada.
+             */
+            ai_model?: string | null;
+        };
+        /**
+         * FieldBoundaryUpdate
+         * @description Novo contorno de um talhão que já existe.
+         */
+        FieldBoundaryUpdate: {
+            /**
+             * Boundary
+             * @description Anel [[lon, lat], ...] em WGS84, sem repetir o primeiro ponto no fim.
+             */
+            boundary: number[][];
+            /**
+             * Row Azimuth Deg
+             * @description Direção das linhas, quando a leitura da imagem a descobriu.
+             */
+            row_azimuth_deg?: number | null;
+            /** @description A leitura de terreno que veio junto com o encaixe do contorno. Ela é gravada com o contorno porque é dele que vale: um terreno lido sobre outro polígono descreve outro pedaço de chão. */
+            terrain?: components["schemas"]["TerrainOut"] | null;
         };
         /** FieldCreate */
         FieldCreate: {
@@ -2375,6 +6972,11 @@ export interface components {
             boundary: number[][];
             /** Variety */
             variety?: string | null;
+            /**
+             * Ai Model
+             * @description Versão do modelo de diagnóstico para este talhão, ex.: 'banana-foliar-cc'. Nulo: a recomendada da cultura. Ver GET /v1/fields/{id}/ai-models.
+             */
+            ai_model?: string | null;
             /** Crop Stage */
             crop_stage?: string | null;
             /** Planted On */
@@ -2386,6 +6988,20 @@ export interface components {
              * @description Direção das linhas, graus a partir do norte. 0 = N-S, 90 = L-O.
              */
             row_azimuth_deg?: number | null;
+            /**
+             * Plant Spacing M
+             * @description Espaçamento entre plantas na linha, em metros.
+             */
+            plant_spacing_m?: number | null;
+            /** Row Count */
+            row_count?: number | null;
+            /**
+             * Validation Rows
+             * @description Números das linhas (a partir de 1) usadas como fileiras de validação.
+             */
+            validation_rows?: number[];
+            /** Notes */
+            notes?: string | null;
         };
         /** FieldOut */
         FieldOut: {
@@ -2399,6 +7015,16 @@ export interface components {
             crop: string;
             /** Variety */
             variety: string | null;
+            /**
+             * Ai Model
+             * @description Versão escolhida para o talhão; nulo é a recomendada.
+             */
+            ai_model?: string | null;
+            /**
+             * Ai Model In Use
+             * @description A versão que de fato atende a imagem de solo deste talhão; nulo sem modelo.
+             */
+            ai_model_in_use?: string | null;
             /** Crop Stage */
             crop_stage: string | null;
             /** Planted On */
@@ -2407,10 +7033,29 @@ export interface components {
             row_spacing_m: number | null;
             /** Row Azimuth Deg */
             row_azimuth_deg?: number | null;
+            /** Plant Spacing M */
+            plant_spacing_m?: number | null;
+            /** Row Count */
+            row_count?: number | null;
+            /** Validation Rows */
+            validation_rows?: number[];
+            /** Notes */
+            notes?: string | null;
             /** Area Ha */
             area_ha: number | null;
             /** Boundary */
             boundary: number[][];
+            /** @description Última leitura de imagem deste talhão, quando houver. */
+            terrain?: components["schemas"]["TerrainOut"] | null;
+            /**
+             * Terrain Read At
+             * @description Quando a leitura foi feita. Leitura velha descreve lavoura que já mudou.
+             */
+            terrain_read_at?: string | null;
+            /** @description O relevo medido deste talhão. Nulo quando nunca foi medido — e então o planejamento trata o talhão como plano, o que os avisos do plano declaram. */
+            relief?: components["schemas"]["ReliefOut"] | null;
+            /** Relief Read At */
+            relief_read_at?: string | null;
         };
         /**
          * FieldSceneOut
@@ -2501,6 +7146,163 @@ export interface components {
             /** Classes */
             classes: components["schemas"]["ClassCountOut"][];
         };
+        /**
+         * FieldUpdate
+         * @description Configuração agronômica do talhão. Só o que vier é alterado.
+         *
+         *     O contorno tem rota própria (``PATCH /fields/{id}/boundary``), porque mexe em
+         *     área, cerca virtual e leitura de terreno; e o modelo de IA também
+         *     (``PUT /fields/{id}/ai-model``).
+         */
+        FieldUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Variety */
+            variety?: string | null;
+            /** Crop Stage */
+            crop_stage?: string | null;
+            /** Planted On */
+            planted_on?: string | null;
+            /** Row Spacing M */
+            row_spacing_m?: number | null;
+            /** Row Azimuth Deg */
+            row_azimuth_deg?: number | null;
+            /** Plant Spacing M */
+            plant_spacing_m?: number | null;
+            /** Row Count */
+            row_count?: number | null;
+            /** Validation Rows */
+            validation_rows?: number[] | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
+         * FleetDeviceOut
+         * @description Um robô na visão de Operações: o mesmo retrato, com o cliente dono.
+         */
+        FleetDeviceOut: {
+            /** Id */
+            id: string;
+            /** Serial Number */
+            serial_number: string;
+            /** Name */
+            name: string;
+            kind: components["schemas"]["DeviceKind"];
+            status: components["schemas"]["DeviceStatus"];
+            /** Model Code */
+            model_code: string;
+            /** Farm Id */
+            farm_id: string | null;
+            /** Firmware Version */
+            firmware_version: string | null;
+            /** Protocol Version */
+            protocol_version: string | null;
+            connectivity: components["schemas"]["Connectivity"];
+            /** Battery Percent */
+            battery_percent: number | null;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Last Lat */
+            last_lat: number | null;
+            /** Last Lon */
+            last_lon: number | null;
+            /** Active Mission Id */
+            active_mission_id: string | null;
+            /** Capabilities */
+            capabilities: {
+                [key: string]: unknown;
+            };
+            /**
+             * Fleet State
+             * @description disponivel, em_missao, sincronizando, manutencao, offline, bloqueado ou erro — derivado do protocolo (contato, missão, /sync, falhas), nunca digitado.
+             */
+            fleet_state: string;
+            /** Fleet State Label */
+            fleet_state_label: string;
+            /** Fleet State Reason */
+            fleet_state_reason: string;
+            /** Hardware Version */
+            hardware_version?: string | null;
+            /** Runtime Version */
+            runtime_version?: string | null;
+            /** Edge Ai Version */
+            edge_ai_version?: string | null;
+            /** Ai Model Key */
+            ai_model_key?: string | null;
+            /** Ai Model Version */
+            ai_model_version?: string | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
+            /** Versions Reported At */
+            versions_reported_at?: string | null;
+            /** Temperature C */
+            temperature_c?: number | null;
+            /** Storage Total Bytes */
+            storage_total_bytes?: number | null;
+            /** Storage Free Bytes */
+            storage_free_bytes?: number | null;
+            /** Link Quality */
+            link_quality?: number | null;
+            /** Operating Hours */
+            operating_hours?: number | null;
+            /** Active Faults */
+            active_faults?: unknown[];
+            /**
+             * Sync Pending
+             * @default 0
+             */
+            sync_pending: number;
+            /** Last Sync At */
+            last_sync_at?: string | null;
+            /** Last Maintenance At */
+            last_maintenance_at?: string | null;
+            /** Maintenance Note */
+            maintenance_note?: string | null;
+            /**
+             * Model Status
+             * @description conforme (o modelo informado é um dos designados), divergente (é outro do registry), fora_do_registry (não existe no registry) ou sem_dado.
+             * @default sem_dado
+             */
+            model_status: string;
+            /**
+             * Designated Models
+             * @description Modelos que o registry designa a este robô, como 'chave@versão'.
+             */
+            designated_models?: string[];
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name: string;
+        };
+        /** GlobalAccountMembership */
+        GlobalAccountMembership: {
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name: string;
+            role: components["schemas"]["Role"];
+        };
+        /** GlobalAccountOut */
+        GlobalAccountOut: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /** Is Active */
+            is_active: boolean;
+            platform_role: components["schemas"]["PlatformRole"] | null;
+            /** Last Login At */
+            last_login_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Memberships */
+            memberships: components["schemas"]["GlobalAccountMembership"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2526,6 +7328,113 @@ export interface components {
              */
             warnings?: string[];
         };
+        /** IncidentBrief */
+        IncidentBrief: {
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Public Note */
+            public_note: string | null;
+        };
+        /** IncidentCreate */
+        IncidentCreate: {
+            /** Title */
+            title: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Severity
+             * @default media
+             * @enum {string}
+             */
+            severity: "baixa" | "media" | "alta" | "critica";
+            /** Public Note */
+            public_note?: string | null;
+            /** Ticket Ids */
+            ticket_ids?: string[];
+        };
+        /** IncidentDetailOut */
+        IncidentDetailOut: {
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Status */
+            status: string;
+            /** Severity */
+            severity: string;
+            /** Public Note */
+            public_note: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Ticket Count */
+            ticket_count: number;
+            /** Tenant Count */
+            tenant_count: number;
+            /** Tickets */
+            tickets: components["schemas"]["TicketOut"][];
+        };
+        /** IncidentLink */
+        IncidentLink: {
+            /** Ticket Ids */
+            ticket_ids: string[];
+        };
+        /** IncidentOut */
+        IncidentOut: {
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Status */
+            status: string;
+            /** Severity */
+            severity: string;
+            /** Public Note */
+            public_note: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Ticket Count */
+            ticket_count: number;
+            /** Tenant Count */
+            tenant_count: number;
+        };
+        /** IncidentUpdate */
+        IncidentUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Status */
+            status?: ("aberto" | "investigando" | "mitigado" | "resolvido") | null;
+            /** Severity */
+            severity?: ("baixa" | "media" | "alta" | "critica") | null;
+            /** Public Note */
+            public_note?: string | null;
+        };
         /** IngestOut */
         IngestOut: {
             /** Accepted */
@@ -2539,6 +7448,70 @@ export interface components {
             rejected: number;
             /** Errors */
             errors?: string[];
+        };
+        /** JobCountOut */
+        JobCountOut: {
+            /** Kind */
+            kind: string;
+            /** State */
+            state: string;
+            /** Count */
+            count: number;
+        };
+        /** JobOut */
+        JobOut: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** State */
+            state: string;
+            /** Subject Type */
+            subject_type: string;
+            /** Subject Id */
+            subject_id: string;
+            /** Attempts */
+            attempts: number;
+            /** Max Attempts */
+            max_attempts: number;
+            /** Progress Done */
+            progress_done: number;
+            /** Progress Total */
+            progress_total: number;
+            /** Last Error */
+            last_error?: string | null;
+            /** Locked By */
+            locked_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /**
+         * JobState
+         * @enum {string}
+         */
+        JobState: "queued" | "running" | "done" | "failed" | "cancelled";
+        /**
+         * LinkDeArquivoOut
+         * @description Onde baixar um arquivo do cliente (seção 38).
+         *
+         *     ``direct=true``: URL assinada do object storage, válida por ``expires_in`` segundos,
+         *     emitida só depois do escopo do cliente conferido. ``direct=false`` (disco local):
+         *     ``url`` é a própria rota da API, que exige o login.
+         */
+        LinkDeArquivoOut: {
+            /** Url */
+            url: string;
+            /** Direct */
+            direct: boolean;
+            /** Expires In */
+            expires_in: number | null;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -2565,13 +7538,22 @@ export interface components {
             full_name: string;
             /** Is Platform Admin */
             is_platform_admin: boolean;
+            platform_role?: components["schemas"]["PlatformRole"] | null;
             /** Active Tenant Id */
             active_tenant_id: string;
             role: components["schemas"]["Role"];
+            /**
+             * Access
+             * @default membro
+             * @enum {string}
+             */
+            access: "membro" | "plataforma" | "suporte";
             /** Capabilities */
             capabilities: string[];
             /** Memberships */
             memberships: components["schemas"]["MembershipOut"][];
+            /** @description Presente quando o acesso é por sessão de suporte: é a faixa no topo. */
+            support_session?: components["schemas"]["SupportSessionOut"] | null;
         };
         /** MembershipOut */
         MembershipOut: {
@@ -2582,6 +7564,13 @@ export interface components {
             /** Tenant Slug */
             tenant_slug: string;
             role: components["schemas"]["Role"];
+            /**
+             * Access
+             * @description 'plataforma': a pessoa é da equipe da ValTexa e não é membro. O cliente aparece para as rotas de plataforma; os dados dele só por sessão de suporte.
+             * @default membro
+             * @enum {string}
+             */
+            access: "membro" | "plataforma";
         };
         /**
          * Message
@@ -2799,6 +7788,708 @@ export interface components {
          * @enum {string}
          */
         MissionState: "draft" | "pending_safety" | "blocked" | "authorized" | "dispatched" | "running" | "paused" | "paused_for_recharge" | "ready_to_resume" | "completed" | "aborted" | "expired";
+        /**
+         * ModelOptimizationIn
+         * @description O relatório de ``ia/training/dnaty_pipeline.py`` (os campos que o registry usa).
+         *
+         *     O veredito do relatório é ignorado: o registry recalcula com ``criterio``
+         *     (ou o padrão) a partir dos números.
+         */
+        ModelOptimizationIn: {
+            /** Tool */
+            tool: string;
+            /** Tool Version */
+            tool_version?: string | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
+            /** Parametros */
+            parametros?: {
+                [key: string]: unknown;
+            };
+            /** Criterio */
+            criterio?: {
+                [key: string]: unknown;
+            } | null;
+            original: components["schemas"]["OptimizationArtifactIn"];
+            otimizado: components["schemas"]["OptimizationArtifactIn"];
+        };
+        /** ModelOptimizationOut */
+        ModelOptimizationOut: {
+            /** Id */
+            id: string;
+            /** Model Version Id */
+            model_version_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Tool */
+            tool: string;
+            /** Tool Version */
+            tool_version: string | null;
+            /** Dnaty Version */
+            dnaty_version: string | null;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Original Sha256 */
+            original_sha256: string;
+            /** Original Benchmark */
+            original_benchmark: {
+                [key: string]: unknown;
+            };
+            /** Optimized Artifact Uri */
+            optimized_artifact_uri: string;
+            /** Optimized Sha256 */
+            optimized_sha256: string;
+            /** Optimized Size Bytes */
+            optimized_size_bytes: number | null;
+            /** Optimized Benchmark */
+            optimized_benchmark: {
+                [key: string]: unknown;
+            };
+            /** Criterion */
+            criterion: {
+                [key: string]: unknown;
+            };
+            /** Comparison */
+            comparison: {
+                [key: string]: unknown;
+            };
+            /** Accepted */
+            accepted: boolean;
+            /** Reasons */
+            reasons: string[];
+            /** License Note */
+            license_note: string | null;
+            /**
+             * Applied
+             * @description Se é a rodada que deu o otimizado atual da versão.
+             */
+            applied: boolean;
+        };
+        /** ModelReleaseIn */
+        ModelReleaseIn: {
+            /** Tenant Id */
+            tenant_id: string;
+            /** Model Key */
+            model_key: string;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ModelReleaseOut */
+        ModelReleaseOut: {
+            /** Id */
+            id: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name: string;
+            /** Model Key */
+            model_key: string;
+            /** Reason */
+            reason: string | null;
+            /** Released By Label */
+            released_by_label: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+        };
+        /** ModelTransitionIn */
+        ModelTransitionIn: {
+            to: components["schemas"]["ModelVersionState"];
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * ModelTransitionOut
+         * @description Uma linha do histórico de uma versão (vem da auditoria).
+         */
+        ModelTransitionOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Actor Label */
+            actor_label: string | null;
+            /** Action */
+            action: string;
+            /** From State */
+            from_state: string | null;
+            /** To State */
+            to_state: string | null;
+            /** Reason */
+            reason: string | null;
+        };
+        /**
+         * ModelVersionCreate
+         * @description Registro de uma versão nova. Entra em TREINAMENTO, com quem registrou.
+         */
+        ModelVersionCreate: {
+            /** Model Key */
+            model_key: string;
+            /** Version */
+            version: string;
+            /** Name */
+            name?: string | null;
+            platform: components["schemas"]["CapturePlatform"];
+            /** Crops */
+            crops: string[];
+            /** Problem */
+            problem?: string | null;
+            /** Architecture */
+            architecture?: string | null;
+            /** Dataset Version Id */
+            dataset_version_id?: string | null;
+            /** Dataset Ref */
+            dataset_ref?: string | null;
+            /** Trained At */
+            trained_at?: string | null;
+            /** Metrics */
+            metrics?: {
+                [key: string]: unknown;
+            };
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Flops */
+            flops?: number | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Memory Mb */
+            memory_mb?: number | null;
+            /** Target Hardware */
+            target_hardware?: string | null;
+            /** Original Artifact Uri */
+            original_artifact_uri?: string | null;
+            /** Original Artifact Sha256 */
+            original_artifact_sha256?: string | null;
+            /** Optimized Artifact Uri */
+            optimized_artifact_uri?: string | null;
+            /** Optimized Artifact Sha256 */
+            optimized_artifact_sha256?: string | null;
+            /** Optimized Size Bytes */
+            optimized_size_bytes?: number | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
+            /**
+             * Variant
+             * @default padrão
+             */
+            variant: string;
+            /**
+             * Recommended
+             * @default true
+             */
+            recommended: boolean;
+            /** License */
+            license?: string | null;
+            /** Caveat */
+            caveat?: string | null;
+            /** @default todos */
+            release_scope: components["schemas"]["ReleaseScope"];
+            /** Notes */
+            notes?: string | null;
+        };
+        /** ModelVersionDetailOut */
+        ModelVersionDetailOut: {
+            /** Id */
+            id: string;
+            /** Model Key */
+            model_key: string;
+            /** Version */
+            version: string;
+            /** Name */
+            name?: string | null;
+            state: components["schemas"]["ModelVersionState"];
+            /**
+             * State Label
+             * @default
+             */
+            state_label: string;
+            platform: components["schemas"]["CapturePlatform"];
+            /** Crop */
+            crop?: string | null;
+            /** Crops */
+            crops?: string[];
+            /** Problem */
+            problem?: string | null;
+            /** Architecture */
+            architecture?: string | null;
+            /** Dataset Version Id */
+            dataset_version_id?: string | null;
+            /** Dataset Ref */
+            dataset_ref?: string | null;
+            /** Trained At */
+            trained_at?: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Flops */
+            flops?: number | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Memory Mb */
+            memory_mb?: number | null;
+            /** Target Hardware */
+            target_hardware?: string | null;
+            /** Original Artifact Uri */
+            original_artifact_uri?: string | null;
+            /** Original Artifact Sha256 */
+            original_artifact_sha256?: string | null;
+            /** Optimized Artifact Uri */
+            optimized_artifact_uri?: string | null;
+            /** Optimized Artifact Sha256 */
+            optimized_artifact_sha256?: string | null;
+            /** Optimized Size Bytes */
+            optimized_size_bytes?: number | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
+            /**
+             * Variant
+             * @default padrão
+             */
+            variant: string;
+            /**
+             * Recommended
+             * @default true
+             */
+            recommended: boolean;
+            /** License */
+            license?: string | null;
+            /** Caveat */
+            caveat?: string | null;
+            /** @default todos */
+            release_scope: components["schemas"]["ReleaseScope"];
+            /** Notes */
+            notes?: string | null;
+            /** Registered By */
+            registered_by?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Approved At */
+            approved_at?: string | null;
+            /**
+             * Promoted At
+             * @description Data de publicação (entrada em PRODUÇÃO).
+             */
+            promoted_at?: string | null;
+            /** Retired At */
+            retired_at?: string | null;
+            /**
+             * Next States
+             * @description Para onde esta versão pode ir daqui.
+             */
+            next_states?: components["schemas"]["ModelVersionState"][];
+            /** History */
+            history?: components["schemas"]["ModelTransitionOut"][];
+            /**
+             * Released To
+             * @description Clientes com liberação ativa desta linha de modelo.
+             */
+            released_to?: string[];
+        };
+        /** ModelVersionOut */
+        ModelVersionOut: {
+            /** Id */
+            id: string;
+            /** Model Key */
+            model_key: string;
+            /** Version */
+            version: string;
+            /** Name */
+            name?: string | null;
+            state: components["schemas"]["ModelVersionState"];
+            /**
+             * State Label
+             * @default
+             */
+            state_label: string;
+            platform: components["schemas"]["CapturePlatform"];
+            /** Crop */
+            crop?: string | null;
+            /** Crops */
+            crops?: string[];
+            /** Problem */
+            problem?: string | null;
+            /** Architecture */
+            architecture?: string | null;
+            /** Dataset Version Id */
+            dataset_version_id?: string | null;
+            /** Dataset Ref */
+            dataset_ref?: string | null;
+            /** Trained At */
+            trained_at?: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Flops */
+            flops?: number | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Memory Mb */
+            memory_mb?: number | null;
+            /** Target Hardware */
+            target_hardware?: string | null;
+            /** Original Artifact Uri */
+            original_artifact_uri?: string | null;
+            /** Original Artifact Sha256 */
+            original_artifact_sha256?: string | null;
+            /** Optimized Artifact Uri */
+            optimized_artifact_uri?: string | null;
+            /** Optimized Artifact Sha256 */
+            optimized_artifact_sha256?: string | null;
+            /** Optimized Size Bytes */
+            optimized_size_bytes?: number | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
+            /**
+             * Variant
+             * @default padrão
+             */
+            variant: string;
+            /**
+             * Recommended
+             * @default true
+             */
+            recommended: boolean;
+            /** License */
+            license?: string | null;
+            /** Caveat */
+            caveat?: string | null;
+            /** @default todos */
+            release_scope: components["schemas"]["ReleaseScope"];
+            /** Notes */
+            notes?: string | null;
+            /** Registered By */
+            registered_by?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Approved At */
+            approved_at?: string | null;
+            /**
+             * Promoted At
+             * @description Data de publicação (entrada em PRODUÇÃO).
+             */
+            promoted_at?: string | null;
+            /** Retired At */
+            retired_at?: string | null;
+            /**
+             * Next States
+             * @description Para onde esta versão pode ir daqui.
+             */
+            next_states?: components["schemas"]["ModelVersionState"][];
+        };
+        /**
+         * ModelVersionState
+         * @description Ciclo de vida de uma versão de modelo no registry (brief, seção 9).
+         *
+         *     TREINAMENTO → VALIDAÇÃO → APROVADO → STAGING → PRODUÇÃO → DESCONTINUADO. As
+         *     transições permitidas e quem pode fazê-las estão em
+         *     :mod:`valtexa.services.model_registry`; toda transição fica na auditoria.
+         * @enum {string}
+         */
+        ModelVersionState: "treinamento" | "validacao" | "aprovado" | "staging" | "producao" | "descontinuado";
+        /**
+         * ModelVersionUpdate
+         * @description Correção de uma versão. Métricas e artefatos só até a aprovação.
+         */
+        ModelVersionUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Crops */
+            crops?: string[] | null;
+            /** Problem */
+            problem?: string | null;
+            /** Architecture */
+            architecture?: string | null;
+            /** Dataset Ref */
+            dataset_ref?: string | null;
+            /** Trained At */
+            trained_at?: string | null;
+            /** Metrics */
+            metrics?: {
+                [key: string]: unknown;
+            } | null;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Flops */
+            flops?: number | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Memory Mb */
+            memory_mb?: number | null;
+            /** Target Hardware */
+            target_hardware?: string | null;
+            /** Original Artifact Uri */
+            original_artifact_uri?: string | null;
+            /** Original Artifact Sha256 */
+            original_artifact_sha256?: string | null;
+            /** Optimized Artifact Uri */
+            optimized_artifact_uri?: string | null;
+            /** Optimized Artifact Sha256 */
+            optimized_artifact_sha256?: string | null;
+            /** Optimized Size Bytes */
+            optimized_size_bytes?: number | null;
+            /** Dnaty Version */
+            dnaty_version?: string | null;
+            /** License */
+            license?: string | null;
+            /** Caveat */
+            caveat?: string | null;
+            release_scope?: components["schemas"]["ReleaseScope"] | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** ModeloIn */
+        ModeloIn: {
+            /**
+             * Model Key
+             * @description Nulo volta à escolha do talhão.
+             */
+            model_key?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /** NotificationChannelOut */
+        NotificationChannelOut: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
+            /** Implemented */
+            implemented: boolean;
+            /** Configured */
+            configured: boolean;
+        };
+        /** NotificationCount */
+        NotificationCount: {
+            /** Unread */
+            unread: number;
+        };
+        /** NotificationDeliveryOut */
+        NotificationDeliveryOut: {
+            /** Channel */
+            channel: string;
+            /**
+             * Status
+             * @description pendente, enviado, nao_enviado (sem SMTP ou canal não implementado), falhou (vai tentar de novo) ou desistiu.
+             */
+            status: string;
+            /** Attempts */
+            attempts: number;
+            /** Last Error */
+            last_error: string | null;
+            /** Sent At */
+            sent_at: string | null;
+        };
+        /** NotificationOut */
+        NotificationOut: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Severity */
+            severity: string;
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /** Link */
+            link: string | null;
+            /** Subject Type */
+            subject_type: string | null;
+            /** Subject Id */
+            subject_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Read At */
+            read_at: string | null;
+            /** Deliveries */
+            deliveries: components["schemas"]["NotificationDeliveryOut"][];
+        };
+        /** NotificationPreferenceIn */
+        NotificationPreferenceIn: {
+            /** Kind */
+            kind: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Channels
+             * @description Canais externos ('email'). A central do console vale sempre.
+             */
+            channels?: string[];
+            /** Threshold */
+            threshold?: number | null;
+            /**
+             * Reset
+             * @description true: apaga a preferência e volta ao padrão.
+             * @default false
+             */
+            reset: boolean;
+        };
+        /** NotificationPreferenceOut */
+        NotificationPreferenceOut: {
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Channels */
+            channels: string[];
+            /** Threshold */
+            threshold: number | null;
+            /** Threshold Unit */
+            threshold_unit: string | null;
+            /**
+             * Source
+             * @description pessoa, papel ou padrao: de onde veio a regra que vale.
+             */
+            source: string;
+        };
+        /** NotificationPreferencesOut */
+        NotificationPreferencesOut: {
+            /** Role */
+            role: string | null;
+            /** Channels */
+            channels: components["schemas"]["NotificationChannelOut"][];
+            /** Preferences */
+            preferences: components["schemas"]["NotificationPreferenceOut"][];
+        };
+        /** NotificationReadAll */
+        NotificationReadAll: {
+            /** Marked */
+            marked: number;
+        };
+        /** NotificationRolePreferenceIn */
+        NotificationRolePreferenceIn: {
+            /** Kind */
+            kind: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Channels
+             * @description Canais externos ('email'). A central do console vale sempre.
+             */
+            channels?: string[];
+            /** Threshold */
+            threshold?: number | null;
+            /**
+             * Reset
+             * @description true: apaga a preferência e volta ao padrão.
+             * @default false
+             */
+            reset: boolean;
+            /** Role */
+            role: string;
+        };
+        /** ObsAlertOut */
+        ObsAlertOut: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /**
+             * State
+             * @description disparado, reconhecido ou resolvido
+             */
+            state: string;
+            /** Severity */
+            severity: string;
+            /** Tenant Id */
+            tenant_id: string | null;
+            /** Tenant Name */
+            tenant_name?: string | null;
+            /** Subject Type */
+            subject_type: string;
+            /** Subject Id */
+            subject_id: string;
+            /** Subject Label */
+            subject_label: string;
+            /** Message */
+            message: string;
+            /** Value */
+            value: number | null;
+            /** Threshold */
+            threshold: number | null;
+            /**
+             * Fired At
+             * Format: date-time
+             */
+            fired_at: string;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /** Acknowledged At */
+            acknowledged_at: string | null;
+            /** Acknowledged Label */
+            acknowledged_label: string | null;
+            /** Ack Note */
+            ack_note: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+        };
+        /** ObsComponentOut */
+        ObsComponentOut: {
+            /**
+             * Component
+             * @description banco, api, worker, ia, frota, alertas
+             */
+            component: string;
+            /**
+             * Status
+             * @description ok, atencao ou falha
+             */
+            status: string;
+            /** Detail */
+            detail?: string | null;
+        };
+        /** ObservabilityOverviewOut */
+        ObservabilityOverviewOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Components */
+            components: components["schemas"]["ObsComponentOut"][];
+            api: components["schemas"]["ApiStatsOut"];
+            queues: components["schemas"]["QueuesOut"];
+            users: components["schemas"]["ActiveUsersOut"];
+            ai_service: components["schemas"]["AiServiceOut"];
+            /** Alerts Open */
+            alerts_open: number;
+            /** Alerts Critical */
+            alerts_critical: number;
+        };
         /** ObservationOut */
         ObservationOut: {
             /** Id */
@@ -2809,8 +8500,13 @@ export interface components {
             zone_id: string | null;
             /** Mission Id */
             mission_id: string | null;
-            /** Device Id */
-            device_id: string;
+            /**
+             * Device Id
+             * @description Nulo quando a imagem veio de coleta, não de um robô da frota.
+             */
+            device_id?: string | null;
+            /** Collection Id */
+            collection_id?: string | null;
             /**
              * Captured At
              * Format: date-time
@@ -2836,6 +8532,194 @@ export interface components {
              * @description Fração do quadro com lesão, quando medida.
              */
             severity?: number | null;
+            /**
+             * Signals
+             * @description O que a IA disse além do rótulo (análise primária): veredito do portão de enquadramento, conjunto conformal e, num quadro do rover, os recortes por zona da planta, as plantas do talhão e a severidade da Sigatoka.
+             */
+            signals?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * OnboardFarm
+         * @description A propriedade que nasce junto com o cliente.
+         */
+        OnboardFarm: {
+            /** Name */
+            name: string;
+            /** Center Lat */
+            center_lat: number;
+            /** Center Lon */
+            center_lon: number;
+            /** Area Ha */
+            area_ha?: number | null;
+            /**
+             * Timezone
+             * @default America/Sao_Paulo
+             */
+            timezone: string;
+        };
+        /**
+         * OnboardField
+         * @description O primeiro talhão. O contorno pode vir vazio e ser desenhado depois.
+         */
+        OnboardField: {
+            /** Name */
+            name: string;
+            /**
+             * Crop
+             * @description 'coffee', 'corn', 'soy'.
+             */
+            crop: string;
+            /** Variety */
+            variety?: string | null;
+            /** Row Spacing M */
+            row_spacing_m?: number | null;
+            /** Plant Spacing M */
+            plant_spacing_m?: number | null;
+            /** Row Count */
+            row_count?: number | null;
+            /**
+             * Boundary
+             * @description Polígono [[lon, lat], ...]. Vazio é válido: o contorno costuma vir depois, no editor, com a imagem de satélite na frente.
+             */
+            boundary?: number[][];
+        };
+        /**
+         * OnboardIn
+         * @description Cadastro de cliente em uma etapa: cliente, propriedade e primeiro talhão.
+         *
+         *     As três coisas vêm juntas porque é assim que a informação chega — numa
+         *     ligação com o produtor, não em três visitas ao sistema. Propriedade e talhão
+         *     são opcionais: dá para cadastrar só o cliente e voltar depois.
+         */
+        OnboardIn: {
+            tenant: components["schemas"]["TenantCreate"];
+            /**
+             * Plan Code
+             * @description Plano do cliente. Sem ele, o cliente nasce no 'piloto' (sem limites).
+             */
+            plan_code?: string | null;
+            farm?: components["schemas"]["OnboardFarm"] | null;
+            field?: components["schemas"]["OnboardField"] | null;
+        };
+        /** OnboardOut */
+        OnboardOut: {
+            tenant: components["schemas"]["TenantOut"];
+            /** Farm Id */
+            farm_id?: string | null;
+            /** Field Id */
+            field_id?: string | null;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /**
+         * OptimizationArtifactIn
+         * @description Um lado do relatório: onde o artefato vive e o benchmark dele.
+         */
+        OptimizationArtifactIn: {
+            /** Artifact Uri */
+            artifact_uri?: string | null;
+            /** Benchmark */
+            benchmark: {
+                [key: string]: unknown;
+            };
+        };
+        /** OtaDeploymentIn */
+        OtaDeploymentIn: {
+            /** Package Id */
+            package_id: string;
+            /** Device Ids */
+            device_ids?: string[] | null;
+            /** Tenant Id */
+            tenant_id?: string | null;
+        };
+        /** OtaDeploymentOut */
+        OtaDeploymentOut: {
+            /** Id */
+            id: string;
+            /** Package Id */
+            package_id: string;
+            /** Kind */
+            kind: string;
+            /** Version */
+            version: string;
+            /** Device Id */
+            device_id: string;
+            /** Device Serial */
+            device_serial: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name: string;
+            /** State */
+            state: string;
+            /** Detail */
+            detail: string | null;
+            /** History */
+            history: {
+                [key: string]: unknown;
+            }[];
+            /** Bytes Served */
+            bytes_served: number;
+            /** Size Bytes */
+            size_bytes: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at: string | null;
+        };
+        /** OtaDeviceItemOut */
+        OtaDeviceItemOut: {
+            /** Deployment Id */
+            deployment_id: string;
+            /** State */
+            state: string;
+            /**
+             * Envelope
+             * @description payload (pacote, manifesto, robô, validade) + assinatura Ed25519 OTA.
+             */
+            envelope: {
+                [key: string]: unknown;
+            };
+        };
+        /** OtaPackageOut */
+        OtaPackageOut: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Version */
+            version: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Manifest */
+            manifest: {
+                [key: string]: unknown;
+            };
+            /** Model Version Id */
+            model_version_id: string | null;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** OtaStatusIn */
+        OtaStatusIn: {
+            /** State */
+            state: string;
+            /** Detail */
+            detail?: string | null;
+            /** Version Running */
+            version_running?: string | null;
         };
         /** OutboxEventOut */
         OutboxEventOut: {
@@ -2862,6 +8746,291 @@ export interface components {
             attempts: number;
             /** Last Error */
             last_error: string | null;
+        };
+        /**
+         * PasswordChange
+         * @description Troca da própria senha. Exige a atual.
+         *
+         *     Exigir a senha atual não protege contra quem já roubou a sessão — esse já
+         *     entrou. Protege contra o outro caso, que é o comum: a estação destravada na
+         *     sala da fazenda, com a sessão de alguém aberta. Sem a senha atual, trocar a
+         *     senha alheia seria questão de passar por perto.
+         */
+        PasswordChange: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /**
+         * PasswordReset
+         * @description Redefinição feita por um administrador, para quem perdeu o acesso.
+         *
+         *     É o caminho de recuperação desta plataforma: não há envio de e-mail, então
+         *     não há link de redefinição. Alguém com ``user:manage`` no cliente define uma
+         *     senha nova e a entrega por outro canal — e a ação fica na auditoria, com o
+         *     nome de quem redefiniu e de quem teve a senha trocada.
+         */
+        PasswordReset: {
+            /** New Password */
+            new_password: string;
+        };
+        /**
+         * PlanOut
+         * @description O plano de cobertura de um talhão.
+         */
+        PlanOut: {
+            /** Field Id */
+            field_id: string;
+            /** Field Name */
+            field_name?: string | null;
+            /** Device Model Code */
+            device_model_code: string;
+            /** Area Ha */
+            area_ha: number;
+            /** Swath M */
+            swath_m: number;
+            /** Azimute Deg */
+            azimute_deg: number;
+            /**
+             * Velocidade Ms
+             * @description Velocidade de cruzeiro usada no cálculo do tempo, em m/s.
+             */
+            velocidade_ms: number;
+            /** Passadas */
+            passadas: number;
+            /** Metros De Linha */
+            metros_de_linha: number;
+            /** Metros De Manobra */
+            metros_de_manobra: number;
+            /** Metros Totais */
+            metros_totais: number;
+            /** Minutos Dirigindo */
+            minutos_dirigindo: number;
+            /** Minutos De Manobra */
+            minutos_de_manobra: number;
+            /** Minutos De Recarga */
+            minutos_de_recarga: number;
+            /** Minutos Totais */
+            minutos_totais: number;
+            /** Horas Totais */
+            horas_totais: number;
+            /** Wh Totais */
+            wh_totais: number;
+            /** Ha Por Hora */
+            ha_por_hora: number;
+            /** Cargas */
+            cargas: number;
+            /** Postes */
+            postes: components["schemas"]["ChargePostOut"][];
+            /**
+             * Rota
+             * @description Passadas em [[lat, lon], ...], para desenhar no mapa.
+             */
+            rota?: number[][][];
+            /**
+             * Perfil Medido
+             * @description Falso: o consumo veio do datasheet, não de missão medida em campo.
+             */
+            perfil_medido: boolean;
+            /** @description A leitura de imagem gravada neste talhão, quando houver. O console a desenha sobre a rota para quem valida a missão ver o que está no caminho. */
+            terrain?: components["schemas"]["TerrainOut"] | null;
+            /**
+             * Operable Area Ha
+             * @description Área que é lavoura ou caminho, segundo a leitura de imagem. Menor que ``area_ha`` quando há obstáculo dentro do contorno.
+             */
+            operable_area_ha?: number | null;
+            /**
+             * Area Contornada Ha
+             * @description Área dos obstáculos que a rota contorna. A rota desvia deles: as passadas que os atravessariam foram partidas em duas.
+             * @default 0
+             */
+            area_contornada_ha: number;
+            /** @description O relevo gravado neste talhão, quando há. Nulo quando não há fonte de elevação configurada — e então a rota foi planejada como se o talhão fosse plano, o que os avisos declaram. */
+            relief?: components["schemas"]["ReliefOut"] | null;
+            /**
+             * Avoided
+             * @description Quantos obstáculos a rota contornou.
+             * @default 0
+             */
+            avoided: number;
+            /** Avisos */
+            avisos: string[];
+        };
+        /**
+         * PlanRequest
+         * @description O que o painel pergunta ao planejar um talhão.
+         */
+        PlanRequest: {
+            /**
+             * Device Model Code
+             * @description Modelo cujo perfil de autonomia será usado.
+             * @default ROVER_V3
+             */
+            device_model_code: string;
+            /**
+             * Row Azimuth Deg
+             * @description Direção das linhas de plantio, em graus a partir do norte. O rover anda ao longo delas; atravessar passaria por cima das plantas.
+             * @default 90
+             */
+            row_azimuth_deg: number;
+            /**
+             * Swath M
+             * @description Largura útil da passada. Vazio usa a do modelo.
+             */
+            swath_m?: number | null;
+            /**
+             * Start Battery Percent
+             * @default 100
+             */
+            start_battery_percent: number;
+            /**
+             * Reserve Percent
+             * @description Reserva intocável. Vazio usa a do sistema.
+             */
+            reserve_percent?: number | null;
+            /**
+             * Boundary
+             * @description Rascunho: planeja este contorno em vez do salvo. É o editor mostrando a rota enquanto a pessoa ainda desenha — planejar não grava nada.
+             */
+            boundary?: number[][] | null;
+            /** @description Rascunho: a leitura de imagem do encaixe que ainda não foi salva. */
+            terrain?: components["schemas"]["TerrainOut"] | null;
+            /**
+             * Speed Ms
+             * @description Sobrepõe a do modelo.
+             */
+            speed_ms?: number | null;
+            /**
+             * Obstacle Margin M
+             * @description Folga entre a passada e a borda de um obstáculo. O contorno de um obstáculo lido por imagem é o retângulo de um bloco da grade, e raspá-lo é entrar nele.
+             * @default 2
+             */
+            obstacle_margin_m: number;
+        };
+        /**
+         * PlatformMeOut
+         * @description Quem é a pessoa da equipe e o que ela pode no console interno.
+         */
+        PlatformMeOut: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            platform_role: components["schemas"]["PlatformRole"];
+            /** Capabilities */
+            capabilities: string[];
+            /**
+             * Open Support Sessions
+             * @description Sessões de suporte desta pessoa ainda abertas (para retomar ou sair).
+             */
+            open_support_sessions?: components["schemas"]["SupportSessionOut"][];
+        };
+        /**
+         * PlatformRole
+         * @description Papéis da equipe da ValTexa (brief, seção 28). Não existem dentro de cliente.
+         *
+         *     Cada um enxerga só o que o trabalho pede — menor privilégio. O mapa de
+         *     capacidades fica em :data:`valtexa.security.rbac.PLATFORM_ROLE_CAPABILITIES`.
+         * @enum {string}
+         */
+        PlatformRole: "superadmin" | "suporte" | "ia_dados" | "operacoes" | "comercial";
+        /** PlatformRoleUpdate */
+        PlatformRoleUpdate: {
+            platform_role: components["schemas"]["PlatformRole"] | null;
+        };
+        /**
+         * PlatformTenantSummary
+         * @description A linha da lista de clientes: cadastro, plano, assinatura, uso e consentimento.
+         */
+        PlatformTenantSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Document */
+            document: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /** City */
+            city: string | null;
+            /** State */
+            state: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Plan Code */
+            plan_code: string | null;
+            /** Plan Name */
+            plan_name: string | null;
+            subscription_status: components["schemas"]["SubscriptionStatus"] | null;
+            /** Subscription Ends At */
+            subscription_ends_at: string | null;
+            /**
+             * Usage
+             * @description Vazio para quem não tem platform:usage:read.
+             */
+            usage?: components["schemas"]["UsageItem"][];
+            /**
+             * Warnings
+             * @description Rótulos dos limites com uso de 80% ou mais.
+             */
+            warnings?: string[];
+            consent: components["schemas"]["TenantConsentSummary"];
+            /** Members */
+            members: number;
+            /** Open Support Sessions */
+            open_support_sessions: number;
+        };
+        /** PlatformTicketCommentIn */
+        PlatformTicketCommentIn: {
+            /** Body */
+            body: string;
+            /**
+             * Internal
+             * @description Nota da equipe: o cliente não vê.
+             * @default false
+             */
+            internal: boolean;
+        };
+        /** PlatformTicketCreate */
+        PlatformTicketCreate: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * Priority
+             * @default normal
+             * @enum {string}
+             */
+            priority: "baixa" | "normal" | "alta" | "urgente";
+            /** Category */
+            category?: string | null;
+            /** Device Id */
+            device_id?: string | null;
+            /** Mission Id */
+            mission_id?: string | null;
+            /** Tenant Id */
+            tenant_id: string;
+        };
+        /** PlatformUserOut */
+        PlatformUserOut: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            platform_role: components["schemas"]["PlatformRole"] | null;
+            /** Is Active */
+            is_active: boolean;
         };
         /** ProductCreate */
         ProductCreate: {
@@ -2921,6 +9090,20 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ProgressoIn */
+        ProgressoIn: {
+            /** Fracao */
+            fracao: number;
+            /**
+             * Etapa
+             * @default
+             */
+            etapa: string;
+            /** Parcial */
+            parcial?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** ProvisioningTokenCreate */
         ProvisioningTokenCreate: {
             /** Device Model Code */
@@ -2957,12 +9140,237 @@ export interface components {
             /** Serial Number */
             serial_number: string | null;
         };
+        /** QueuesOut */
+        QueuesOut: {
+            /** Jobs */
+            jobs: components["schemas"]["JobCountOut"][];
+            /** Jobs Queued */
+            jobs_queued: number;
+            /** Jobs Running */
+            jobs_running: number;
+            /** Jobs Oldest Queued S */
+            jobs_oldest_queued_s: number | null;
+            /** Jobs Failed 24H */
+            jobs_failed_24h: number;
+            /** Outbox Pending */
+            outbox_pending: number;
+            /** Outbox With Error */
+            outbox_with_error: number;
+            /** Outbox Oldest Pending S */
+            outbox_oldest_pending_s: number | null;
+            /**
+             * Deliveries
+             * @description Entregas de aviso por estado.
+             */
+            deliveries: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * ReleaseScope
+         * @description Para quais clientes uma versão em PRODUÇÃO pode ser escolhida.
+         * @enum {string}
+         */
+        ReleaseScope: "todos" | "clientes";
+        /**
+         * ReliefOut
+         * @description O relevo medido de uma área.
+         *
+         *     Em graus, e não em porcentagem: o limite que importa — o ângulo de
+         *     tombamento do rover — vem em graus no datasheet do fabricante, e converter
+         *     na fronteira evita a classe de erro em que 30% vira 30°.
+         */
+        ReliefOut: {
+            /** Amostras */
+            amostras: number;
+            /** Altitude Min M */
+            altitude_min_m: number;
+            /** Altitude Max M */
+            altitude_max_m: number;
+            /** Desnivel M */
+            desnivel_m: number;
+            /** Declividade Media Deg */
+            declividade_media_deg: number;
+            /** Declividade Maxima Deg */
+            declividade_maxima_deg: number;
+            /**
+             * Azimute Da Encosta Deg
+             * @description Para onde o terreno cai, em graus do norte. Nulo em terreno plano. As passadas em curva de nível correm a 90° disto.
+             */
+            azimute_da_encosta_deg?: number | null;
+            /**
+             * Fonte
+             * @description Qual serviço de elevação respondeu.
+             */
+            fonte: string;
+            /**
+             * Azimute Em Curva De Nivel Deg
+             * @description A direção de passada que corta a encosta em vez de subi-la.
+             */
+            azimute_em_curva_de_nivel_deg?: number | null;
+            /** Avisos */
+            avisos?: string[];
+        };
+        /** ResultadoIn */
+        ResultadoIn: {
+            /** Ok */
+            ok: boolean;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Error */
+            error?: string | null;
+        };
         /**
          * Role
          * @description Papéis dentro de um tenant. A ordem da lista é a ordem de privilégio.
          * @enum {string}
          */
         Role: "owner" | "admin" | "agronomist" | "operator" | "technician" | "auditor" | "viewer";
+        /** RotuloIn */
+        RotuloIn: {
+            /**
+             * Label
+             * @description Classe do modelo: Healthy, Rust, Leaf_Miner_Damage...
+             */
+            label: string;
+            /**
+             * Incidence Percent
+             * @description % de folhas com a doença (MIP).
+             */
+            incidence_percent?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Row Ref */
+            row_ref?: string | null;
+        };
+        /**
+         * RouteEdit
+         * @description A rota que o operador desenhou, passada a passada.
+         *
+         *     Só o percurso. Distância, tempo e energia saem da geometria no servidor —
+         *     aceitá-los do cliente abriria a porta para o número na tela discordar do
+         *     número que o robô vai cumprir.
+         */
+        RouteEdit: {
+            /**
+             * Legs
+             * @description Passadas, cada uma com ao menos dois pontos [lon, lat]. A ordem das passadas é a ordem de execução.
+             */
+            legs: number[][][];
+            /**
+             * Reason
+             * @description Por que a rota foi corrigida. Vai para a trilha de auditoria.
+             */
+            reason?: string | null;
+        };
+        /**
+         * RouteReplan
+         * @description Premissas novas para o planejador refazer a rota.
+         *
+         *     Tudo opcional: o que não vier fica como estava. Um replanejamento sem
+         *     campo nenhum ainda faz trabalho — é como se pede ao sistema para aplicar
+         *     uma leitura de terreno que chegou depois de a missão ter sido criada.
+         */
+        RouteReplan: {
+            /** Swath M */
+            swath_m?: number | null;
+            /** Row Azimuth Deg */
+            row_azimuth_deg?: number | null;
+            /**
+             * Obstacle Margin M
+             * @description Folga a deixar em volta de cada obstáculo intransponível.
+             */
+            obstacle_margin_m?: number | null;
+        };
+        /** RoverCameraOut */
+        RoverCameraOut: {
+            /** Id */
+            id: string;
+            /** Ok */
+            ok: boolean;
+            /** Detail */
+            detail?: string | null;
+        };
+        /**
+         * RoverHealthOut
+         * @description Saúde de um robô. ``None`` = o robô não mediu (não é zero).
+         */
+        RoverHealthOut: {
+            /** Device Id */
+            device_id: string;
+            /** Name */
+            name: string;
+            /** Serial Number */
+            serial_number: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name?: string | null;
+            /** Status */
+            status: string;
+            /** Cpu Percent */
+            cpu_percent: number | null;
+            /** Memory Percent */
+            memory_percent: number | null;
+            /** Accelerator Percent */
+            accelerator_percent: number | null;
+            /** Accelerator Name */
+            accelerator_name: string | null;
+            /** Disk Percent */
+            disk_percent: number | null;
+            /** Temperature C */
+            temperature_c: number | null;
+            /** Battery Percent */
+            battery_percent: number | null;
+            /** Cameras Total */
+            cameras_total: number;
+            /** Cameras Ok */
+            cameras_ok: number;
+            /** Cameras */
+            cameras: components["schemas"]["RoverCameraOut"][];
+            /** Sensors */
+            sensors: {
+                [key: string]: string | null;
+            };
+            /** Connectivity */
+            connectivity: string;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Offline Minutes */
+            offline_minutes: number | null;
+            /** Sync Pending */
+            sync_pending: number;
+            /** Sync Oldest Pending S */
+            sync_oldest_pending_s: number | null;
+            /** Sync Blocked */
+            sync_blocked: boolean;
+            /** Last Sync At */
+            last_sync_at: string | null;
+            /** Edge Ai */
+            edge_ai: {
+                [key: string]: unknown;
+            };
+            /** Versions */
+            versions: {
+                [key: string]: string | null;
+            };
+            /** Faults */
+            faults: unknown[];
+            /** Health Reported At */
+            health_reported_at: string | null;
+            /**
+             * Simulated
+             * @description Partes da HAL que são simulação.
+             */
+            simulated: string[];
+            /**
+             * Open Alerts
+             * @default 0
+             */
+            open_alerts: number;
+        };
         /** RowScanOut */
         RowScanOut: {
             /** Id */
@@ -3000,6 +9408,22 @@ export interface components {
             point_count: number | null;
             /** Has Pointcloud */
             has_pointcloud: boolean;
+        };
+        /**
+         * RowsOut
+         * @description O que a imagem disse sobre as linhas de plantio dentro do contorno.
+         */
+        RowsOut: {
+            /** Detected */
+            detected: boolean;
+            /** Azimuth Deg */
+            azimuth_deg?: number | null;
+            /** Spacing M */
+            spacing_m?: number | null;
+            /** Strength */
+            strength: number;
+            /** Description */
+            description: string;
         };
         /**
          * RtkFix
@@ -3228,6 +9652,50 @@ export interface components {
             battery_percent?: number | null;
         };
         /**
+         * SessionOut
+         * @description Uma sessão aberta, como a pessoa a vê na lista.
+         *
+         *     Nada aqui é o token — só o bastante para alguém se reconhecer ("Chrome no
+         *     Windows, ontem à noite, deste IP") e decidir o que derrubar. Devolver o
+         *     token seria espalhar a credencial por mais um lugar.
+         */
+        SessionOut: {
+            /** Id */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Seen At */
+            last_seen_at?: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** User Agent */
+            user_agent?: string | null;
+            /** Ip Address */
+            ip_address?: string | null;
+            /**
+             * Current
+             * @description Verdadeiro para a sessão que está fazendo esta requisição.
+             * @default false
+             */
+            current: boolean;
+        };
+        /** SessionRevoked */
+        SessionRevoked: {
+            /**
+             * Revoked
+             * @description Quantas sessões foram encerradas.
+             */
+            revoked: number;
+            /** Detail */
+            detail: string;
+        };
+        /**
          * SignedCommandOut
          * @description O envelope assinado que o robô verifica antes de agir.
          */
@@ -3243,6 +9711,164 @@ export interface components {
             /** Algorithm */
             algorithm: string;
         };
+        /** SubscriptionOut */
+        SubscriptionOut: {
+            /** Tenant Id */
+            tenant_id: string;
+            /** Has Subscription */
+            has_subscription: boolean;
+            plan: components["schemas"]["BillingPlanOut"] | null;
+            status: components["schemas"]["SubscriptionStatus"] | null;
+            /** Started At */
+            started_at: string | null;
+            /** Ends At */
+            ends_at: string | null;
+            /** Overrides */
+            overrides: {
+                [key: string]: unknown;
+            };
+            /** Notes */
+            notes: string | null;
+            /** Effective Limits */
+            effective_limits: {
+                [key: string]: number | null;
+            };
+            /** Usage */
+            usage: components["schemas"]["UsageItem"][];
+        };
+        /**
+         * SubscriptionStatus
+         * @enum {string}
+         */
+        SubscriptionStatus: "teste" | "ativa" | "suspensa" | "cancelada";
+        /** SubscriptionUpdate */
+        SubscriptionUpdate: {
+            /** Plan Code */
+            plan_code: string;
+            /** @default ativa */
+            status: components["schemas"]["SubscriptionStatus"];
+            /** Ends At */
+            ends_at?: string | null;
+            /**
+             * Overrides
+             * @description Limites só deste cliente, com o nome da coluna do plano: {'max_fields': 12}.
+             */
+            overrides?: {
+                [key: string]: number | null;
+            };
+            /** Notes */
+            notes?: string | null;
+            /** Billing Customer Id */
+            billing_customer_id?: string | null;
+        };
+        /**
+         * SupportMode
+         * @description Como a equipe está dentro de um cliente numa sessão de suporte.
+         * @enum {string}
+         */
+        SupportMode: "leitura" | "assistido";
+        /** SupportModeChange */
+        SupportModeChange: {
+            mode: components["schemas"]["SupportMode"];
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+        };
+        /** SupportSessionEnd */
+        SupportSessionEnd: {
+            /**
+             * Reason
+             * @default saiu
+             */
+            reason: string;
+        };
+        /** SupportSessionOut */
+        SupportSessionOut: {
+            /** Id */
+            id: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name?: string | null;
+            /** User Id */
+            user_id: string;
+            /** User Email */
+            user_email?: string | null;
+            /** Reason */
+            reason: string;
+            /** Ticket Ref */
+            ticket_ref: string | null;
+            /** Ticket Id */
+            ticket_id?: string | null;
+            mode: components["schemas"]["SupportMode"];
+            /** Assisted Reason */
+            assisted_reason: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Ended At */
+            ended_at: string | null;
+            /** Ended Reason */
+            ended_reason: string | null;
+            /** Request Count */
+            request_count: number;
+            /** Is Open */
+            is_open: boolean;
+        };
+        /** SupportSessionStart */
+        SupportSessionStart: {
+            /** Tenant Id */
+            tenant_id: string;
+            /**
+             * Reason
+             * @description Por que entrar. Obrigatório.
+             */
+            reason: string;
+            /**
+             * Duration Minutes
+             * @default 120
+             */
+            duration_minutes: number;
+            /** Ticket Ref */
+            ticket_ref?: string | null;
+            /**
+             * Ticket Id
+             * @description Chamado do mesmo cliente que motiva a entrada (aparece no histórico dele).
+             */
+            ticket_id?: string | null;
+            /**
+             * Assisted Reason
+             * @description Preencha só para abrir já com escrita (modo assistido), com o motivo.
+             */
+            assisted_reason?: string | null;
+        };
+        /** SupportSessionStarted */
+        SupportSessionStarted: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Tenant Id */
+            tenant_id: string;
+            session: components["schemas"]["SupportSessionOut"];
+        };
         /**
          * SyncBatch
          * @description Descarga de um robô que ficou offline.
@@ -3254,6 +9880,42 @@ export interface components {
             samples?: components["schemas"]["TelemetryIn"][];
             /** Events */
             events?: components["schemas"]["DeviceEventIn"][];
+            /**
+             * Remaining
+             * @description Quantos registros ainda ficaram no robô depois deste lote. Maior que zero deixa o robô SINCRONIZANDO na frota; zero (ou ausente) encerra a descarga.
+             */
+            remaining?: number | null;
+        };
+        /** SyncStatusOut */
+        SyncStatusOut: {
+            /** Device Id */
+            device_id: string;
+            /** Name */
+            name: string;
+            /** Serial Number */
+            serial_number: string;
+            /** Online */
+            online: boolean;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Last Sync At */
+            last_sync_at: string | null;
+            /** Last Record Received At */
+            last_record_received_at: string | null;
+            /**
+             * Queue Pending
+             * @description Itens na fila do robô (último contato).
+             */
+            queue_pending: number | null;
+            /** Queue Oldest S */
+            queue_oldest_s: number | null;
+            /**
+             * Uploads Incomplete
+             * @description Arquivos que começaram a subir e não fecharam.
+             */
+            uploads_incomplete: number;
+            /** Open Alerts */
+            open_alerts: number;
         };
         /** TankCreate */
         TankCreate: {
@@ -3349,6 +10011,21 @@ export interface components {
             mission_state?: string | null;
             /** Link Quality */
             link_quality?: number | null;
+            /**
+             * Storage Total Bytes
+             * @description Capacidade do armazenamento local do robô.
+             */
+            storage_total_bytes?: number | null;
+            /**
+             * Storage Free Bytes
+             * @description Espaço livre no armazenamento local.
+             */
+            storage_free_bytes?: number | null;
+            /**
+             * Operating Hours
+             * @description Horímetro do robô (horas de operação acumuladas).
+             */
+            operating_hours?: number | null;
             /** Motors */
             motors?: {
                 [key: string]: unknown;
@@ -3357,7 +10034,17 @@ export interface components {
             sensors?: {
                 [key: string]: unknown;
             };
-            /** Faults */
+            /**
+             * Health
+             * @description Saúde padronizada do robô (Rover Runtime, Parte 7): cpu_percent, memory_percent, accelerator, disk_percent, cameras, sensors, network, sync, edge_ai, simulated. Campos desconhecidos são ignorados; ausente = não medido.
+             */
+            health?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Faults
+             * @description Falhas ativas no instante da amostra. A amostra mais recente define o estado ERRO da frota; uma amostra com a lista vazia o encerra.
+             */
             faults?: unknown[];
         };
         /** TelemetryOut */
@@ -3435,17 +10122,86 @@ export interface components {
             /** Last Lon */
             last_lon: number | null;
         };
+        /** TeleopIn */
+        TeleopIn: {
+            /**
+             * V
+             * @description m/s; positivo = para a frente.
+             */
+            v: number;
+            /**
+             * W
+             * @description rad/s; positivo = para a esquerda.
+             */
+            w: number;
+        };
+        /** TenantConsentSummary */
+        TenantConsentSummary: {
+            /** Allowed */
+            allowed: boolean;
+            /** Decided */
+            decided: boolean;
+            /** Decided At */
+            decided_at: string | null;
+            /** Source */
+            source: string | null;
+        };
         /** TenantCreate */
         TenantCreate: {
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Address */
+            address?: string | null;
+            /** City */
+            city?: string | null;
+            /** State */
+            state?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /**
+             * Contracted Service
+             * @description Legado (antes dos planos): operação contratada em texto livre. O que limita o cliente agora é o plano (``/v1/admin/tenants/{id}/subscription``); este texto foi copiado para a observação da assinatura na migração 0011.
+             */
+            contracted_service?: string | null;
+            /** Notes */
+            notes?: string | null;
             /** Name */
             name: string;
             /** Slug */
             slug: string;
-            /** Document */
+            /**
+             * Document
+             * @description CNPJ ou CPF.
+             */
             document?: string | null;
         };
         /** TenantOut */
         TenantOut: {
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Address */
+            address?: string | null;
+            /** City */
+            city?: string | null;
+            /** State */
+            state?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /**
+             * Contracted Service
+             * @description Legado (antes dos planos): operação contratada em texto livre. O que limita o cliente agora é o plano (``/v1/admin/tenants/{id}/subscription``); este texto foi copiado para a observação da assinatura na migração 0011.
+             */
+            contracted_service?: string | null;
+            /** Notes */
+            notes?: string | null;
             /** Id */
             id: string;
             /** Name */
@@ -3461,6 +10217,355 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Farms
+             * @description Quantas propriedades o cliente tem.
+             * @default 0
+             */
+            farms: number;
+            /**
+             * Fields
+             * @description Quantos talhões, somados.
+             * @default 0
+             */
+            fields: number;
+            /**
+             * Area Ha
+             * @description Área somada dos talhões desenhados.
+             */
+            area_ha?: number | null;
+            /**
+             * Plan Code
+             * @description Plano da assinatura vigente.
+             */
+            plan_code?: string | null;
+            /** Plan Name */
+            plan_name?: string | null;
+            subscription_status?: components["schemas"]["SubscriptionStatus"] | null;
+        };
+        /**
+         * TenantUpdate
+         * @description Alteração de cadastro. O apelido não muda: ele é a identidade pública.
+         */
+        TenantUpdate: {
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Address */
+            address?: string | null;
+            /** City */
+            city?: string | null;
+            /** State */
+            state?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /**
+             * Contracted Service
+             * @description Legado (antes dos planos): operação contratada em texto livre. O que limita o cliente agora é o plano (``/v1/admin/tenants/{id}/subscription``); este texto foi copiado para a observação da assinatura na migração 0011.
+             */
+            contracted_service?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Document */
+            document?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+        };
+        /**
+         * TerrainObjectOut
+         * @description Uma coisa localizada dentro do talhão, em coordenadas do mapa.
+         */
+        TerrainObjectOut: {
+            /**
+             * Kind
+             * @description mata, carreador, solo_exposto ou desconhecido. Palpite, não medição.
+             */
+            kind: string;
+            /**
+             * Center
+             * @description [lon, lat] do centro do agrupamento.
+             */
+            center: number[];
+            /**
+             * Outline
+             * @description Retângulo [lon, lat] em volta do objeto. Grosseiro de propósito: a leitura é em blocos, e um contorno fino sugeriria precisão que não existe.
+             */
+            outline: number[][];
+            /** Area Ha */
+            area_ha: number;
+            /**
+             * Traversable
+             * @description Se o rover passa por cima (carreador, solo) ou tem que contornar.
+             */
+            traversable: boolean;
+            /** Confidence */
+            confidence: number;
+            /** Blocks */
+            blocks: number;
+        };
+        /**
+         * TerrainOut
+         * @description O talhão repartido pela leitura de imagem: quanto opera e o que atrapalha.
+         *
+         *     ``resolution_ok`` falso zera o resto. É deliberado: numa imagem em que a rua
+         *     de plantio não se resolve, nada é lavoura para o classificador, e o número
+         *     que sairia — "75% de obstáculo" num cafezal inteiro — encolheria a área
+         *     operável pela metade sem ninguém desconfiar.
+         */
+        TerrainOut: {
+            /** Resolution Ok */
+            resolution_ok: boolean;
+            /** Description */
+            description: string;
+            /** Crop Fraction */
+            crop_fraction: number;
+            /** Obstacle Fraction */
+            obstacle_fraction: number;
+            /** Path Fraction */
+            path_fraction: number;
+            /**
+             * Operable Area Ha
+             * @description Lavoura mais caminho, aplicado à área do contorno. É o número que o planejamento deve usar no lugar da área bruta.
+             */
+            operable_area_ha?: number | null;
+            /** Row Spacing Px */
+            row_spacing_px?: number | null;
+            /** Cover Fractions */
+            cover_fractions?: {
+                [key: string]: number;
+            };
+            /** Objects */
+            objects?: components["schemas"]["TerrainObjectOut"][];
+            /**
+             * Heuristic
+             * @description Sempre verdadeiro por enquanto: a classe de cada objeto é regra de cor e textura, não modelo treinado. Quem confirma é o agrônomo.
+             * @default true
+             */
+            heuristic: boolean;
+        };
+        /** TicketAssigneeOut */
+        TicketAssigneeOut: {
+            /** Id */
+            id: string;
+            /** Full Name */
+            full_name: string;
+            /** Platform Role */
+            platform_role: string;
+        };
+        /** TicketClose */
+        TicketClose: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** TicketCommentIn */
+        TicketCommentIn: {
+            /** Body */
+            body: string;
+        };
+        /** TicketCommentOut */
+        TicketCommentOut: {
+            /** Id */
+            id: string;
+            /** Author Label */
+            author_label: string;
+            /** Side */
+            side: string;
+            /** Body */
+            body: string;
+            /** Internal */
+            internal: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** TicketCreate */
+        TicketCreate: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * Priority
+             * @default normal
+             * @enum {string}
+             */
+            priority: "baixa" | "normal" | "alta" | "urgente";
+            /** Category */
+            category?: string | null;
+            /** Device Id */
+            device_id?: string | null;
+            /** Mission Id */
+            mission_id?: string | null;
+        };
+        /** TicketDetailOut */
+        TicketDetailOut: {
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name?: string | null;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Status */
+            status: string;
+            /** Priority */
+            priority: string;
+            /** Category */
+            category: string | null;
+            /** Device Id */
+            device_id: string | null;
+            /** Device Label */
+            device_label: string | null;
+            /** Mission Id */
+            mission_id: string | null;
+            incident: components["schemas"]["IncidentBrief"] | null;
+            /** Opened By Label */
+            opened_by_label: string;
+            /** Opened Via */
+            opened_via: string;
+            /** Assignee Id */
+            assignee_id: string | null;
+            /** Assignee Label */
+            assignee_label: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** First Response At */
+            first_response_at: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Closed At */
+            closed_at: string | null;
+            /** Comments */
+            comments: components["schemas"]["TicketCommentOut"][];
+            /** History */
+            history: components["schemas"]["TicketEventOut"][];
+            /**
+             * Support Sessions
+             * @description Sessões 'entrar como cliente' abertas por causa deste chamado.
+             */
+            support_sessions?: components["schemas"]["SupportSessionOut"][];
+        };
+        /** TicketEventOut */
+        TicketEventOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Actor Label */
+            actor_label: string;
+            /** Side */
+            side: string;
+            /** Kind */
+            kind: string;
+            /** Old Value */
+            old_value: string | null;
+            /** New Value */
+            new_value: string | null;
+            /** Note */
+            note: string | null;
+            /** Internal */
+            internal: boolean;
+        };
+        /** TicketOut */
+        TicketOut: {
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name?: string | null;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Status */
+            status: string;
+            /** Priority */
+            priority: string;
+            /** Category */
+            category: string | null;
+            /** Device Id */
+            device_id: string | null;
+            /** Device Label */
+            device_label: string | null;
+            /** Mission Id */
+            mission_id: string | null;
+            incident: components["schemas"]["IncidentBrief"] | null;
+            /** Opened By Label */
+            opened_by_label: string;
+            /** Opened Via */
+            opened_via: string;
+            /** Assignee Id */
+            assignee_id: string | null;
+            /** Assignee Label */
+            assignee_label: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** First Response At */
+            first_response_at: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Closed At */
+            closed_at: string | null;
+        };
+        /** TicketReopen */
+        TicketReopen: {
+            /** Reason */
+            reason: string;
+        };
+        /** TicketUpdate */
+        TicketUpdate: {
+            /** Status */
+            status?: ("aberto" | "em_atendimento" | "aguardando_cliente" | "resolvido" | "fechado") | null;
+            /** Priority */
+            priority?: ("baixa" | "normal" | "alta" | "urgente") | null;
+            /** Assignee Id */
+            assignee_id?: string | null;
+            /**
+             * Unassign
+             * @default false
+             */
+            unassign: boolean;
+            /** Incident Id */
+            incident_id?: string | null;
+            /**
+             * Unlink Incident
+             * @default false
+             */
+            unlink_incident: boolean;
+            /** Note */
+            note?: string | null;
         };
         /** TimePointOut */
         TimePointOut: {
@@ -3496,6 +10601,75 @@ export interface components {
             /** Capabilities */
             capabilities: string[];
         };
+        /** UploadCompleteIn */
+        UploadCompleteIn: {
+            /** Sha256 */
+            sha256: string;
+        };
+        /** UploadOpenIn */
+        UploadOpenIn: {
+            /** Upload Id */
+            upload_id: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Content Type */
+            content_type: string;
+            /** Chunk Size */
+            chunk_size: number;
+            /** Record Id */
+            record_id?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Tier */
+            tier?: string | null;
+            /** Priority */
+            priority?: number | null;
+        };
+        /** UploadStateOut */
+        UploadStateOut: {
+            /** Upload Id */
+            upload_id: string;
+            /**
+             * Status
+             * @description receiving | complete
+             */
+            status: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Chunk Size */
+            chunk_size: number;
+            /** Total Chunks */
+            total_chunks: number;
+            /** Received Chunks */
+            received_chunks: number[];
+            /** Asset Id */
+            asset_id?: string | null;
+            /**
+             * Deduplicated
+             * @default false
+             */
+            deduplicated: boolean;
+        };
+        /** UsageItem */
+        UsageItem: {
+            /** Resource */
+            resource: string;
+            /** Label */
+            label: string;
+            /** Used */
+            used: number;
+            /** Limit */
+            limit: number | null;
+            /**
+             * Percent
+             * @description Uso sobre o limite, em %. O console avisa a partir de 80.
+             */
+            percent?: number | null;
+        };
         /** UserInvite */
         UserInvite: {
             /**
@@ -3524,6 +10698,20 @@ export interface components {
         /** UserUpdate */
         UserUpdate: {
             role: components["schemas"]["Role"];
+        };
+        /** ValidacaoAgronomicaIn */
+        ValidacaoAgronomicaIn: {
+            /** Field Id */
+            field_id: string;
+            /** Mission Id */
+            mission_id: string;
+            /**
+             * Params
+             * @description Limites mais rígidos que o portão, se quiser.
+             */
+            params?: {
+                [key: string]: unknown;
+            };
         };
         /** ValidationError */
         ValidationError: {
@@ -3568,6 +10756,22 @@ export interface components {
             conclusion: components["schemas"]["VerificationConclusion"];
             /** Notes */
             notes: string | null;
+        };
+        /** VideoIn */
+        VideoIn: {
+            /** Cameras */
+            cameras: string[];
+            /**
+             * Fps
+             * @default 4
+             */
+            fps: number;
+            /**
+             * Lado
+             * @description Lado maior da imagem, em px.
+             * @default 640
+             */
+            lado: number;
         };
         /** ZoneCreate */
         ZoneCreate: {
@@ -3734,7 +10938,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-tenant-id"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3752,6 +10955,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TenantOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_v1_auth_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_v1_users__user_id__password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordReset"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
                 };
             };
             /** @description Validation Error */
@@ -3903,6 +11180,138 @@ export interface operations {
             };
         };
     };
+    list_my_sessions_v1_auth_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_my_session_v1_auth_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_everywhere_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_user_sessions_v1_users__user_id__sessions_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_farms_v1_farms_get: {
         parameters: {
             query?: never;
@@ -3953,6 +11362,44 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FarmOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_farm_v1_farms__farm_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                farm_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FarmUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4043,6 +11490,78 @@ export interface operations {
             };
         };
     };
+    list_field_ai_models_v1_fields__field_id__ai_models_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelChoiceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_field_ai_model_v1_fields__field_id__ai_model_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldAiModelUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_all_fields_v1_fields_get: {
         parameters: {
             query?: never;
@@ -4088,6 +11607,82 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_field_v1_fields__field_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_boundary_v1_fields__field_id__boundary_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldBoundaryUpdate"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -4452,7 +12047,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeviceSessionIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -4461,6 +12060,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    designated_models_v1_device_models_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesignatedModelOut"][];
                 };
             };
         };
@@ -4892,6 +12520,539 @@ export interface operations {
             };
         };
     };
+    record_file_v1_edge_records__record_pk__files__upload_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                record_pk: string;
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_file_url_v1_edge_records__record_pk__files__upload_id__url_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                record_pk: string;
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkDeArquivoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_records_v1_device_edge_records_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EdgeRecordBatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EdgeRecordsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_upload_v1_device_uploads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadOpenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_upload_v1_device_uploads__upload_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_chunk_v1_device_uploads__upload_id__chunks__index__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-chunk-sha256"?: string | null;
+            };
+            path: {
+                upload_id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChunkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_upload_v1_device_uploads__upload_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadCompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_records_v1_edge_records_get: {
+        parameters: {
+            query?: {
+                mission_id?: string | null;
+                field_id?: string | null;
+                kind?: string | null;
+                type?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EdgeRecordOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_packages_v1_platform_ota_packages_get: {
+        parameters: {
+            query?: {
+                kind?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtaPackageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_package_v1_platform_ota_packages_post: {
+        parameters: {
+            query: {
+                kind: string;
+                version: string;
+                model_version_id?: string | null;
+                notes?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtaPackageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deployments_v1_platform_ota_deployments_get: {
+        parameters: {
+            query?: {
+                package_id?: string | null;
+                device_id?: string | null;
+                tenant_id?: string | null;
+                state?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtaDeploymentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deployments_v1_platform_ota_deployments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OtaDeploymentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtaDeploymentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_deployment_v1_platform_ota_deployments__deployment_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                deployment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtaDeploymentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_pending_v1_device_ota_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtaDeviceItemOut"][];
+                };
+            };
+        };
+    };
+    device_package_v1_device_ota__deployment_id__package_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                length?: number;
+            };
+            header?: never;
+            path: {
+                deployment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_status_v1_device_ota__deployment_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deployment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OtaStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtaDeviceItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_missions_v1_missions_get: {
         parameters: {
             query?: {
@@ -5175,6 +13336,82 @@ export interface operations {
             };
         };
     };
+    edit_route_v1_missions__mission_id__route_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replan_v1_missions__mission_id__replan_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteReplan"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     abort_v1_missions__mission_id__abort_post: {
         parameters: {
             query?: never;
@@ -5283,6 +13520,152 @@ export interface operations {
             };
         };
     };
+    mission_plants_v1_missions__mission_id__plants_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mission_report_v1_missions__mission_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mission_map_v1_missions__mission_id__map_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mission_comparison_v1_missions__mission_id__comparison_get: {
+        parameters: {
+            query: {
+                baseline_id: string;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_observations_v1_observations_get: {
         parameters: {
             query?: {
@@ -5354,6 +13737,40 @@ export interface operations {
             };
         };
     };
+    observation_image_url_v1_observations__observation_id__image_url_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                observation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkDeArquivoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_diagnoses_v1_diagnoses_get: {
         parameters: {
             query?: {
@@ -5390,10 +13807,46 @@ export interface operations {
             };
         };
     };
+    get_diagnosis_v1_diagnoses__diagnosis_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                diagnosis_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosisOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     review_queue_v1_review_queue_get: {
         parameters: {
             query?: {
                 limit?: number;
+                /** @description 'novidade': o que mais destoa primeiro. 'valor': o que mais ensina ao próximo treino primeiro — fora do escopo, discordância, incerteza, classe rara —, com o motivo de cada item. */
+                order?: "novidade" | "valor";
             };
             header?: {
                 authorization?: string | null;
@@ -5519,6 +13972,423 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DecisionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_plants_v1_fields__field_id__plants_get: {
+        parameters: {
+            query?: {
+                /** @description Passada (missão); padrão: a última. */
+                pass_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_plant_map_v1_fields__field_id__plants_map_get: {
+        parameters: {
+            query?: {
+                pass_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plant_evolution_v1_fields__field_id__plants__plant_id__evolution_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+                /** @description Ex.: 1-P0009. */
+                plant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_prevalence_v1_fields__field_id__prevalence_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_plant_incidence_v1_fields__field_id__plants_incidence_get: {
+        parameters: {
+            query?: {
+                /** @description Passada (missão); padrão: a última. */
+                pass_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_plant_prescription_v1_fields__field_id__plants_prescription_post: {
+        parameters: {
+            query?: {
+                formato?: "json" | "geojson";
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plantas_da_validacao_v1_fields__field_id__validacao__mission_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    anota_planta_v1_fields__field_id__validacao__mission_id___plant_ref__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+                mission_id: string;
+                plant_ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RotuloIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apaga_rotulo_v1_fields__field_id__validacao__mission_id___plant_ref__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+                mission_id: string;
+                plant_ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    relatorio_da_validacao_v1_fields__field_id__validacao__mission_id__relatorio_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rotulos_para_calibrar_v1_fields__field_id__validacao_csv_get: {
+        parameters: {
+            query?: {
+                /** @description Uma passada; padrão: todas. */
+                mission_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
                 };
             };
             /** @description Validation Error */
@@ -6094,6 +14964,45 @@ export interface operations {
             };
         };
     };
+    field_history_v1_fields__field_id__history_get: {
+        parameters: {
+            query?: {
+                /** @description Quantas missões, das mais novas. */
+                missions?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     anomalies_v1_fields__field_id__anomalies_get: {
         parameters: {
             query?: {
@@ -6446,14 +15355,4891 @@ export interface operations {
             };
         };
     };
+    list_collections_v1_collections_get: {
+        parameters: {
+            query?: {
+                field_id?: string | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_collection_v1_collections__collection_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_files_v1_collections__collection_id__files_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionFileOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tenants_v1_admin_tenants_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    onboard_tenant_v1_admin_tenants_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_tenant_v1_admin_tenants__tenant_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_collections_v1_admin_collections_get: {
+        parameters: {
+            query?: {
+                state?: components["schemas"]["CollectionState"] | null;
+                field_id?: string | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_collection_v1_admin_collections_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_collection_v1_admin_collections__collection_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_files_v1_admin_collections__collection_id__files_get: {
+        parameters: {
+            query?: {
+                state?: string | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionFileOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    declare_files_v1_admin_collections__collection_id__files_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionFilesDeclare"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionFileOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_chunk_v1_admin_collections__collection_id__files__file_id__chunk_put: {
+        parameters: {
+            query: {
+                /** @description Byte em que este pedaço começa. */
+                offset: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChunkAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_upload_v1_admin_collections__collection_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_collection_v1_admin_collections__collection_id__release_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_jobs_v1_admin_jobs_get: {
+        parameters: {
+            query?: {
+                state?: components["schemas"]["JobState"] | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_job_v1_admin_jobs__job_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    model_catalog_v1_admin_models_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogModelOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_model_versions_v1_admin_models_versions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_datasets_v1_admin_datasets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_samples_v1_admin_datasets__dataset_id__samples_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetSampleOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_dataset_versions_v1_admin_datasets__dataset_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetVersionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    freeze_dataset_version_v1_admin_datasets__dataset_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetVersionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetVersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_relief_v1_admin_fields__field_id__relief_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReliefOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_field_v1_admin_fields__field_id__plan_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refine_boundary_v1_admin_boundary_refine_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoundaryRefineIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoundaryRefineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    drone_mission_not_implemented_v1_admin_drone_missions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Successful Response */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
+    list_support_sessions_v1_platform_support_sessions_get: {
+        parameters: {
+            query?: {
+                tenant_id?: string | null;
+                only_open?: boolean;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportSessionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_support_session_v1_platform_support_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportSessionStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportSessionStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_support_mode_v1_platform_support_sessions__support_session_id__mode_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                support_session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportModeChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_support_session_v1_platform_support_sessions__support_session_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                support_session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SupportSessionEnd"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_tenant_support_sessions_v1_tenants_current_support_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportSessionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_platform_users_v1_platform_users_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUserOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_platform_role_v1_platform_users__user_id__platform_role_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_audit_v1_platform_audit_get: {
+        parameters: {
+            query?: {
+                tenant_id?: string | null;
+                /** @description Prefixo: 'support.', 'plan.' */
+                action?: string | null;
+                support_session_id?: string | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_me_v1_platform_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformMeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_health_v1_platform_health_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_tenants_v1_platform_tenants_get: {
+        parameters: {
+            query?: {
+                /** @description Parte do nome ou apelido. */
+                q?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTenantSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_accounts_v1_platform_accounts_get: {
+        parameters: {
+            query?: {
+                /** @description Parte do e-mail ou nome. */
+                q?: string | null;
+                /** @description Só quem tem papel de plataforma. */
+                team_only?: boolean;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalAccountOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_account_active_v1_platform_accounts__user_id__active_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountActiveUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_farms_v1_admin_farms_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FarmOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_fields_v1_admin_fields_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_models_v1_platform_models_get: {
+        parameters: {
+            query?: {
+                state?: components["schemas"]["ModelVersionState"] | null;
+                model_key?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_model_v1_platform_models_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelVersionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_model_v1_platform_models__model_version_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                model_version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_model_v1_platform_models__model_version_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                model_version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelVersionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transition_model_v1_platform_models__model_version_id__transition_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                model_version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelTransitionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_optimizations_v1_platform_models__model_version_id__optimizations_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                model_version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelOptimizationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_optimization_v1_platform_models__model_version_id__optimizations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                model_version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelOptimizationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelOptimizationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_releases_v1_platform_model_releases_get: {
+        parameters: {
+            query?: {
+                tenant_id?: string | null;
+                include_revoked?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelReleaseOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_release_v1_platform_model_releases_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelReleaseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelReleaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_release_v1_platform_model_releases__release_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelReleaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_fleet_v1_platform_fleet_get: {
+        parameters: {
+            query?: {
+                tenant_id?: string | null;
+                /** @description Ex.: offline, erro. */
+                fleet_state?: string | null;
+                /** @description Só robôs cujo modelo informado não é o designado pelo registry. */
+                model_divergent?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FleetDeviceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_health_v1_platform_ai_health_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiHealthOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lista_bases_v1_platform_bases_get: {
+        parameters: {
+            query?: {
+                tenant_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    uma_base_v1_platform_bases__device_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cobertura_do_talhao_v1_platform_fields__field_id__cobertura_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assiste_v1_platform_rovers__device_id__video_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    para_de_assistir_v1_platform_rovers__device_id__video_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quadro_ao_vivo_v1_platform_rovers__device_id__video__camera_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Sem quadro recente desta câmera. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    painel_v1_platform_rovers__device_id__painel_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comandos_v1_platform_rovers__device_id__comandos_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manda_v1_platform_rovers__device_id__comandos_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComandoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancela_v1_platform_rovers__device_id__comandos__command_id__cancelar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+                command_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    teleop_v1_platform_rovers__device_id__teleop_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeleopIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    teleop_parar_v1_platform_rovers__device_id__teleop_parar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    modelos_v1_platform_rovers__device_id__modelos_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fixa_modelo_v1_platform_rovers__device_id__modelo_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_commands_v1_device_commands_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    device_enlace_chave_v1_device_enlace_chave_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChaveDeEnlaceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_base_pares_v1_device_base_pares_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    device_base_cobertura_v1_device_base_cobertura__field_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_video_v1_device_video__camera_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-capturado-em"?: string | null;
+                "x-seq"?: number | null;
+            };
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Ninguém assiste esta câmera: pare de mandar. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_command_result_v1_device_commands__command_id__result_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                command_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResultadoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_teleop_v1_device_teleop_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Sem controle remoto ativo: pare. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalogo_v1_platform_ensaios_catalogo_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resultados_v1_platform_rovers__device_id__ensaios_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manda_ensaio_v1_platform_rovers__device_id__ensaios_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnsaioIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancela_ensaio_v1_platform_rovers__device_id__ensaios__command_id__cancelar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+                command_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resultado_v1_platform_rovers__device_id__ensaios__resultado_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+                resultado_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portoes_v1_platform_rovers__device_id__portoes_get: {
+        parameters: {
+            query?: {
+                /** @description Conta resultado simulado (simulador). */
+                aceitar_simulado?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validacao_agronomica_v1_platform_rovers__device_id__ensaios_validacao_agronomica_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidacaoAgronomicaIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_progresso_v1_device_commands__command_id__progresso_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                command_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_eco_v1_device_ensaio_eco_get: {
+        parameters: {
+            query?: {
+                bytes?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_eco_subida_v1_device_ensaio_eco_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
+    list_plans_v1_admin_plans_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlanOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_plan_v1_admin_plans_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingPlanCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_plan_v1_admin_plans__plan_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingPlanUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tenant_subscription_v1_admin_tenants__tenant_id__subscription_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_tenant_subscription_v1_admin_tenants__tenant_id__subscription_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_plan_v1_tenants_current_plan_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_consent_v1_tenants_current_data_consent_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataConsentStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_my_consent_v1_tenants_current_data_consent_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DataConsentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataConsentStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_consent_v1_admin_tenants__tenant_id__data_consent_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataConsentStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_tenant_consent_v1_admin_tenants__tenant_id__data_consent_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DataConsentPlatformIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataConsentStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_v1_notifications_get: {
+        parameters: {
+            query?: {
+                only_unread?: boolean;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unread_count_v1_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_v1_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_read_v1_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationReadAll"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_preferences_v1_notifications_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_my_preference_v1_notifications_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    role_preferences_v1_notifications_role_preferences_get: {
+        parameters: {
+            query: {
+                role: string;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_role_preference_v1_notifications_role_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationRolePreferenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_notifications_v1_platform_notifications_get: {
+        parameters: {
+            query?: {
+                only_unread?: boolean;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_unread_count_v1_platform_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_mark_read_v1_platform_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_mark_all_read_v1_platform_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationReadAll"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_my_preferences_v1_platform_notifications_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_set_my_preference_v1_platform_notifications_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_role_preferences_v1_platform_notifications_role_preferences_get: {
+        parameters: {
+            query: {
+                role: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_set_role_preference_v1_platform_notifications_role_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationRolePreferenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tickets_v1_support_tickets_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                open_only?: boolean;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_ticket_v1_support_tickets_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ticket_v1_support_tickets__ticket_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comment_ticket_v1_support_tickets__ticket_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCommentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_ticket_v1_support_tickets__ticket_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketClose"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_ticket_v1_support_tickets__ticket_id__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketReopen"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_list_tickets_v1_platform_tickets_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                open_only?: boolean;
+                priority?: string | null;
+                tenant_id?: string | null;
+                incident_id?: string | null;
+                assignee_id?: string | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_open_ticket_v1_platform_tickets_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformTicketCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_get_ticket_v1_platform_tickets__ticket_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_update_ticket_v1_platform_tickets__ticket_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_comment_ticket_v1_platform_tickets__ticket_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformTicketCommentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ticket_assignees_v1_platform_support_assignees_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketAssigneeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_incidents_v1_platform_incidents_get: {
+        parameters: {
+            query?: {
+                open_only?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_incident_v1_platform_incidents_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_incident_v1_platform_incidents__incident_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_incident_v1_platform_incidents__incident_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_incident_tickets_v1_platform_incidents__incident_id__tickets_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentLink"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_overview_v1_platform_observability_get: {
+        parameters: {
+            query?: {
+                minutes?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservabilityOverviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_api_stats_v1_platform_observability_api_get: {
+        parameters: {
+            query?: {
+                minutes?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiStatsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_fleet_health_v1_platform_observability_fleet_get: {
+        parameters: {
+            query?: {
+                tenant_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoverHealthOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_ai_stats_v1_platform_observability_ai_get: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiObservabilityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_alerts_v1_platform_observability_alerts_get: {
+        parameters: {
+            query?: {
+                state?: string | null;
+                kind?: string | null;
+                tenant_id?: string | null;
+                open_only?: boolean;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObsAlertOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_ack_alert_v1_platform_observability_alerts__alert_id__ack_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertAckIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObsAlertOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_alert_rules_v1_platform_observability_alert_rules_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertRuleOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_update_alert_rule_v1_platform_observability_alert_rules__kind__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertRuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_fleet_health_v1_observability_fleet_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoverHealthOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_alerts_v1_observability_alerts_get: {
+        parameters: {
+            query?: {
+                state?: string | null;
+                kind?: string | null;
+                open_only?: boolean;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObsAlertOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_ack_alert_v1_observability_alerts__alert_id__ack_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertAckIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObsAlertOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_alert_rules_v1_observability_alert_rules_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertRuleOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_update_alert_rule_v1_observability_alert_rules__kind__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertRuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_reset_alert_rule_v1_observability_alert_rules__kind__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     stream_v1_stream_get: {
         parameters: {
             query?: {
-                /** @description Retoma a partir deste instante (o `created_at` do último evento). */
+                /** @description Só eventos posteriores a este instante. O console manda aqui o horário do último evento que já mostrou, e é o que evita repetir a tela inteira ao reconectar. */
                 after?: string | null;
-                /** @description Duração da conexão. O cliente reconecta com `after`. */
+                /** @description Quantos segundos manter a conexão antes de pedir reconexão. Zero usa o padrão do servidor. Limitado por STREAM_MAX_SECONDS: o cliente pede, o servidor decide. */
                 timeout?: number;
-                poll?: number;
             };
             header?: {
                 authorization?: string | null;
@@ -6470,6 +20256,105 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    busca_v1_mapa_localizar_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    satelite_v1_mapa_satelite_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    metrics_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Exposição 0.0.4 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain; version=0.0.4; charset=utf-8": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

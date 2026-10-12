@@ -83,7 +83,7 @@ def create_product(
         and payload.min_rate_l_ha > payload.max_rate_l_ha
     ):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Dose mínima maior que a máxima."
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Dose mínima maior que a máxima."
         )
 
     product = Product(tenant_id=principal.tenant_id, **payload.model_dump())
@@ -223,16 +223,16 @@ def load_tank(
 
     if batch.product_id != product.id:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "O lote não pertence a este produto."
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "O lote não pertence a este produto."
         )
     if batch.is_expired(datetime.now(UTC).date()):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"Lote {batch.code!r} venceu em {batch.expires_on}.",
         )
     if payload.volume_l > tank.capacity_l:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"Volume de {payload.volume_l} L excede a capacidade de {tank.capacity_l} L.",
         )
 

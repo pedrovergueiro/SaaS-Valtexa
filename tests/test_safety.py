@@ -9,6 +9,7 @@ errado, o lote vencido, o vento sem leitura.
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
+from typing import ClassVar
 
 import pytest
 from sqlalchemy.orm import Session
@@ -388,3 +389,50 @@ class TestSafetyEngine:
         cenario["session"].commit()
         codes = _blocked_codes(_check(cenario))
         assert {safety_engine.APPROVAL, safety_engine.BATTERY, safety_engine.GEOFENCE} <= codes
+
+
+class TestTalhaoConcavo:
+    """Talhão em forma de L, com um vértice reflexo.
+
+    A lavoura real quase nunca é retângulo: a mata entra por um lado, o
+    carreador corta um canto, o brejo come um pedaço. Estes testes existem
+    porque um defeito em ``_segments_intersect`` fazia o geofence enxergar
+    cruzamento em **todo** vértice côncavo — e bloquear toda missão num talhão
+    desses. Com a demonstração num retângulo, nada disso aparecia.
+    """
+
+    EM_L: ClassVar[list[list[float]]] = [
+        [0.0, 0.0],
+        [0.002, 0.0],
+        [0.002, 0.001],
+        [0.001, 0.001],
+        [0.001, 0.002],
+        [0.0, 0.002],
+    ]
+
+    def test_contorno_concavo_nao_cruza_a_si_mesmo(self) -> None:
+        assert geo.edges_cross(self.EM_L, self.EM_L) is False
+
+    def test_area_encolhida_cabe_no_contorno_concavo(self) -> None:
+        encolhido = [list(ponto) for ponto in geo.shrink(self.EM_L, 5.0)]
+        assert geo.polygon_contains_polygon(self.EM_L, encolhido)
+        assert geo.edges_cross(self.EM_L, encolhido) is False
+
+    def test_cruzamento_de_verdade_continua_sendo_visto(self) -> None:
+        """A correção não pode ter cegado a checagem."""
+        atravessa = [[0.0005, -0.001], [0.0007, -0.001], [0.0007, 0.003], [0.0005, 0.003]]
+        assert geo.edges_cross(self.EM_L, atravessa) is True
+
+    def test_encostar_na_borda_nao_e_atravessar(self) -> None:
+        encostado = [[0.0, 0.0], [0.001, 0.0], [0.001, 0.001], [0.0, 0.001]]
+        assert geo.edges_cross(self.EM_L, encostado) is False
+
+    def test_missao_no_talhao_de_cafe_da_demonstracao_passa_no_geofence(self) -> None:
+        """O contorno real da foto: côncavo, com a mata entrando pelo leste."""
+        from valtexa.seed import DEMO_FIELD_BOUNDARY, DEMO_ZONE_BOUNDARY
+
+        permitido = geo.shrink(DEMO_FIELD_BOUNDARY, 5.0)
+        alvo = [list(ponto) for ponto in permitido]
+        assert geo.polygon_contains_polygon(permitido, alvo)
+        assert geo.edges_cross(permitido, alvo) is False
+        assert geo.polygon_contains_polygon(permitido, DEMO_ZONE_BOUNDARY)

@@ -1,0 +1,132 @@
+/* Documentos A4 do pacote VALTEXA ROVER V3 Rev E — impressão em PDF */
+@page { size: 210mm 297mm; margin: 18mm 16mm 24mm 16mm; }
+
+:root {
+  --tinta: #14140f;
+  --tinta2: #4a4a42;
+  --tinta3: #7a7a70;
+  --linha: #c9c7bd;
+  --linha2: #e6e4dc;
+  --fundo: #f6f5f0;
+  --verde: #1f6b3a;
+  --vermelho: #a4291f;
+  --ambar: #8a6414;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 9.6pt; line-height: 1.42; color: var(--tinta);
+  background: #fff;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+
+main { display: block; }
+.quebra { break-after: page; page-break-after: always; }
+
+/* ---------------------------------------------------------------- capa */
+.capa { padding-top: 6mm; }
+.marca { display: flex; align-items: baseline; gap: 4mm; border-bottom: 1.2pt solid var(--tinta); padding-bottom: 2mm; }
+.marca b { font-size: 16pt; letter-spacing: 0.06em; }
+.marca span { font-size: 8pt; letter-spacing: 0.14em; color: var(--tinta3); text-transform: uppercase; }
+.capa .tit { font-size: 24pt; line-height: 1.12; margin: 14mm 0 3mm; font-weight: 700; letter-spacing: -0.01em; }
+.capa .sub { font-size: 11.5pt; color: var(--tinta2); margin: 0 0 8mm; max-width: 140mm; }
+.selo {
+  display: inline-block; border: 1pt solid var(--vermelho); color: var(--vermelho);
+  font-size: 8.4pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 1.6mm 3mm; margin-bottom: 10mm;
+}
+.capa-info { margin-bottom: 12mm; }
+.capa-info td:first-child { width: 32%; color: var(--tinta2); }
+.legenda-cat { border-top: 0.6pt solid var(--linha); padding-top: 4mm; }
+.legenda-cat p { margin: 0 0 1.6mm; display: flex; align-items: baseline; gap: 3mm; }
+.legenda-cat span:last-child { color: var(--tinta2); font-size: 8.8pt; }
+
+/* ------------------------------------------------------------- sumário */
+.sumario h2 { font-size: 13pt; margin: 0 0 4mm; }
+.sumario ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 10mm; }
+.sumario li { margin-bottom: 1.8mm; break-inside: avoid; font-size: 9.4pt; }
+.sumario li span { display: inline-block; width: 7mm; color: var(--tinta3); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- títulos */
+h1 { font-size: 14pt; margin: 9mm 0 3mm; padding-bottom: 1.6mm; border-bottom: 1pt solid var(--tinta);
+     break-after: avoid; page-break-after: avoid; }
+h1 .num { display: inline-block; min-width: 9mm; color: var(--verde); }
+h2 { font-size: 11pt; margin: 6mm 0 2mm; break-after: avoid; page-break-after: avoid; }
+h3 { font-size: 9.8pt; margin: 4.5mm 0 1.5mm; text-transform: uppercase; letter-spacing: 0.05em;
+     color: var(--tinta2); break-after: avoid; page-break-after: avoid; }
+h1:first-child { margin-top: 0; }
+
+p { margin: 0 0 2.4mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+li { margin-bottom: 1.2mm; }
+b { font-weight: 600; }
+small { font-size: 8pt; color: var(--tinta3); }
+
+.nota { font-size: 8.8pt; color: var(--tinta2); border-left: 2pt solid var(--linha); padding-left: 3mm;
+        break-inside: avoid; page-break-inside: avoid; }
+.alerta { font-size: 9pt; border: 0.8pt solid var(--vermelho); border-left: 2.5pt solid var(--vermelho);
+          padding: 2.4mm 3mm; background: #fdf6f5; break-inside: avoid; page-break-inside: avoid; }
+
+/* -------------------------------------------------------------- tabelas */
+.tabtit { font-size: 8.6pt; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta3);
+          margin: 4mm 0 1.2mm; }
+table.tab { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 0 0 3.5mm; }
+table.tab th {
+  text-align: left; font-weight: 600; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em;
+  background: var(--fundo); border-bottom: 0.8pt solid var(--tinta); padding: 1.6mm 2mm; vertical-align: bottom;
+}
+table.tab td { border-bottom: 0.4pt solid var(--linha2); padding: 1.5mm 2mm; vertical-align: top; }
+table.tab tr { break-inside: avoid; page-break-inside: avoid; }
+table.tab tr.grupo td { background: var(--fundo); font-weight: 600; font-size: 8.4pt;
+                        text-transform: uppercase; letter-spacing: 0.05em; }
+table.tab tr.total td { border-top: 0.8pt solid var(--tinta); font-weight: 600; }
+table.tab.compacta { font-size: 8.2pt; }
+table.tab.compacta td, table.tab.compacta th { padding: 1.1mm 1.6mm; }
+table.tab .num, table.tab .n { text-align: right; font-variant-numeric: tabular-nums; }
+table.tab .vazio { background: repeating-linear-gradient(135deg, #fff, #fff 2mm, var(--fundo) 2mm, var(--fundo) 4mm); }
+
+/* --------------------------------------------------------- etiquetas */
+.cat {
+  display: inline-block; font-size: 7.2pt; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 0.3mm 1.4mm; border: 0.6pt solid; white-space: nowrap;
+}
+.c-conf { color: var(--verde); border-color: var(--verde); }
+.c-der { color: #1f4f6b; border-color: #1f4f6b; }
+.c-prop { color: var(--ambar); border-color: var(--ambar); }
+.c-def { color: #fff; background: var(--vermelho); border-color: var(--vermelho); }
+.c-pesq { color: var(--tinta2); border-color: var(--linha); }
+
+/* ----------------------------------------------------------- campos */
+.campos div { display: flex; gap: 3mm; border-bottom: 0.4pt solid var(--linha); padding: 2mm 0; }
+.campos span { min-width: 45mm; color: var(--tinta2); font-size: 8.6pt; }
+.assin { display: flex; gap: 8mm; margin-top: 8mm; }
+.assin div { flex: 1; }
+.assin .linha { display: block; border-bottom: 0.6pt solid var(--tinta); height: 12mm; }
+.assin small { display: block; margin-top: 1.2mm; }
+
+/* ---------------------------------------------------------- fluxo */
+ol.fluxo { list-style: none; padding: 0; margin: 3mm 0; display: flex; flex-wrap: wrap; gap: 2mm; }
+ol.fluxo li {
+  flex: 1 1 28%; border: 0.6pt solid var(--linha); padding: 2mm 2.5mm; font-size: 8.6pt;
+  display: flex; gap: 2.5mm; align-items: baseline; background: #fff;
+}
+ol.fluxo li span {
+  font-weight: 700; color: var(--verde); font-size: 8pt; min-width: 4mm;
+}
+
+/* ---------------------------------------------------------- rodapé */
+.rodape {
+  position: fixed; bottom: -14mm; left: 0; right: 0;
+  display: flex; justify-content: space-between;
+  font-size: 7.4pt; color: var(--tinta3); border-top: 0.4pt solid var(--linha); padding-top: 1.2mm;
+}
+
+@media screen {
+  body { background: #e8e6df; padding: 8mm 0; }
+  .capa, .sumario, main { max-width: 178mm; margin: 0 auto; background: #fff; padding: 12mm; }
+  .capa, .sumario { margin-bottom: 6mm; }
+  .rodape { display: none; }
+}

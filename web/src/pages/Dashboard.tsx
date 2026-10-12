@@ -1,7 +1,8 @@
-import { Bot, Droplets, Plus, Radio, ScanSearch, Sprout } from 'lucide-react'
+import { Bot, BrainCircuit, CloudUpload, Droplets, Map as MapIcon, Plus, Radio, ScanSearch, Sprout, TriangleAlert } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { useDashboard, useDevices, useFields } from '@/api/queries'
+import type { DashboardOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { DistributionBars } from '@/components/charts'
 import { FarmMap } from '@/components/FarmMap'
@@ -84,6 +85,8 @@ export default function Dashboard() {
           Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-28" />)
         )}
       </div>
+
+      {data?.overview && <Overview overview={data.overview} />}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1.15fr]">
         <Card>
@@ -194,6 +197,120 @@ export default function Dashboard() {
                         </span>
                       </div>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Card>
+      </div>
+    </>
+  )
+}
+
+type Overview = NonNullable<DashboardOut['overview']>
+
+const SERVICO: Record<string, { label: string; tone: 'good' | 'critical' | 'warning' | 'neutral' }> = {
+  ok: { label: 'IA de nuvem no ar', tone: 'good' },
+  fora: { label: 'IA de nuvem fora do ar', tone: 'critical' },
+  simulado: { label: 'IA de nuvem simulada', tone: 'warning' },
+  desligado: { label: 'IA de nuvem desligada', tone: 'neutral' },
+}
+
+/** Seção 45: área, ocorrências, sincronização, saúde da frota e da IA — tudo do backend. */
+function Overview({ overview: o }: { overview: Overview }) {
+  const saude = o.fleet_health
+  const servico = SERVICO[o.ai_health.cloud_service] ?? { label: o.ai_health.cloud_service, tone: 'neutral' as const }
+  const atrasados = o.sync.filter((s) => (s.queue_pending ?? 0) > 0 || s.uploads_incomplete > 0)
+  return (
+    <>
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4" data-painel-visao>
+        <Stat
+          label="Área"
+          value={<span className="num">{fmt.hectares(o.hectares)}</span>}
+          hint={`${o.farms} fazenda(s) · ${o.fields} talhão(ões)`}
+          icon={<MapIcon className="size-4" />}
+        />
+        <Stat
+          label="Varreduras · 30 dias"
+          value={<span className="num">{o.scouts_completed_30d}</span>}
+          hint={`${fmt.hectares(o.hectares_scouted_30d)} percorridos`}
+          icon={<Radio className="size-4" />}
+        />
+        <Link to="/mapa?modo=missao" className="contents">
+          <Stat
+            label="Ocorrências · 7 dias"
+            value={<span className="num">{o.occurrences_7d}</span>}
+            hint={
+              Object.entries(o.occurrences_by_category_7d)
+                .map(([k, n]) => `${n} ${k === 'POSSIVEL_DOENCA' ? 'doença' : k === 'POSSIVEL_PRAGA' ? 'praga' : 'anomalia'}`)
+                .join(' · ') || 'eventos da Edge AI'
+            }
+            icon={<TriangleAlert className="size-4" />}
+          />
+        </Link>
+        <Stat
+          label="IA · 24 h"
+          value={<span className="num">{fmt.number(o.ai_health.edge_results_24h)}</span>}
+          hint={`quadros no robô · ${o.ai_health.cloud_inferences_24h} análise(s) na nuvem${o.ai_health.cloud_errors_24h ? ` (${o.ai_health.cloud_errors_24h} com erro)` : ''}`}
+          icon={<BrainCircuit className="size-4" />}
+        />
+      </div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1.4fr]">
+        <Card>
+          <CardHeader title="Saúde da frota e da IA" subtitle="Robô offline há mais de 5 min, com alerta aberto ou em dia." />
+          <div className="flex flex-wrap gap-2 px-5 pb-3">
+            <Badge tone="good">{saude.ok ?? 0} em dia</Badge>
+            <Badge tone={saude.com_alerta ? 'warning' : 'neutral'}>{saude.com_alerta ?? 0} com alerta</Badge>
+            <Badge tone={saude.offline ? 'critical' : 'neutral'}>{saude.offline ?? 0} offline</Badge>
+            {!!saude.inativo && <Badge tone="neutral">{saude.inativo} inativo(s)</Badge>}
+          </div>
+          <div className="flex flex-wrap gap-2 px-5 pb-5">
+            <Badge tone={servico.tone}>{servico.label}</Badge>
+            {o.ai_health.edge_models.map((m) => (
+              <Badge key={`${m.model_key}@${m.model_version}`} tone="info">
+                {m.model_key}@{m.model_version ?? '?'} · {m.results_24h}
+              </Badge>
+            ))}
+            <Link to="/observabilidade" className="text-[13px] text-accent hover:underline">
+              Saúde da frota
+            </Link>
+          </div>
+        </Card>
+        <Card className="overflow-hidden">
+          <CardHeader
+            title="Sincronização"
+            subtitle={atrasados.length ? `${atrasados.length} robô(s) com fila ou arquivo pela metade` : 'O que cada robô mandou por último.'}
+            actions={<CloudUpload className="size-4 text-muted" aria-hidden />}
+          />
+          {o.sync.length === 0 ? (
+            <Empty title="Nenhum robô ainda" />
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <th className={th}>Robô</th>
+                  <th className={th}>Último registro</th>
+                  <th className={th}>Fila</th>
+                  <th className={th}>Arquivos pela metade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {o.sync.map((s) => (
+                  <tr key={s.device_id}>
+                    <td className={td}>
+                      <Badge tone={s.online ? 'good' : 'neutral'}>{s.online ? 'online' : 'offline'}</Badge>{' '}
+                      <Link to={`/frota/${s.device_id}`} className="font-medium hover:underline">
+                        {s.name}
+                      </Link>
+                      {s.open_alerts > 0 && <Badge tone="warning" className="ml-1">{s.open_alerts} alerta(s)</Badge>}
+                    </td>
+                    <td className={`${td} text-[12px]`}>{s.last_record_received_at ? fmt.ago(s.last_record_received_at) : '—'}</td>
+                    <td className={`${td} num`}>
+                      {s.queue_pending ?? '—'}
+                      {s.queue_oldest_s ? <span className="text-[12px] text-muted"> · mais antigo {fmt.number(s.queue_oldest_s / 60)} min</span> : null}
+                    </td>
+                    <td className={`${td} num`}>{s.uploads_incomplete}</td>
                   </tr>
                 ))}
               </tbody>

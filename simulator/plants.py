@@ -10,7 +10,7 @@ Doença e praga vêm de focos (reboleiras): cada foco tem centro, raio e
 intensidade, e deixa as plantas ali mais baixas, menos verdes e, na nuvem de
 pontos, com lesão ou folha comida. A foto que o rover tira dentro do foco mostra
 o sintoma — e o modelo responde o que o modelo responderia: ferrugem ele
-conhece; lagarta, não, e a foto vai para o agrônomo.
+conhece; bicho-mineiro, não, e a foto vai para o agrônomo.
 
 Em Python puro, como o resto do simulador. É ilustração: não serve para medir
 nada sobre sensor nenhum.
@@ -72,6 +72,14 @@ class SimulatedCrop:
     plant_spacing_m: float = 0.3
     row_azimuth_deg: float = 90.0
     height_m: float = 1.3
+    canopy_m: float = 0.62
+    """Diâmetro médio da copa.
+
+    Separado da altura porque a razão entre as duas muda com a cultura: milho
+    é haste alta e estreita, café é arbusto quase tão largo quanto alto. Com um
+    número só, a cópia 3D de um cafezal vira um campo de varetas.
+    """
+
     gap_ratio: float = 0.04
     foci: list[Focus] = field(default_factory=list)
     seed: int = 11
@@ -164,7 +172,10 @@ class SimulatedCrop:
         noise = 1 + (self._unit(m, j, 4) - 0.5) * 0.16
         stunting = (focus.stunting if focus else 0.0) * k
         height = self.height_m * fertility * noise * (1 - stunting)
-        canopy = max(0.2, 0.62 * height / self.height_m * (1 + (self._unit(m, j, 5) - 0.5) * 0.2))
+        canopy = max(
+            0.2,
+            self.canopy_m * (height / self.height_m) * (1 + (self._unit(m, j, 5) - 0.5) * 0.2),
+        )
         green = (
             0.78
             + (self._unit(m, j, 6) - 0.5) * 0.08

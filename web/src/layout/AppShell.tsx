@@ -1,12 +1,16 @@
 import {
   Bell,
+  BellRing,
   Bot,
   Box,
   Building2,
   ChevronDown,
   Droplets,
   FlaskConical,
+  HeartPulse,
+  Images,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Map as MapIcon,
   Menu,
@@ -16,6 +20,7 @@ import {
   ScanSearch,
   ScrollText,
   Settings,
+  ShieldCheck,
   Sprout,
   Sun,
   X,
@@ -28,12 +33,14 @@ import { useAlerts, useDashboard } from '@/api/queries'
 import type { AlertOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Logo } from '@/components/Logo'
+import { NotificationBell } from '@/components/NotificationBell'
 import { Badge } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/format'
 import { role as roleLabel, severity, severityTone } from '@/lib/labels'
 import { useEventStream, type StreamStatus } from '@/lib/stream'
 import { useTheme, type ThemeChoice } from '@/lib/theme'
+import { SupportBanner } from '@/platform/SupportBanner'
 
 type NavItem = {
   to: string
@@ -52,6 +59,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { to: '/mapa', label: 'Mapa', icon: MapIcon },
       { to: '/missoes', label: 'Missões', icon: Route },
       { to: '/frota', label: 'Frota', icon: Bot },
+      { to: '/observabilidade', label: 'Saúde da frota', icon: HeartPulse, capability: 'device:read' },
     ],
   },
   {
@@ -59,6 +67,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { to: '/revisao', label: 'Fila do agrônomo', icon: ScanSearch, badge: 'review' },
       { to: '/talhoes', label: 'Talhões', icon: Sprout },
+      { to: '/coletas', label: 'Coletas', icon: Images },
       { to: '/lavoura-3d', label: 'Lavoura 3D', icon: Box },
     ],
   },
@@ -73,6 +82,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
     group: 'Governança',
     items: [
       { to: '/auditoria', label: 'Auditoria', icon: ScrollText, capability: 'audit:read' },
+      { to: '/suporte', label: 'Suporte', icon: LifeBuoy },
+      { to: '/notificacoes', label: 'Notificações', icon: BellRing },
       { to: '/configuracoes', label: 'Configurações', icon: Settings },
     ],
   },
@@ -112,7 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const visible = NAV.map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.capability || can(item.capability)),
-  }))
+  })).filter((group) => group.items.length > 0)
   const flat = visible.flatMap((group) => group.items)
 
   const sidebar = (
@@ -182,6 +193,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <SupportBanner />
         <TopBar onMenu={() => setDrawer(true)} stream={stream} />
         <main className="min-w-0 flex-1 overflow-y-auto px-4 pt-6 pb-24 sm:px-6 lg:px-8 lg:pb-10">
           <div className="mx-auto max-w-[1400px]">{children}</div>
@@ -221,8 +233,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function TopBar({ onMenu, stream }: { onMenu: () => void; stream: StreamStatus }) {
-  const { me, memberships, selectTenant, logout } = useAuth()
+  const { me, memberships, selectTenant, logout, support, isPlatform } = useAuth()
   const active = memberships.find((item) => item.tenant_id === me?.active_tenant_id)
+  // Na sessão de suporte o cliente é fixo: o token só vale para ele.
+  const trocaCliente = memberships.length > 1 && !support
 
   return (
     <header className="sticky top-0 z-[700] flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur sm:px-6 lg:px-8">
@@ -237,7 +251,7 @@ function TopBar({ onMenu, stream }: { onMenu: () => void; stream: StreamStatus }
 
       <div className="flex min-w-0 items-center gap-2">
         <Building2 className="size-4 shrink-0 text-muted" aria-hidden />
-        {memberships.length > 1 ? (
+        {trocaCliente ? (
           <select
             className="max-w-[46vw] truncate rounded-lg bg-transparent py-1 pr-6 text-[14px] font-medium outline-none hover:bg-raised"
             value={me?.active_tenant_id ?? ''}
@@ -251,15 +265,23 @@ function TopBar({ onMenu, stream }: { onMenu: () => void; stream: StreamStatus }
             ))}
           </select>
         ) : (
-          <span className="truncate text-[14px] font-medium">{active?.tenant_name ?? '—'}</span>
+          <span className="truncate text-[14px] font-medium">
+            {support?.tenantName ?? active?.tenant_name ?? '—'}
+          </span>
         )}
       </div>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
         <LiveIndicator status={stream} />
+        <NotificationBell audience="cliente" centralPath="/notificacoes" />
         <AlertsMenu />
         <ThemeToggle />
-        <UserMenu name={me?.full_name ?? ''} role={me?.role ?? ''} onLogout={logout} />
+        <UserMenu
+          name={me?.full_name ?? ''}
+          role={me?.role ?? ''}
+          onLogout={logout}
+          platformLink={isPlatform && !support}
+        />
       </div>
     </header>
   )
@@ -355,7 +377,17 @@ function ThemeToggle() {
   )
 }
 
-function UserMenu({ name, role, onLogout }: { name: string; role: string; onLogout: () => void }) {
+function UserMenu({
+  name,
+  role,
+  onLogout,
+  platformLink,
+}: {
+  name: string
+  role: string
+  onLogout: () => void
+  platformLink: boolean
+}) {
   const [open, setOpen] = useState(false)
   const ref = useClickAway(() => setOpen(false))
   const initials = name
@@ -384,6 +416,15 @@ function UserMenu({ name, role, onLogout }: { name: string; role: string; onLogo
             <div className="truncate font-medium">{name}</div>
             <div className="text-[12px] text-muted">{roleLabel(role)}</div>
           </div>
+          {platformLink && (
+            <Link
+              to="/plataforma"
+              className="flex w-full items-center gap-2 border-b border-line-soft px-4 py-3 text-[13px] hover:bg-raised"
+            >
+              <ShieldCheck className="size-4" aria-hidden />
+              Console da plataforma
+            </Link>
+          )}
           <button
             type="button"
             onClick={onLogout}

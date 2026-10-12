@@ -43,7 +43,7 @@ export function authHeaders(): Record<string, string> {
 export type Query = Record<string, string | number | boolean | null | undefined>
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   query?: Query
   signal?: AbortSignal
@@ -76,6 +76,18 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await send(path, options)
   if (response.status === 204) return undefined as T
+  return (await response.json()) as T
+}
+
+/**
+ * Envia um arquivo como corpo cru (pacote OTA): `fetch` com o `File` direto, sem
+ * ler tudo para a memória do JavaScript. A resposta é JSON, como nas outras rotas.
+ */
+export async function apiUpload<T>(path: string, body: Blob, query: Query, contentType: string): Promise<T> {
+  const headers: Record<string, string> = { ...authHeaders(), 'Content-Type': contentType }
+  const response = await fetch(buildUrl(path, query), { method: 'POST', headers, body })
+  if (response.status === 401 && credentials) onUnauthorized?.()
+  if (!response.ok) throw new ApiError(response.status, await readDetail(response))
   return (await response.json()) as T
 }
 

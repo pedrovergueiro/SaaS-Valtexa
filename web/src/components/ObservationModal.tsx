@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 
+import { useDiagnosis } from '@/api/queries'
 import type { ObservationOut } from '@/api/types'
+import { AiSignalsPanel, primarySignals } from '@/components/AiSignals'
 import { AuthImage } from '@/components/AuthImage'
 import { Badge, Button, Modal } from '@/components/ui'
 import { fmt } from '@/lib/format'
@@ -15,6 +17,10 @@ export function ObservationModal({
   onClose: () => void
   showFieldLink?: boolean
 }) {
+  // Os sinais da IA não vêm na lista (pesam num quadro do rover): só ao abrir.
+  const diagnosis = useDiagnosis(observation?.diagnosis_id)
+  const primary = diagnosis.data?.detections?.find((item) => item.source !== 'human' && item.model_key)
+  const signals = primarySignals(diagnosis.data?.detections)
   return (
     <Modal
       open={Boolean(observation)}
@@ -51,7 +57,13 @@ export function ObservationModal({
           </div>
           <div className="num text-[12px] text-muted">
             {fmt.number(observation.lat, 6)}, {fmt.number(observation.lon, 6)}
+            {primary?.model_key && <span className="font-mono"> · {primary.model_key}</span>}
           </div>
+          {signals && (
+            <div className="border-t border-line-soft pt-3">
+              <AiSignalsPanel signals={signals} />
+            </div>
+          )}
         </div>
       )}
     </Modal>

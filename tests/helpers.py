@@ -32,6 +32,11 @@ class DeviceSession:
         return self.sequence
 
     def request(self, method: str, path: str, *, json_body: dict | None = None, **kwargs):
+        if "content" in kwargs:
+            # Corpo bruto (chunk de upload): assina exatamente esses bytes.
+            corpo = kwargs.pop("content")
+            headers = {**kwargs.pop("headers", {}), **self._headers(method, path, corpo)}
+            return self.client.request(method, path, content=corpo, headers=headers)
         body = b"" if json_body is None else json.dumps(json_body).encode()
         headers = self._headers(method, path, body)
         if json_body is not None:
@@ -54,7 +59,7 @@ class DeviceSession:
             signing.HEADER_TIMESTAMP: timestamp,
             signing.HEADER_NONCE: nonce,
             signing.HEADER_SIGNATURE: signing.sign_request(
-                self.private_key, method, path, "", timestamp, nonce, body
+                self.private_key, method, *_path_query(path), timestamp, nonce, body
             ),
         }
 
@@ -127,8 +132,8 @@ def upload_observation(
     zone_id: str | None = None,
     mission_id: str | None = None,
     captured_at: datetime | None = None,
-    lat: float = -12.7240,
-    lon: float = -55.9075,
+    lat: float = -21.9029,
+    lon: float = -45.8624,
 ):
     sequence = device.next_sequence()
     metadata = {
@@ -147,3 +152,9 @@ def upload_observation(
         files={"file": (f"f{sequence}.jpg", frame(label, novelty), "image/jpeg")},
         data={"metadata": json.dumps(metadata)},
     )
+
+
+def _path_query(path: str) -> tuple[str, str]:
+    """A query entra na assinatura (protocolo, seção 4), separada do caminho."""
+    caminho, _, query = path.partition("?")
+    return caminho, query

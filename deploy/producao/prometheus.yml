@@ -1,0 +1,30 @@
+# Prometheus do deploy de produção num host (deploy/producao/docker-compose.yml).
+# Raspa cada réplica da API pela rede interna (descoberta por DNS do Docker) e a IA.
+# Tokens por arquivo (secrets do compose). Regras: ../observabilidade/regras.yml.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    ambiente: producao
+
+rule_files:
+  - /etc/prometheus/regras.yml
+
+scrape_configs:
+  - job_name: valtexa-saas
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/metrics_token
+    dns_sd_configs:
+      - names: ["api"]
+        type: A
+        port: 8080
+
+  - job_name: valtexa-ia
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/inference_service_token
+    static_configs:
+      - targets: ["ia:8000"]

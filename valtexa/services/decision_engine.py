@@ -91,6 +91,8 @@ class DecisionContext:
     available_product_rate: float | None
     days_since_last_application: float | None
     last_application_product_id: str | None = None
+    sample_unit: str = "observações"
+    """``plantas`` quando a incidência veio da fusão por planta (evento da Edge AI)."""
     extra: dict = field(default_factory=dict)
 
     def as_dict(self) -> dict:
@@ -228,7 +230,7 @@ def decide(context: DecisionContext) -> DecisionResult:
         DecisionOutcome.APPLICATION_CANDIDATE,
         RECOMMEND_APPLICATION,
         (
-            f"{context.affected_ratio:.1%} de {context.sample_size} observações com "
+            f"{context.affected_ratio:.1%} de {context.sample_size} {context.sample_unit} com "
             f"{context.label!r}, confiança {confidence:.2f}. Candidata a aplicação — "
             f"depende de aprovação do agrônomo e do parecer de segurança."
         ),
@@ -262,6 +264,10 @@ def build_context(
     target = diagnosis.effective_label
     affected = sum(1 for row in neighbours if row.effective_label == target)
     affected_ratio = affected / sample_size if sample_size else 0.0
+    por_planta = _incidencia_por_planta(session, diagnosis, target)
+    unidade = "observações"
+    if por_planta is not None:
+        (sample_size, affected_ratio), unidade = por_planta, "plantas"
 
     product = _pick_product(session, diagnosis.tenant_id, crop, target)
     last_application = _last_application(session, diagnosis)
@@ -288,7 +294,37 @@ def build_context(
         last_application_product_id=(
             last_application.product_id if last_application is not None else None
         ),
+        sample_unit=unidade,
     )
+
+
+def _incidencia_por_planta(
+    session: Session, diagnosis: Diagnosis, target: str | None
+) -> tuple[int, float] | None:
+    """Incidência por planta quando o diagnóstico nasceu de um evento da Edge AI.
+
+    Com a Edge AI filtrando, só os eventos sobem em original para a nuvem: contar
+    diagnósticos daria quase 100 % (no ponta a ponta, 75 % contra 7,4 % das plantas).
+    A amostra certa são as plantas que o Rover viu na missão (fusão por planta de
+    :mod:`valtexa.services.missao_resultado`). ``None`` para observação de outra origem.
+    """
+    from valtexa.models import Observation
+    from valtexa.services.missao_resultado import plantas_da_missao
+
+    observacao = session.get(Observation, diagnosis.observation_id)
+    if (
+        observacao is None
+        or not observacao.mission_id
+        or not (observacao.edge_summary or {}).get("edge_record_id")
+    ):
+        return None
+    plantas = plantas_da_missao(session, diagnosis.tenant_id, observacao.mission_id)
+    if not plantas["plants_seen"]:
+        return None
+    doentes = sum(
+        1 for p in plantas["plants"] if p["status"] == "doente" and p["label"] == target
+    )
+    return plantas["plants_seen"], doentes / plantas["plants_seen"]
 
 
 def evaluate(session: Session, diagnosis: Diagnosis) -> Decision:

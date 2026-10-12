@@ -1,0 +1,570 @@
+{
+  "uid": "valtexa-visao-geral",
+  "title": "ValTexa — visão geral",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "tags": [
+    "valtexa"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Requisições por rota (req/s)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum by (route) (rate(valtexa_http_requests_total[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Taxa de erro 5xx",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum(rate(valtexa_http_server_errors_total[5m])) / clamp_min(sum(rate(valtexa_http_requests_total[5m])), 1e-9)",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Latência p95 por rota",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(valtexa_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Fila e eventos",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max(valtexa_outbox_pending)",
+          "legendFormat": "eventos pendentes"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max(valtexa_outbox_oldest_pending_seconds)",
+          "legendFormat": "idade do mais antigo (s)"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum by (state) (max by (kind, state) (valtexa_jobs))",
+          "legendFormat": "trabalhos {{state}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Usuários ativos",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 6,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max by (window) (valtexa_active_users)",
+          "legendFormat": "{{window}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Alertas abertos",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 16,
+        "w": 6,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum by (kind) (max by (kind, state) (valtexa_alerts_open))",
+          "legendFormat": "{{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Robôs conectados",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum(max by (tenant, device) (valtexa_rover_up))",
+          "legendFormat": "conectados"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "count(max by (tenant, device) (valtexa_rover_up))",
+          "legendFormat": "total"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Disco dos robôs (%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max by (device) (valtexa_rover_disk_percent)",
+          "legendFormat": "{{device}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Temperatura dos robôs (°C)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max by (device) (valtexa_rover_temperature_celsius)",
+          "legendFormat": "{{device}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "CPU / GPU-NPU dos robôs (%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max by (device) (valtexa_rover_cpu_percent)",
+          "legendFormat": "CPU {{device}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max by (device) (valtexa_rover_accelerator_percent)",
+          "legendFormat": "acelerador {{device}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Fila de sincronização dos robôs",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max by (device) (valtexa_rover_sync_pending)",
+          "legendFormat": "{{device}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "IA: inferências por modelo (img/s)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum by (model) (rate(valtexa_ia_inferences_total[5m]))",
+          "legendFormat": "{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "IA: latência p95 por imagem",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(valtexa_ia_inference_duration_seconds_bucket[15m])))",
+          "legendFormat": "{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "IA: erros por modelo e tipo",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum by (model, error) (rate(valtexa_ia_inference_errors_total[15m]))",
+          "legendFormat": "{{model}} {{error}}"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "barchart",
+      "title": "IA: distribuição de classes (última hora)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "sum by (model, label) (increase(valtexa_ia_predictions_total[1h]))",
+          "legendFormat": "{{model}} {{label}}"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Drift da distribuição de classes (0 a 1)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-valtexa"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-valtexa"
+          },
+          "expr": "max by (source, model) (valtexa_ai_class_drift)",
+          "legendFormat": "{{source}} {{model}}"
+        }
+      ]
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": []
+  }
+}

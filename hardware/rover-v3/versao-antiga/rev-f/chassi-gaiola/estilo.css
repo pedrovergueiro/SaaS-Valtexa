@@ -1,0 +1,240 @@
+/* Caderno VTX-RV3-CG-E — folhas A3 (420 × 297 mm).
+   A folha é sempre papel branco; só a "mesa" em volta segue o tema de quem vê. */
+:root {
+  --ink: #15191e;
+  --ink-2: #505b66;
+  --paper: #ffffff;
+  --line-soft: #8d97a1;
+  --green: #1d7443;
+  --green-2: #38a46a;
+  --red: #b3261e;
+  --desk: #d5dbe0;
+  --desk-ink: #1b2127;
+  --desk-2: #eef1f3;
+  --desk-line: #b7c0c8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #14191e;
+    --desk-ink: #e4e9ed;
+    --desk-2: #1d242b;
+    --desk-line: #33404b;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #14191e;
+  --desk-ink: #e4e9ed;
+  --desk-2: #1d242b;
+  --desk-line: #33404b;
+}
+
+html { background: var(--desk); }
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--desk-ink);
+  font-family: 'Barlow', 'Segoe UI', Arial, sans-serif;
+}
+
+/* ---------------------------------------------------------------- barra (tela) */
+.barra {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  background: var(--desk-2);
+  border-bottom: 1px solid var(--desk-line);
+  color: var(--desk-ink);
+}
+.barra .doc { font: 600 14px/1.2 'Barlow Semi Condensed', 'Arial Narrow', sans-serif; letter-spacing: .02em; }
+.barra .doc b { color: var(--green-2); font-weight: 700; }
+.barra .doc small { display: block; font: 500 12px/1.3 'Barlow', sans-serif; opacity: .75; letter-spacing: 0; }
+.barra nav { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.barra nav a {
+  font: 600 12px/1 'IBM Plex Mono', Consolas, monospace;
+  color: var(--desk-ink);
+  text-decoration: none;
+  padding: 5px 6px;
+  border: 1px solid var(--desk-line);
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.barra nav a:hover, .barra nav a:focus-visible { border-color: var(--green-2); color: var(--green-2); outline: none; }
+
+.folhas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding-block: 20px 40px;
+  padding-inline: 16px;
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------- folha */
+.folha {
+  position: relative;
+  width: 420mm;
+  height: 297mm;
+  flex: none;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 8px 24px rgba(0,0,0,.12);
+  scroll-margin-top: 70px;
+}
+@media screen { .folha { zoom: var(--k, 1); } }
+.folha svg.desenho { position: absolute; inset: 0; display: block; }
+
+/* traço (ISO 128) */
+.papel { fill: var(--paper); }
+.moldura { fill: none; stroke: var(--ink); stroke-width: .5; }
+.zona { stroke: var(--ink); stroke-width: .25; }
+.vis { fill: var(--paper); stroke: var(--ink); stroke-width: .35; stroke-linejoin: round; }
+.visl { stroke: var(--ink); stroke-width: .25; }
+.vism { fill: none; stroke: var(--ink); stroke-width: .25; }
+.ctx { fill: var(--paper); stroke: #a9b2bb; stroke-width: .16; }
+.ctxl { stroke: #a9b2bb; stroke-width: .14; }
+.ref { fill: none; stroke: #66717d; stroke-width: .18; stroke-dasharray: 3.5 .7 .5 .7 .5 .7; }
+.hid { fill: none; stroke: var(--ink); stroke-width: .18; stroke-dasharray: 1.3 .7; }
+.hid0 { stroke: var(--ink-2); stroke-width: .13; }
+.solo { stroke: var(--ink); stroke-width: .3; }
+.cheio { fill: var(--ink); stroke: var(--ink); stroke-width: .08; }
+.hach { fill: url(#hach); stroke: var(--ink); stroke-width: .3; }
+.hach2 { fill: url(#hach2); stroke: var(--ink); stroke-width: .3; }
+.hach3 { fill: url(#hach3); stroke: var(--ink); stroke-width: .3; }
+.vazio { fill: var(--paper); stroke: var(--ink); stroke-width: .3; }
+.vazio2 { fill: var(--paper); stroke: var(--ink); stroke-width: .25; }
+.dim { fill: none; stroke: var(--ink); stroke-width: .13; }
+.dimf { fill: none; stroke: var(--ink); stroke-width: .2; }
+.arr { fill: var(--ink); }
+.arrv { fill: var(--green); }
+.eixo { stroke: var(--green); stroke-width: .35; }
+.cl { fill: none; stroke: var(--ink); stroke-width: .13; stroke-dasharray: 4 .8 .8 .8; }
+.corte { stroke: var(--ink); stroke-width: .7; }
+.janela { fill: none; stroke: var(--ink); stroke-width: .3; }
+.marcador { fill: none; stroke: var(--ink); stroke-width: .25; }
+.raio { stroke: var(--red); stroke-width: .25; stroke-dasharray: 2 .8; }
+.balao { fill: var(--paper); stroke: var(--ink); stroke-width: .3; }
+.gdt { fill: none; stroke: var(--ink); stroke-width: .2; }
+.fcf { fill: var(--paper); stroke: var(--ink); stroke-width: .22; }
+.barra0 { fill: #f4f6f8; stroke: var(--ink); stroke-width: .2; }
+.barra { fill: #dfe5ea; stroke: var(--ink); stroke-width: .15; }
+.isov { stroke: var(--ink); stroke-width: .15; stroke-linejoin: round; }
+.isor { stroke: #8f99a4; stroke-width: .12; stroke-linejoin: round; }
+.isoc { stroke: #b9c1c8; stroke-width: .12; stroke-linejoin: round; }
+.isof { stroke-width: .1; }
+
+.tx { font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif; fill: var(--ink); }
+.tx.sec { fill: var(--ink-2); }
+.tx.rot { letter-spacing: .12px; }
+.rotl { stroke: var(--ink); stroke-width: .3; }
+.eixotx { fill: var(--green); }
+.selo { fill: #fff6f5; stroke: var(--red); stroke-width: .35; }
+.selotx { fill: var(--red); letter-spacing: .18px; }
+.carimbo { fill: none; stroke: var(--ink); stroke-width: .5; }
+.celula { fill: none; stroke: var(--ink); stroke-width: .2; }
+.marca { fill: var(--green); }
+.marca2 { fill: var(--green-2); }
+.marcatx { fill: var(--ink); }
+
+/* ---------------------------------------------------------------- blocos de texto */
+.bl {
+  position: absolute;
+  font: 400 10.2pt/1.3 'Barlow', 'Segoe UI', Arial, sans-serif;
+  color: var(--ink);
+}
+.bl h3 {
+  font: 700 10.4pt/1.2 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin: 4mm 0 1.6mm;
+  padding-bottom: .8mm;
+  border-bottom: .35mm solid var(--ink);
+  text-wrap: balance;
+}
+.bl > h3:first-child { margin-top: 0; }
+.bl p { margin: 0 0 1.6mm; }
+.bl ul, .bl ol { margin: 0 0 1.6mm; padding-left: 5mm; }
+.bl li { margin: 0 0 .8mm; }
+.bl b { font-weight: 600; }
+.notas li::marker { font-weight: 600; font-variant-numeric: tabular-nums; }
+.mini { font-size: 10.2pt; line-height: 1.3; color: var(--ink-2); margin-top: 1.4mm !important; }
+
+.tab {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font: 400 10.2pt/1.22 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 1.6mm;
+}
+.tab th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 10.2pt;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  background: #edf0f2;
+  border: .2mm solid var(--ink);
+  padding: .6mm 1.1mm;
+}
+.tab td { border: .15mm solid var(--line-soft); padding: .5mm 1.1mm; vertical-align: top; overflow-wrap: anywhere; }
+.tab tr.grupo td { background: #e8f2ec; font-weight: 700; letter-spacing: .02em; }
+.tab.info td:first-child { color: var(--ink-2); }
+.tab.indice td { padding-block: .6mm; }
+
+.tab.rfq td { height: 7.4mm; vertical-align: middle; }
+.tab.rfq td:nth-child(n+4) { background: #fbfcfd; }
+.tab.fix td:nth-child(4), .tab.corte td:nth-child(n+5) { text-align: right; }
+.tab.bom td { padding-block: .25mm; }
+
+.tag {
+  display: inline-block;
+  font: 600 8.4pt/1.35 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+  letter-spacing: .05em;
+  padding: 0 1mm;
+  border: .18mm solid var(--ink);
+  color: var(--ink);
+  white-space: nowrap;
+  vertical-align: .2mm;
+}
+.t-novo { border-style: dashed; }
+.t-val, .t-hip { background: var(--ink); color: var(--paper); }
+.legenda p { display: grid; grid-template-columns: 26mm 1fr; align-items: baseline; margin: 0 0 1.2mm; }
+.legenda .tag { justify-self: start; }
+
+/* capa */
+.sobre { font: 600 10.2pt/1 'Barlow Semi Condensed', sans-serif; letter-spacing: .2em; color: var(--green); margin: 0 0 3mm !important; }
+h1.capa { font: 700 30pt/1.22 'Barlow Semi Condensed', 'Arial Narrow', sans-serif; letter-spacing: -.01em; margin: 0 0 4mm; text-wrap: balance; }
+.lead { font-size: 11pt; line-height: 1.38; max-width: 172mm; }
+.status { margin: 4mm 0 5mm; padding: 2.2mm 3mm; border: .25mm solid var(--red); color: var(--ink); font-size: 10.2pt; }
+
+/* validação e proposta */
+.check { list-style: none; padding: 0 !important; columns: 2; column-gap: 5mm; }
+.check li { break-inside: avoid; display: flex; gap: 1.6mm; align-items: flex-start; }
+.box { display: inline-block; flex: none; width: 3.6mm; height: 3.6mm; border: .25mm solid var(--ink); margin-right: 1.3mm; vertical-align: -.5mm; }
+.parecer { display: flex; gap: 6mm; margin: 2mm 0 3mm; font-weight: 600; }
+.obs { height: 12mm; border: .2mm solid var(--line-soft); margin: 0 0 3mm; padding: .8mm 1.2mm; font: 500 8.4pt 'Barlow Semi Condensed', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.assin { display: grid; grid-template-columns: 2fr 1fr 1fr 2fr; gap: 3mm; }
+.assin div { height: 11mm; border-bottom: .25mm solid var(--ink); font: 500 10.2pt 'Barlow Semi Condensed', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.assin.v { grid-template-columns: 1fr; gap: 1mm; }
+.assin.v div { height: 12mm; }
+.campos div { border-bottom: .2mm solid var(--line-soft); padding: .9mm 0 1.1mm; min-height: 5.4mm; }
+.campos span { display: block; font: 500 10.2pt 'Barlow Semi Condensed', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.cols2 { column-count: 2; column-gap: 7mm; }
+
+/* ---------------------------------------------------------------- impressão */
+@page { size: 420mm 297mm; margin: 0; }
+@media print {
+  html, body { background: #fff; }
+  .barra { display: none; }
+  .folhas { display: block; padding: 0; gap: 0; overflow: visible; }
+  .folha { box-shadow: none; zoom: 1; break-after: page; page-break-after: always; }
+  .folha:last-child { break-after: auto; page-break-after: auto; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }

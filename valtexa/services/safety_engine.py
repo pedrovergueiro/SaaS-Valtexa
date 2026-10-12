@@ -48,7 +48,7 @@ from valtexa.models import (
 )
 from valtexa.models.agro import Product
 from valtexa.security import rbac
-from valtexa.services import geo
+from valtexa.services import elevation, geo
 from valtexa.services.hal import capabilities_of
 
 ENGINE_VERSION = "1.0.0"
@@ -68,6 +68,7 @@ MISSION_STATE = "mission_state"
 MISSION_NOT_EXPIRED = "mission_not_expired"
 GEOMETRY_VALID = "geometry_valid"
 GEOFENCE = "geofence"
+SLOPE = "slope"
 APPROVAL = "approval"
 APPROVER_ROLE = "approver_role"
 PRODUCT_PRESENT = "product_present"
@@ -162,6 +163,7 @@ def check_mission(
     device = session.get(Device, mission.device_id)
     checks += _check_device(session, mission, device, moment)
     checks += _check_geometry(session, mission)
+    checks += _check_slope(session, mission)
 
     if mission.kind is MissionKind.SPRAY:
         checks += _check_approval(session, mission)
@@ -296,6 +298,47 @@ def _check_rtk(session: Session, device: Device) -> Check:
         latest.rtk_fix is RtkFix.FIXED,
         f"RTK {latest.rtk_fix.value!r}; exigido 'fixed' para aplicação.",
     )
+
+
+def _check_slope(session: Session, mission: Mission) -> list[Check]:
+    """Barra a missão cuja encosta passa do ângulo que o rover aguenta.
+
+    A verificação **passa** quando não há relevo medido, e é assim de propósito:
+    esta plataforma pode rodar sem fonte de elevação contratada, e transformar
+    "não medi" em "não pode" travaria toda missão de toda instalação que ainda
+    não ligou um DEM. O que não se pode é o contrário — tratar "não medi" como
+    "é plano" sem dizer. Por isso a mensagem do parecer distingue os dois casos
+    em letras, mesmo quando o veredito é o mesmo.
+
+    Medido e acima do limite, aí sim bloqueia. Tombar numa encosta é perda total
+    do equipamento, e é o tipo de dano que nenhum operador aceita ter aprovado
+    sem aviso.
+    """
+    field_row = session.get(Field, mission.field_id)
+    relevo = field_row.relief if field_row else None
+    if not relevo:
+        return [
+            Check(
+                SLOPE,
+                True,
+                "Relevo não medido: a rota foi planejada como se o talhão fosse "
+                "plano. Confira a declividade no local antes de autorizar.",
+            )
+        ]
+
+    device = session.get(Device, mission.device_id)
+    capabilities = capabilities_of(device.capabilities if device else {})
+    limite = capabilities.number("max_slope_deg", elevation.LIMITE_DE_TOMBAMENTO_PADRAO_DEG)
+    maxima = float(relevo.get("declividade_maxima_deg") or 0.0)
+
+    return [
+        Check(
+            SLOPE,
+            maxima < limite,
+            f"Declividade máxima medida {maxima:.0f}°, limite do modelo {limite:.0f}°"
+            + (f" (fonte: {relevo.get('fonte')})." if relevo.get("fonte") else "."),
+        )
+    ]
 
 
 def _check_geometry(session: Session, mission: Mission) -> list[Check]:

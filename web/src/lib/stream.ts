@@ -31,9 +31,11 @@ type Payload = {
 }
 
 const INVALIDATE: [prefix: string, keys: QueryKey[]][] = [
-  ['mission.', [['missions'], keys.dashboard, keys.alerts, ['devices'], ['scene']]],
+  // Missão concluída fecha a passada: as plantas ganham o comparativo com a anterior.
+  ['mission.', [['missions'], keys.dashboard, keys.alerts, ['devices'], ['scene'], ['plants']]],
   ['safety.', [['missions'], keys.alerts]],
-  ['diagnosis.', [keys.reviewQueue, ['observations'], ['twin'], keys.dashboard, ['scene']]],
+  // Um quadro do rover diagnosticado também mexe nas plantas e na prevalência do talhão.
+  ['diagnosis.', [keys.reviewQueue, ['observations'], ['twin'], keys.dashboard, ['scene'], ['plants'], ['diagnoses']]],
   // Cada rua que o rover termina aparece na cópia 3D sem recarregar a página.
   ['row_scan.', [['scene']]],
   ['novelty.', [keys.reviewQueue, keys.alerts]],

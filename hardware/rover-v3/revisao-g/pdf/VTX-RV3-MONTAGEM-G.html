@@ -1,0 +1,160 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Rover V3 — manual de montagem e posição das peças</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; margin: 0; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #15402a;
+     border-bottom: 2.4pt solid #1f6b3a; padding-bottom: 2.5mm; }
+h2 { font-size: 13.5pt; margin: 9mm 0 3mm; color: #1f6b3a; page-break-after: avoid;
+     border-bottom: .6pt solid #cfd8d2; padding-bottom: 1.5mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #15402a; page-break-after: avoid; }
+p { margin: 0 0 2.8mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm;
+        font-size: 9pt; page-break-inside: avoid; }
+th { background: #1f6b3a; color: #fff; text-align: left; padding: 1.6mm 2mm;
+     font-weight: 600; font-size: 8.6pt; }
+td { border-bottom: .4pt solid #dde3df; padding: 1.5mm 2mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8f7; }
+code { font: 9pt 'Cascadia Mono', Consolas, monospace; background: #eef2ef;
+       padding: .3mm 1mm; border-radius: 1mm; }
+pre { background: #f4f6f5; border-left: 2.5pt solid #1f6b3a; padding: 2.5mm 3mm;
+      margin: 2mm 0 4mm; overflow-x: auto; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.45; }
+blockquote { border-left: 2.5pt solid #c9a227; background: #fdf9ec; margin: 2mm 0 4mm;
+             padding: 2mm 3mm; }
+blockquote p { margin: 0; }
+hr { border: 0; border-top: .6pt solid #cfd8d2; margin: 6mm 0; }
+strong { font-weight: 650; color: #0d2b1c; }
+.rodape { margin-top: 8mm; padding-top: 2.5mm; border-top: .6pt solid #cfd8d2;
+          font-size: 8pt; color: #6a7570; }
+</style></head><body><h1>Rover V3 — manual de montagem e posição das peças</h1>
+<blockquote><p><strong>VTX-RV3 · Revisão G · 11/10/2026</strong> EMITIDO PARA COTAÇÃO E VALIDAÇÃO — NÃO LIBERADO PARA FABRICAÇÃO  Documento <strong>gerado</strong> de <code>revisao-g/montagem.py</code> sobre a geometria de <code>chassi-gaiola/modelo.py</code>. Não editar à mão: a próxima geração sobrescreve.</p></blockquote>
+<h2>Para que serve este documento</h2>
+<p>Para montar o rover sem adivinhar. Ele responde três perguntas por peça: <strong>onde</strong> ela vai,</p>
+<p><strong>contra o quê</strong> ela encosta, e <strong>como</strong> ela prende. As duas primeiras são medidas no modelo paramétrico; a terceira é decisão de projeto declarada.</p>
+<p>A coluna &quot;encosta em&quot; é a mais útil na bancada: se a peça vizinha listada não estiver no lugar quando você for montar, a ordem está errada — volte à seção de sequência.</p>
+<p>Referencial: origem no solo, no centro do polígono das quatro rodas. <strong>X</strong> para a frente,</p>
+<p><strong>Y</strong> para a esquerda, <strong>Z</strong> para cima (ISO 8855). Todas as coordenadas em mm.</p>
+<h2>Mapa de posições</h2>
+<p>55 códigos de peça fabricada. A coordenada é a caixa envolvente de UM exemplar — os demais são espelhados em X, em Y ou nos dois.</p>
+<h3>Grupo Q — Quadro estrutural soldado</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>Q-01</strong></td><td>Longarina</td><td>4</td><td>-521…521</td><td>268…298</td><td>250…280</td><td>C-01, G-05, K-01, M-02, Q-02, Q-03, Q-04, Q-06</td><td>TIG a2 contínuo nas travessas</td></tr><tr><td><strong>Q-06</strong></td><td>Tampa de extremidade</td><td>8</td><td>521…523</td><td>268…298</td><td>250…280</td><td>C-01, G-05, K-01, K-02, K-03, Q-01, Q-02, Q-04</td><td>tampa de extremidade, TIG a2 em todo o contorno</td></tr><tr><td><strong>Q-02</strong></td><td>Travessa de extremidade</td><td>4</td><td>493…523</td><td>-268…268</td><td>250…280</td><td>C-01, G-05, K-02, K-03, N-08, Q-01, Q-04, Q-05, Q-06, W-11</td><td>TIG a2 contínuo nas longarinas</td></tr><tr><td><strong>Q-03</strong></td><td>Travessa da estação de roda</td><td>4</td><td>335…365</td><td>-268…268</td><td>250…280</td><td>C-01, N-02, Q-01, Q-04, Q-05, W-11</td><td>TIG a2 contínuo nas longarinas</td></tr><tr><td><strong>Q-04</strong></td><td>Montante entre anéis</td><td>16</td><td>-523…-493</td><td>268…298</td><td>280…310</td><td>K-01, K-02, K-03, Q-01, Q-02, Q-03, Q-06</td><td>TIG a2 contínuo nos dois anéis</td></tr><tr><td><strong>Q-05</strong></td><td>Bucha de compressão</td><td>16</td><td>344…356</td><td>162…174</td><td>250…280</td><td>C-01, Q-02, Q-03, W-11</td><td>bucha soldada dentro do tubo, antes de fechar o anel</td></tr></tbody></table>
+<h3>Grupo M — Mastros: base, haste e suportes de câmera</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>M-02</strong></td><td>Chapa de reforço da base</td><td>2</td><td>-28…28</td><td>258…298</td><td>340…346</td><td>K-01, M-01, M-10, Q-01</td><td>reforço soldado no anel superior, antes da luva</td></tr><tr><td><strong>M-01</strong></td><td>Luva do mastro</td><td>2</td><td>-17…17</td><td>263…297</td><td>346…526</td><td>K-01, M-02, M-10, M-20</td><td>luva soldada no quadro, sobre o reforço M-02</td></tr></tbody></table>
+<h3>Grupo C — Chapa de fundo e nervuras</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>C-01</strong></td><td>Chapa de fundo</td><td>1</td><td>-523…523</td><td>-298…298</td><td>248…250</td><td>B-01, C-02, E-01, E-02, K-01, K-02, K-03, N-03, N-04, N-05, N-06, Q-01, Q-02, Q-03, Q-05, Q-06, W-06, W-12, W-13</td><td>M6 em porca-rebite no anel inferior · <strong>10 N·m</strong></td></tr><tr><td><strong>C-02</strong></td><td>Nervura da chapa de fundo</td><td>2</td><td>100…140</td><td>-296…296</td><td>208…248</td><td>C-01</td><td>Ø4,8 na chapa + M6 no anel</td></tr></tbody></table>
+<h3>Grupo W — Suspensão pneumática independente (4 cantos, soldados e usinados)</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>W-01</strong></td><td>Braço longitudinal</td><td>4</td><td>340…522</td><td>194…224</td><td>170…210</td><td>W-02, W-03, W-04, W-07, W-08, W-09, W-10</td><td>sobreposto na chapa W-02, filete a4 em cima e embaixo</td></tr><tr><td><strong>W-02</strong></td><td>Chapa de montagem do motor-roda</td><td>4</td><td>290…412</td><td>224…234</td><td>38…210</td><td>W-01, W-03, W-08</td><td>recebe o braço W-01 e a tampa W-03; usinar DEPOIS de soldar</td></tr><tr><td><strong>W-03</strong></td><td>Tampa-gusset da ponta do braço</td><td>4</td><td>334…340</td><td>194…224</td><td>170…210</td><td>W-01, W-02</td><td>tampa-gusset: fecha a ponta do tubo e amarra o braço à chapa, a4</td></tr><tr><td><strong>W-04</strong></td><td>Alojamento da bucha do pivô</td><td>4</td><td>483…517</td><td>190…228</td><td>173…207</td><td>W-01, W-07</td><td>atravessa o tubo do braço, filete a4 nas duas faces</td></tr><tr><td><strong>W-08</strong></td><td>Disco do prato do fole</td><td>4</td><td>379…471</td><td>163…255</td><td>202…210</td><td>W-01, W-02, W-09</td><td>disco articulado no pino W-10, dentro do rasgo do braço</td></tr><tr><td><strong>W-09</strong></td><td>Orelha do prato do fole</td><td>8</td><td>411…439</td><td>197…205</td><td>182…202</td><td>W-01, W-08, W-10</td><td>orelha soldada no disco W-08, em dispositivo</td></tr><tr><td><strong>W-10</strong></td><td>Pino do prato</td><td>4</td><td>419…431</td><td>190…228</td><td>184…196</td><td>W-01, W-09</td><td>atravessa as paredes do braço e as orelhas; anel DIN 471</td></tr><tr><td><strong>W-05</strong></td><td>Orelha da torre do pivô</td><td>8</td><td>478…522</td><td>182…188</td><td>168…240</td><td>W-06, W-07</td><td>orelha soldada no berço W-06, filete a4 nos dois lados</td></tr><tr><td><strong>W-07</strong></td><td>Eixo do pivô</td><td>4</td><td>490…510</td><td>179…239</td><td>180…200</td><td>W-01, W-04, W-05</td><td>passa pelas duas orelhas e pelas buchas; travado por anel DIN 471</td></tr><tr><td><strong>W-06</strong></td><td>Berço do pivô</td><td>4</td><td>476…522</td><td>156…262</td><td>240…248</td><td>C-01, W-05, W-12</td><td>M8×65 passante: berço do fole → bucha → chapa → berço do pivô · <strong>25 N·m</strong></td></tr><tr><td><strong>W-11</strong></td><td>Berço do fole</td><td>4</td><td>338…520</td><td>156…262</td><td>280…290</td><td>Q-02, Q-03, Q-05, W-12</td><td>M8×65 em X 508 e M8×50 em X 350, sobre buchas de compressão · <strong>25 N·m</strong></td></tr><tr><td><strong>W-12</strong></td><td>Tubo do colar de vedação</td><td>4</td><td>375…475</td><td>159…259</td><td>248…280</td><td>C-01, W-06, W-11, W-13</td><td>tubo soldado na flange W-13, filete a3 estanque</td></tr><tr><td><strong>W-13</strong></td><td>Flange do colar</td><td>4</td><td>355…470</td><td>139…279</td><td>244…248</td><td>C-01, W-12</td><td>Ø4,8 na chapa de fundo, com junta NBR nas duas faces</td></tr></tbody></table>
+<h3>Grupo G — Gaiola de proteção (2 módulos idênticos)</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>G-01</strong></td><td>Trilho lateral</td><td>4</td><td>32…522</td><td>278…298</td><td>377…397</td><td>G-02, G-03, G-04, G-07, K-01, K-02, K-03, K-04, K-05</td><td>TIG a2 nos trilhos transversais</td></tr><tr><td><strong>G-07</strong></td><td>Tampa do trilho</td><td>8</td><td>30…32</td><td>278…298</td><td>377…397</td><td>G-01, G-02, G-04, K-01, K-02, K-03, K-04, K-05</td><td>tampa do trilho, TIG a2 no contorno</td></tr><tr><td><strong>G-02</strong></td><td>Trilho transversal</td><td>4</td><td>503…523</td><td>-278…278</td><td>377…397</td><td>G-01, G-04, G-07, K-02, K-03, K-04, K-05, K-06, N-08</td><td>TIG a2 nos trilhos laterais</td></tr><tr><td><strong>G-03</strong></td><td>Barra intermediária</td><td>4</td><td>220…240</td><td>-278…278</td><td>377…397</td><td>G-01, G-06, K-04, K-05, N-01</td><td>TIG a2 nos trilhos laterais</td></tr><tr><td><strong>G-04</strong></td><td>Montante da gaiola</td><td>12</td><td>503…523</td><td>278…298</td><td>343…377</td><td>G-01, G-02, G-05, G-07, K-01, K-02, K-03</td><td>montante soldado no anel e na sapata</td></tr><tr><td><strong>G-05</strong></td><td>Sapata</td><td>12</td><td>453…523</td><td>268…298</td><td>340…343</td><td>G-04, K-01, K-02, K-03, Q-01, Q-02, Q-06</td><td>M6 em porca-rebite no anel superior · <strong>10 N·m</strong></td></tr><tr><td><strong>G-06</strong></td><td>Suporte do LiDAR</td><td>1</td><td>215…345</td><td>-55…55</td><td>398…403</td><td>G-03, G-08, K-04</td><td>M5×16 em porca-rebite, sobre 4 coxins G-08 · <strong>5 N·m</strong></td></tr><tr><td><strong>G-08</strong></td><td>Coxim antivibração</td><td>4</td><td>248…262</td><td>-32…-18</td><td>403…413</td><td>G-06</td><td>M4 no suporte do LiDAR · <strong>2 N·m</strong></td></tr></tbody></table>
+<h3>Grupo K — Carenagens e tampas</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>K-01</strong></td><td>Carenagem lateral (meia)</td><td>4</td><td>0…523</td><td>298…300</td><td>250…397</td><td>C-01, G-01, G-04, G-05, G-07, K-02, K-03, K-04, K-05, M-01, M-02, Q-01, Q-04, Q-06</td><td>M5×12 em porca-rebite nas paredes externas · <strong>5 N·m</strong></td></tr><tr><td><strong>K-02</strong></td><td>Carenagem frontal</td><td>1</td><td>523…525</td><td>-300…300</td><td>250…397</td><td>C-01, G-01, G-02, G-04, G-05, G-07, K-01, K-04, N-08, Q-02, Q-04, Q-06</td><td>M5×12 em porca-rebite nas paredes externas · <strong>5 N·m</strong></td></tr><tr><td><strong>K-03</strong></td><td>Carenagem traseira</td><td>1</td><td>-525…-523</td><td>-300…300</td><td>250…397</td><td>C-01, G-01, G-02, G-04, G-05, G-07, K-01, K-05, Q-02, Q-04, Q-06</td><td>M5×12 em porca-rebite nas paredes externas · <strong>5 N·m</strong></td></tr><tr><td><strong>K-04</strong></td><td>Tampa superior dianteira</td><td>1</td><td>30…525</td><td>-300…300</td><td>397…398</td><td>G-01, G-02, G-03, G-06, G-07, K-01, K-02, K-06</td><td>M5×12 em porca-rebite no anel da gaiola · <strong>5 N·m</strong></td></tr><tr><td><strong>K-05</strong></td><td>Tampa superior traseira</td><td>1</td><td>-525…-30</td><td>-300…300</td><td>397…398</td><td>E-10, E-11, G-01, G-02, G-03, G-07, K-01, K-03, K-06, N-01</td><td>M5×12 em porca-rebite no anel da gaiola · <strong>5 N·m</strong></td></tr><tr><td><strong>K-06</strong></td><td>Faixa central</td><td>1</td><td>-55…55</td><td>-256…256</td><td>398…399</td><td>G-02, K-04, K-05</td><td>M5×12 em porca-rebite, por cima das duas tampas · <strong>5 N·m</strong></td></tr></tbody></table>
+<h3>Grupo M — Mastros: base, haste e suportes de câmera</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>M-10</strong></td><td>Haste do mastro</td><td>2</td><td>-12…12</td><td>268…292</td><td>346…1782</td><td>M-01, M-02, M-11, M-12, M-20</td><td>M6×12 passante na luva, 2 por mastro · <strong>10 N·m</strong></td></tr><tr><td><strong>M-11</strong></td><td>Bainha anti-galho</td><td>6</td><td>-14…14</td><td>266…294</td><td>536…960</td><td>M-10, M-12</td><td>bainha deslizada sobre a haste, sem fixador</td></tr><tr><td><strong>M-12</strong></td><td>Ponta cônica</td><td>2</td><td>-14…14</td><td>266…294</td><td>1782…1822</td><td>M-10, M-11</td><td>ponta cônica pressionada na bainha</td></tr><tr><td><strong>M-20</strong></td><td>Suporte da câmera</td><td>6</td><td>-45…45</td><td>297…303</td><td>415…485</td><td>M-01, M-10, N-09</td><td>parafuso U M6 na haste ou na luva · <strong>8 N·m</strong></td></tr></tbody></table>
+<h3>Grupo B — Retenção da bateria</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>B-01</strong></td><td>Batente da bateria</td><td>4</td><td>225…265</td><td>-75…75</td><td>250…290</td><td>C-01</td><td>M6×20 na malha da chapa de fundo · <strong>10 N·m</strong></td></tr></tbody></table>
+<h3>Grupo E — Bandejas de eletrônica e E-STOP</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>E-01</strong></td><td>Bandeja lateral</td><td>2</td><td>-190…190</td><td>210…264</td><td>250…252</td><td>C-01</td><td>M6×20 na malha da chapa de fundo · <strong>10 N·m</strong></td></tr><tr><td><strong>E-02</strong></td><td>Bandeja de extremidade</td><td>4</td><td>368…490</td><td>100…152</td><td>250…252</td><td>C-01</td><td>M6×20 na malha da chapa de fundo · <strong>10 N·m</strong></td></tr><tr><td><strong>E-10</strong></td><td>Reforço do E-STOP</td><td>1</td><td>-500…-420</td><td>-40…40</td><td>394…397</td><td>E-11, K-05</td><td>M5×16 na tampa traseira · <strong>5 N·m</strong></td></tr><tr><td><strong>E-11</strong></td><td>Protetor do E-STOP</td><td>3</td><td>-485…-435</td><td>24…28</td><td>398…449</td><td>E-10, K-05</td><td>M5×16 na tampa traseira · <strong>5 N·m</strong></td></tr></tbody></table>
+<h3>Grupo N — Interfaces de sensores e sinalização</h3>
+<table><thead><tr><th>item</th><th>nome</th><th>qt</th><th>X</th><th>Y</th><th>Z</th><th>encosta em</th><th>como prende</th></tr></thead><tbody><tr><td><strong>N-01</strong></td><td>Suporte da antena GNSS</td><td>1</td><td>-405…-295</td><td>-55…55</td><td>398…403</td><td>G-03, K-05</td><td>M5×16 em porca-rebite na tampa · <strong>5 N·m</strong></td></tr><tr><td><strong>N-02</strong></td><td>Berço do IMU</td><td>1</td><td>255…345</td><td>-35…35</td><td>304…310</td><td>N-03, Q-03</td><td>M6×16, sobre espaçadores N-03 · <strong>10 N·m</strong></td></tr><tr><td><strong>N-03</strong></td><td>Espaçador do berço</td><td>4</td><td>272…284</td><td>-31…-19</td><td>250…304</td><td>C-01, N-02</td><td>espaçador entre o berço e a chapa</td></tr><tr><td><strong>N-04</strong></td><td>Janela da câmera de raiz</td><td>1</td><td>370…490</td><td>-85…85</td><td>250…253</td><td>C-01, N-07</td><td>M4×12 em porca-rebite, com barras N-05 por cima · <strong>2 N·m</strong></td></tr><tr><td><strong>N-05</strong></td><td>Barra de proteção da janela</td><td>2</td><td>409…417</td><td>-80…80</td><td>240…248</td><td>C-01</td><td>M4 sobre a janela de policarbonato · <strong>2 N·m</strong></td></tr><tr><td><strong>N-06</strong></td><td>Aba do suporte da câmera de raiz</td><td>2</td><td>395…485</td><td>92…95</td><td>250…289</td><td>C-01, N-07</td><td>aba soldada no suporte da câmera de raiz</td></tr><tr><td><strong>N-07</strong></td><td>Face inclinada da câmera de raiz</td><td>1</td><td>399…480</td><td>-95…95</td><td>254…292</td><td>N-04, N-06</td><td>M6×16 no conjunto da câmera de raiz · <strong>10 N·m</strong></td></tr><tr><td><strong>N-08</strong></td><td>Reforço do farol</td><td>2</td><td>521…523</td><td>120…180</td><td>341…376</td><td>G-02, K-02, Q-02</td><td>Ø4,8 na carenagem</td></tr><tr><td><strong>N-09</strong></td><td>Carenagem anti-galho da câmera</td><td>6</td><td>-25…45</td><td>303…337</td><td>425…475</td><td>M-20</td><td>M4×10 na carenagem da câmera · <strong>2 N·m</strong></td></tr></tbody></table>
+<h2>Sequência de montagem</h2>
+<p>Quinze etapas. A razão de cada uma estar nessa posição vem antes das instruções, de propósito: é a razão que diz o que acontece se alguém inverter duas etapas.</p>
+<h3>1. Quadro estrutural (Q)</h3>
+<p>Soldar o quadro completo com as buchas Q-05 JÁ DENTRO dos tubos. Depois de fechar o anel não há como pôr bucha nenhuma.</p>
+<ul>
+<li>Q-05 nas 16 posições de fixação da suspensão</li>
+<li>Q-06 nas pontas das longarinas</li>
+</ul>
+<h3>2. Base dos mastros (M-01, M-02)</h3>
+<p>Soldar antes de qualquer coisa chegar perto do quadro: o acesso para o maçarico desaparece quando a gaiola subir.</p>
+<ul>
+<li>Reforço M-02 primeiro, luva M-01 depois</li>
+</ul>
+<h3>3. Alívio de tensão e aplainamento do quadro</h3>
+<p>Com todo o aço e alumínio de solda do quadro já no lugar. Depois disto o quadro não solda mais.</p>
+<ul>
+<li>Verificar diagonal e planeza do anel inferior</li>
+</ul>
+<h3>4. Cantos de suspensão (W), nas quatro bancadas</h3>
+<p>Cada canto é um subconjunto independente. Soldar e usinar os quatro FORA do rover — a usinagem da chapa W-02 exige acesso de fresa dos dois lados.</p>
+<ul>
+<li>Ver a sequência detalhada de 12 passos na folha 33</li>
+</ul>
+<h3>5. Colares W-12 na chapa de fundo C-01</h3>
+<p>Antes de a chapa subir no quadro: a flange do colar fica na face de BAIXO e é rebitada por fora.</p>
+<ul>
+<li>Junta NBR nas duas faces de cada colar</li>
+<li>4 colares, um por canto</li>
+</ul>
+<h3>6. Chapa de fundo C-01 e nervuras C-02</h3>
+<p>A chapa entra por baixo e é o que fecha o compartimento. As 16 posições de suspensão ficam sem parafuso ainda.</p>
+<ul>
+<li>Não apertar os M8 da suspensão nesta etapa</li>
+</ul>
+<h3>7. Berços do pivô W-06 e berços do fole W-11</h3>
+<p>Os quatro níveis de cada posição (berço do fole, bucha, chapa, berço do pivô) são apertados por UM parafuso M8×65. Montar os quatro níveis antes de apertar.</p>
+<ul>
+<li>Arruela de nylon entre o berço de aço e o alumínio</li>
+<li>Torque 25 N·m</li>
+</ul>
+<h3>8. Cantos de suspensão no rover</h3>
+<p>Pendurar cada canto pelo eixo W-07 nas orelhas W-05 já parafusadas. O braço fica solto até o fole entrar.</p>
+<ul>
+<li>Anel DIN 471 nas duas pontas do eixo</li>
+</ul>
+<h3>9. Foles W-10 e pratos W-08</h3>
+<p>Prato no pino W-09 primeiro, depois o fole: M12 inferior no prato e M12 superior no berço, com a porta de ar voltada para dentro.</p>
+<ul>
+<li>Não pressurizar ainda</li>
+<li>Cabo W-13 no mesmo aperto do prato</li>
+</ul>
+<h3>10. Motores-roda MPW86 nas chapas W-02</h3>
+<p>Sete M4×14 com trava química média. Engajamento máximo 4 mm — parafuso mais longo fura o motor por dentro.</p>
+<ul>
+<li>Torque 2,5 N·m</li>
+<li>Conferir a orientação dos 7 furos</li>
+</ul>
+<h3>11. Gaiola de proteção (G) e suporte do LiDAR</h3>
+<p>Dois módulos idênticos, parafusados nas sapatas G-05 do anel superior.</p>
+<ul>
+<li>O módulo traseiro é o dianteiro girado 180° em Z</li>
+</ul>
+<h3>12. Grupo pneumático (W-15) e bandeja W-16</h3>
+<p>Compressor, reservatório, secador e manifold na bandeja, dentro do compartimento. Linhas PU Ø6 até os quatro foles.</p>
+<ul>
+<li>Linha mais curta possível por canto</li>
+<li>Sensor de altura W-14 por canto</li>
+</ul>
+<h3>13. Parte B: mastros, bandejas, bateria e sensores</h3>
+<p>Tudo o que é interface. Só depois do ar funcionando: a altura muda o acesso.</p>
+<ul>
+<li>Ver folhas 17 a 22</li>
+</ul>
+<h3>14. Carenagens e tampas (K)</h3>
+<p>Último: são o que se tira para mexer em tudo o resto.</p>
+<ul>
+<li>Faixa central K-06 por cima das duas tampas</li>
+</ul>
+<h3>15. Enchimento, nivelamento e verificação</h3>
+<p>Ver folha 35. O rover não sai da bancada sem a verificação de folgas no curso completo.</p>
+<ul>
+<li>Nivelar nos quatro cantos</li>
+<li>Ensaio de estanqueidade de 12 h</li>
+</ul>
+<h2>Torques de aperto</h2>
+<table><thead><tr><th>Rosca</th><th>N·m</th><th>Onde</th></tr></thead><tbody><tr><td>M4 inox A4-70</td><td>2.5</td><td>motor-roda, janela de policarbonato, carenagem de câmera</td></tr><tr><td>M5 inox A4-70</td><td>5.0</td><td>carenagens, tampas, suporte do LiDAR, E-STOP</td></tr><tr><td>M6 inox A4-70</td><td>10.0</td><td>chapa de fundo, sapatas, bandejas, batentes, mastro</td></tr><tr><td>M8 inox A4-70</td><td>25.0</td><td>suspensão: berço do fole, chapa e berço do pivô</td></tr><tr><td>M12 do fole</td><td>40.0</td><td>prato inferior e berço superior do fole</td></tr></tbody></table>
+<p>Inox A4-70 lubrificado, a 70 % do escoamento. <strong>O M8 da suspensão aperta quatro peças em série</strong> — berço do fole, bucha de compressão, chapa de fundo e berço do pivô — com duas delas em alumínio. É a bucha de compressão que define o torque: sem ela, 25 N·m amassam o tubo 30×30×2 e o aperto se perde na primeira semana de campo.</p>
+<h2>Conferências de aceite</h2>
+<table><thead><tr><th>O que medir</th><th>Critério</th><th>Por que importa</th></tr></thead><tbody><tr><td>Bitola</td><td>530 ± 1 mm, medida face a face das rodas</td><td>é a cota que paga a estabilidade desta revisão</td></tr><tr><td>Entre-eixos</td><td>700 ± 1 mm</td><td>define a geometria do braço</td></tr><tr><td>Face de montagem do motor</td><td>planeza 0,1 mm, perpendicular 0,3 a A</td><td>sugestão 2.3 do fabricante — ver folha 29</td></tr><tr><td>Alinhamento do braço</td><td>eixo do pivô paralelo a Y em 0,2/100</td><td>desalinhamento força a bucha e come o curso</td></tr><tr><td>Vão livre nos quatro cantos</td><td>150 ± 3 mm com o ar na pressão mínima</td><td>se um canto difere, o nivelamento nasce torto</td></tr><tr><td>Curso livre</td><td>girar cada braço de batente a batente, sem o fole</td><td>nenhuma interferência em todo o curso</td></tr><tr><td>Folga braço × chapa de fundo</td><td>≥ 13 mm em compressão total</td><td>medida na estação da roda, que é a que mais sobe</td></tr><tr><td>Estanqueidade</td><td>queda ≤ 0,2 bar em 12 h com o sistema parado</td><td>acima disto o compressor cicla e a bateria paga</td></tr><tr><td>Ciclo do compressor</td><td>≤ 15 % em regime</td><td>acima disto há vazamento — é alarme, não tolerância</td></tr></tbody></table>
+<h2>O que não montar ainda</h2>
+<p>Três itens deste projeto não existem como componente escolhido, e improvisar qualquer um deles na bancada custa a desmontagem:</p>
+<ol>
+<li><strong>O fole W-15.</strong> Nenhum modelo comercial escolhido (P-20). A interface está desenhada e</li>
+</ol>
+<p>aceita qualquer fole que feche a folha de requisitos da folha 07 — e aceita igualmente um cilindro pneumático de mesma área. Um fole fora de requisito muda curso, pressão e altura, e nenhum dos três se ajusta depois.</p>
+<ol>
+<li><strong>A bucha autolubrificante do pivô</strong> Ø23/Ø20 (P-21). O alojamento está em Ø23 H7.</li>
+<li><strong>A bateria.</strong> A altura máxima medida na zona central é</li>
+</ol>
+<p>87 mm, e a caixa estimada tem 130. Ver <code>VTX-RV3-ESPACO-G</code>.</p><div class="rodape">VALTEXA · Rover V3 · Revisão G · gerado de <code>VTX-RV3-MONTAGEM-G.md</code> · EMITIDO PARA COTAÇÃO E VALIDAÇÃO</div></body></html>

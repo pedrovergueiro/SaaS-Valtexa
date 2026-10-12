@@ -228,6 +228,38 @@ def platform_public_key() -> str:
     )
 
 
+OTA_ALGORITHM = "VALTEXA-ED25519-OTA-V1"
+"""Prefixo do que se assina num pacote de atualização: uma assinatura de missão
+nunca vale como assinatura de pacote, e vice-versa."""
+
+
+def ota_private_key() -> Ed25519PrivateKey:
+    """Chave que assina os pacotes OTA (``ota_signing_secret``; sem ela, a das missões)."""
+    segredo = settings.ota_signing_secret or settings.command_signing_secret
+    return Ed25519PrivateKey.from_private_bytes(
+        hashlib.sha256(("ota:" + segredo).encode("utf-8")).digest()
+    )
+
+
+def ota_public_key() -> str:
+    """Gravada no robô no provisionamento; é com ela que ele confere cada pacote."""
+    return ota_private_key().public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex()
+
+
+def canonical_ota(payload: dict) -> bytes:
+    corpo = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return (OTA_ALGORITHM + "\n" + corpo).encode("utf-8")
+
+
+def sign_ota(payload: dict) -> str:
+    return ota_private_key().sign(canonical_ota(payload)).hex()
+
+
+def verify_ota(payload: dict, signature: str, public_key: str | None = None) -> None:
+    _verify(public_key or ota_public_key(), signature, canonical_ota(payload),
+            "assinatura do pacote OTA inválida")
+
+
 def canonical_command(payload: dict) -> bytes:
     """Serialização determinística de um comando.
 

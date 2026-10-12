@@ -37,6 +37,7 @@ SWATH_M = "swath_m"
 CAMERA_GSD_MM_AT_1M = "camera_gsd_mm_at_1m"
 MAX_PAYLOAD_KG = "max_payload_kg"
 SUPPORTS_OFFLINE_MISSION = "supports_offline_mission"
+CHARGE_KW = "charge_kw"
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +149,31 @@ REFERENCE_MODELS: list[dict] = [
         },
     },
     {
+        "code": "ROVER_V3",
+        "kind": DeviceKind.ROVER,
+        "name": "ValTexa Rover V3",
+        "manufacturer": "ValTexa",
+        # Números do projeto do V3 (infraestrutura + chassi). São de PROJETO, não
+        # medidos em campo: é exatamente por isso que o planejador marca todo
+        # plano feito com eles como estimativa, até a primeira missão calibrar.
+        # Ver valtexa/services/planner.py.
+        "capabilities": {
+            HAS_RTK: True,
+            HAS_CAMERA_RGB: True,
+            HAS_LIDAR: True,
+            CAN_FLY: False,
+            HAS_SPRAY: False,
+            SWATH_M: 3.0,
+            CRUISE_SPEED_MS: 1.0,
+            MAX_SPEED_MS: 1.5,
+            BATTERY_WH: 5120,          # 48 V, 100 Ah
+            ENDURANCE_MINUTES: 480,    # 6 a 10 h por missão; 8 h é o meio
+            CHARGE_KW: 2.5,            # poste de recarga por acoplamento
+            CAMERA_GSD_MM_AT_1M: 0.35,
+            SUPPORTS_OFFLINE_MISSION: True,
+        },
+    },
+    {
         "code": "DRONE_ACTION_V1",
         "kind": DeviceKind.DRONE,
         "name": "ValTexa Drone Action V1",
@@ -178,6 +204,18 @@ REFERENCE_MODELS: list[dict] = [
             CAN_SWAP_BATTERY: True,
             CAN_REFILL: True,
             HAS_RTK: True,
+            SUPPORTS_OFFLINE_MISSION: False,
+        },
+    },
+    {
+        # A base da fazenda (VALTEXA-BASE): Starlink de um lado, rádios dos Rovers do
+        # outro. Não anda nem fotografa: repassa o que os Rovers assinam e manda o
+        # retrato dela (health.base) — ver valtexa/services/estacao_base.py.
+        "code": "FARM_BASE_V1",
+        "kind": DeviceKind.GATEWAY,
+        "name": "ValTexa Base da Fazenda V1",
+        "manufacturer": "ValTexa",
+        "capabilities": {
             SUPPORTS_OFFLINE_MISSION: False,
         },
     },

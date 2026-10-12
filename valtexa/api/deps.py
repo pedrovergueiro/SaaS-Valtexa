@@ -35,13 +35,18 @@ from valtexa.models import (
     DeviceCredential,
     DeviceStatus,
     Membership,
+    PlatformRole,
     Role,
+    SupportMode,
+    SupportSession,
     Tenant,
     UsedNonce,
     User,
     as_utc,
 )
+from valtexa.observability import contexto
 from valtexa.security import rbac, signing, tokens
+from valtexa.services import audit, sessions, support_sessions
 
 UNAUTHORIZED = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -52,11 +57,29 @@ UNAUTHORIZED = HTTPException(
 
 @dataclass(frozen=True, slots=True)
 class Principal:
-    """Um usuário autenticado, já resolvido dentro de um tenant."""
+    """Um usuário autenticado, já resolvido dentro de um tenant.
+
+    Há três jeitos de chegar aqui, e ``can`` responde diferente em cada um:
+
+    * **membro do cliente** — o papel da associação (``role``);
+    * **sessão de suporte** (``support_session``) — a equipe da ValTexa dentro do
+      cliente, às claras: leitura por padrão, escrita só no modo assistido;
+    * **equipe em rota de plataforma** (``via_platform``) — sem associação, com o
+      cliente só como contexto; vale apenas o papel de plataforma.
+    """
 
     user: User
     tenant: Tenant
     role: Role
+    session_id: str | None = None
+    """A sessão por onde esta requisição entrou.
+
+    Existe para a troca de senha poder derrubar as *outras* sessões sem
+    derrubar a de quem está trocando.
+    """
+    platform_role: PlatformRole | None = None
+    support_session: SupportSession | None = None
+    via_platform: bool = False
 
     @property
     def user_id(self) -> str:
@@ -66,8 +89,51 @@ class Principal:
     def tenant_id(self) -> str:
         return self.tenant.id
 
+    @property
+    def is_support(self) -> bool:
+        return self.support_session is not None
+
     def can(self, capability: str) -> bool:
+        if self.support_session is not None:
+            if self.support_session.mode is SupportMode.ASSISTIDO:
+                return rbac.can(rbac.SUPPORT_ASSISTED_ROLE, capability)
+            rbac.can(Role.VIEWER, capability)  # valida o nome da capacidade
+            return capability in rbac.SUPPORT_READ_CAPABILITIES
+        if self.via_platform:
+            return rbac.platform_can(self.platform_role, capability)
+        # Papel de plataforma não vale em rota de cliente: dentro de uma fazenda
+        # vale o papel que se tem nela.
         return rbac.can(self.role, capability)
+
+    @property
+    def capabilities(self) -> frozenset[str]:
+        """O que o console deve mostrar a esta pessoa neste contexto."""
+        if self.support_session is not None:
+            if self.support_session.mode is SupportMode.ASSISTIDO:
+                return rbac.capabilities_of(rbac.SUPPORT_ASSISTED_ROLE)
+            return frozenset(rbac.SUPPORT_READ_CAPABILITIES)
+        if self.via_platform:
+            return rbac.platform_capabilities_of(self.platform_role)
+        return rbac.capabilities_for(self.role, platform_role=self.platform_role)
+
+
+@dataclass(frozen=True, slots=True)
+class PlatformCaller:
+    """Alguém da equipe da ValTexa numa rota de plataforma sem cliente ativo."""
+
+    user: User
+    session_id: str | None
+
+    @property
+    def user_id(self) -> str:
+        return self.user.id
+
+    @property
+    def platform_role(self) -> PlatformRole | None:
+        return self.user.platform_role
+
+    def can(self, capability: str) -> bool:
+        return rbac.platform_can(self.user.platform_role, capability)
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +156,14 @@ class DeviceCaller:
 # Usuários
 # ---------------------------------------------------------------------------
 
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+SUPPORT_REQUIRED = (
+    "Você é da equipe da ValTexa e não é membro deste cliente. Para ver ou agir nos "
+    "dados dele, abra uma sessão de suporte ('entrar como cliente'), com motivo e "
+    "prazo: POST /v1/platform/support-sessions."
+)
+
 
 def current_user(
     session: Session = Depends(get_session),
@@ -99,25 +173,89 @@ def current_user(
 
     Serve só às rotas que existem justamente para escolher o cliente — um
     agrônomo de cooperativa entra sem cliente definido e precisa ver a lista.
+    Token de sessão de suporte não serve aqui: ele vale só dentro do cliente
+    para o qual foi aberto.
+    """
+    claims = _claims_from(authorization, expected_kind="user")
+    _recusa_token_de_suporte(claims)
+    user = session.get(User, claims.subject_id)
+    if user is None or not user.is_active:
+        raise UNAUTHORIZED
+    _exige_sessao_viva(session, claims)
+    contexto.anotar(user_id=user.id)
+    return user
+
+
+def current_user_ou_suporte(
+    session: Session = Depends(get_session),
+    authorization: str | None = Header(default=None),
+) -> User:
+    """O usuário do token, **inclusive** o de sessão de suporte, sem cliente.
+
+    Só para o que não toca dado de cliente nenhum — achar um endereço no mapa, saber
+    qual satélite o console usa. A equipe que está dentro de um cliente desenhando o
+    talhão dele precisa disso tanto quanto o produtor.
     """
     claims = _claims_from(authorization, expected_kind="user")
     user = session.get(User, claims.subject_id)
     if user is None or not user.is_active:
         raise UNAUTHORIZED
+    _exige_sessao_viva(session, claims)
+    contexto.anotar(user_id=user.id)
     return user
 
 
 def current_principal(
+    request: Request,
     session: Session = Depends(get_session),
     authorization: str | None = Header(default=None),
     x_tenant_id: str | None = Header(default=None),
 ) -> Principal:
-    """Resolve o usuário e o tenant ativo a partir do token."""
+    """Resolve o usuário e o tenant ativo a partir do token.
+
+    A equipe da ValTexa **não** entra em cliente de que não é membro por esta
+    porta: até a fase 2 entrava, como ``ADMIN``, sem motivo nem rastro de
+    entrada — o acesso silencioso que o brief (seção 29) proíbe. Agora a porta é
+    a sessão de suporte, que tem motivo, prazo, modo e auditoria.
+    """
+    return _resolve_principal(request, session, authorization, x_tenant_id, platform=False)
+
+
+def current_principal_or_platform(
+    request: Request,
+    session: Session = Depends(get_session),
+    authorization: str | None = Header(default=None),
+    x_tenant_id: str | None = Header(default=None),
+) -> Principal:
+    """Como :func:`current_principal`, aceitando também a equipe sem associação.
+
+    Só para rotas que descrevem quem chama (``/auth/me``): a equipe precisa
+    saber as próprias capacidades com um cliente como contexto, sem ganhar com
+    isso acesso ao dado dele.
+    """
+    return _resolve_principal(request, session, authorization, x_tenant_id, platform=True)
+
+
+def _resolve_principal(
+    request: Request,
+    session: Session,
+    authorization: str | None,
+    x_tenant_id: str | None,
+    *,
+    platform: bool,
+) -> Principal:
     claims = _claims_from(authorization, expected_kind="user")
 
     user = session.get(User, claims.subject_id)
     if user is None or not user.is_active:
         raise UNAUTHORIZED
+    sessao_id = _exige_sessao_viva(session, claims)
+
+    suporte_id = claims.extra.get("sup")
+    if suporte_id:
+        return _principal_de_suporte(
+            request, session, user, sessao_id, suporte_id, x_tenant_id
+        )
 
     # O cabeçalho permite trocar de tenant sem novo login — útil para o
     # agrônomo de cooperativa. A associação ainda é verificada abaixo, então o
@@ -130,7 +268,14 @@ def current_principal(
         )
 
     tenant = session.get(Tenant, tenant_id)
-    if tenant is None or not tenant.is_active:
+    if tenant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cliente não encontrado.")
+    if not tenant.is_active and not user.is_platform_admin:
+        # Cliente desativado deixa de operar — mas a equipe da ValTexa continua
+        # entrando. É justamente depois do fim de um contrato que a trilha de
+        # auditoria é mais procurada: apuração, disputa, prazo legal de guarda.
+        # Trancá-la junto com a operação apagaria na prática o que a lei manda
+        # guardar, sem apagar uma linha do banco.
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Cliente não encontrado.")
 
     membership = session.scalars(
@@ -139,16 +284,104 @@ def current_principal(
         )
     ).first()
 
+    contexto.anotar(tenant_id=tenant_id, user_id=user.id)
     if membership is None:
-        # A equipe da ValTexa enxerga todos os clientes; a ação fica na
-        # auditoria com o nome de quem a fez.
-        if not user.is_platform_admin:
+        if user.platform_role is None:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, "Usuário não pertence a este cliente."
             )
-        return Principal(user=user, tenant=tenant, role=Role.ADMIN)
+        if not platform:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, SUPPORT_REQUIRED)
+        return Principal(
+            user=user,
+            tenant=tenant,
+            role=Role.VIEWER,
+            session_id=sessao_id,
+            platform_role=user.platform_role,
+            via_platform=True,
+        )
 
-    return Principal(user=user, tenant=tenant, role=membership.role)
+    return Principal(
+        user=user,
+        tenant=tenant,
+        role=membership.role,
+        session_id=sessao_id,
+        platform_role=user.platform_role,
+    )
+
+
+def _principal_de_suporte(
+    request: Request,
+    session: Session,
+    user: User,
+    sessao_id: str,
+    suporte_id: str,
+    x_tenant_id: str | None,
+    *,
+    consulta: bool = False,
+) -> Principal:
+    """A equipe dentro de um cliente por uma sessão de suporte.
+
+    Toda requisição — leitura inclusive — vira uma linha na auditoria do
+    cliente, com o interno como ator, gravada numa transação própria: uma
+    leitura não faz *commit*, e uma escrita recusada não pode levar o rastro
+    junto no *rollback*.
+    """
+    suporte = session.get(SupportSession, suporte_id)
+    if suporte is None or suporte.user_id != user.id:
+        raise SESSAO_ENCERRADA
+    if not suporte.is_open:
+        support_sessions.encerrar_vencida(suporte_id)
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Sessão de suporte encerrada ou vencida. Abra outra, com novo motivo.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if x_tenant_id and x_tenant_id != suporte.tenant_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Esta sessão de suporte vale só para o cliente em que foi aberta.",
+        )
+    if not rbac.platform_can(user.platform_role, rbac.PLATFORM_SUPPORT_SESSION):
+        # O papel foi retirado com a sessão aberta: ela deixa de valer agora.
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Seu papel de plataforma não permite mais esta sessão."
+        )
+
+    assistido = suporte.mode is SupportMode.ASSISTIDO and rbac.platform_can(
+        user.platform_role, rbac.PLATFORM_SUPPORT_ASSIST
+    )
+    # ``consulta``: POST que não grava nada (encaixe de contorno, planejamento) vale
+    # também no modo leitura — continua na auditoria como qualquer requisição.
+    permitido = assistido or consulta or request.method in SAFE_METHODS
+    support_sessions.registrar_requisicao(
+        suporte_id,
+        user=user,
+        method=request.method,
+        path=request.url.path,
+        permitido=permitido,
+    )
+    if not permitido:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Sessão de suporte em modo leitura: nenhuma alteração é permitida. Para "
+            "agir pelo cliente, ligue o modo assistido com um motivo "
+            f"(POST /v1/platform/support-sessions/{suporte.id}/mode).",
+        )
+
+    tenant = session.get(Tenant, suporte.tenant_id)
+    if tenant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cliente não encontrado.")
+    session.info[audit.SUPPORT_SESSION_KEY] = suporte.id
+    contexto.anotar(tenant_id=tenant.id, user_id=user.id, support_session_id=suporte.id)
+    return Principal(
+        user=user,
+        tenant=tenant,
+        role=rbac.SUPPORT_ASSISTED_ROLE if assistido else Role.VIEWER,
+        session_id=sessao_id,
+        platform_role=user.platform_role,
+        support_session=suporte,
+    )
 
 
 def require(*capabilities: str) -> Callable[[Principal], Principal]:
@@ -157,10 +390,135 @@ def require(*capabilities: str) -> Callable[[Principal], Principal]:
     def dependency(principal: Principal = Depends(current_principal)) -> Principal:
         missing = [item for item in capabilities if not principal.can(item)]
         if missing:
+            quem = (
+                f"A sessão de suporte em modo {principal.support_session.mode.value!r}"
+                if principal.support_session is not None
+                else f"O papel {principal.role.value!r}"
+            )
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
-                f"O papel {principal.role.value!r} não permite: {', '.join(missing)}.",
+                f"{quem} não permite: {', '.join(missing)}.",
             )
+        return principal
+
+    return dependency
+
+
+def _equipe_do_token(session: Session, authorization: str | None) -> tuple[User, str]:
+    """O usuário da equipe da ValTexa por trás do token, e a sessão dele."""
+    claims = _claims_from(authorization, expected_kind="user")
+    _recusa_token_de_suporte(claims)
+    user = session.get(User, claims.subject_id)
+    if user is None or not user.is_active:
+        raise UNAUTHORIZED
+    sessao_id = _exige_sessao_viva(session, claims)
+    contexto.anotar(user_id=user.id)
+    if user.platform_role is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Esta área é da equipe da ValTexa.")
+    return user, sessao_id
+
+
+def _exige_capacidades_de_plataforma(user: User, capabilities: tuple[str, ...]) -> None:
+    faltam = [item for item in capabilities if not rbac.platform_can(user.platform_role, item)]
+    if faltam:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"O papel de plataforma {user.platform_role.value!r} não permite: "
+            f"{', '.join(faltam)}.",
+        )
+
+
+def require_platform(*capabilities: str) -> Callable[..., PlatformCaller]:
+    """Rota de plataforma que não depende de cliente ativo (planos, sessões de suporte)."""
+
+    def dependency(
+        session: Session = Depends(get_session),
+        authorization: str | None = Header(default=None),
+    ) -> PlatformCaller:
+        user, sessao_id = _equipe_do_token(session, authorization)
+        _exige_capacidades_de_plataforma(user, capabilities)
+        return PlatformCaller(user=user, session_id=sessao_id)
+
+    return dependency
+
+
+def require_platform_in_tenant(*capabilities: str) -> Callable[..., Principal]:
+    """Rota de plataforma que trabalha **sobre** um cliente (importar coleta, relevo).
+
+    É a fronteira entre o painel administrativo e o console do cliente. Não é
+    checada por papel de cliente: o papel diz o que alguém pode na fazenda dele,
+    e o dono da fazenda mais graduado do mundo não importa coleta nem mexe em
+    dataset. É checada pelo **papel de plataforma**, capacidade a capacidade.
+
+    O cliente vem de ``X-Tenant-Id`` (ou do token) e continua sendo filtrado —
+    o administrador trabalha *dentro* de um cliente por vez, e é assim que a
+    auditoria registra em nome de quem e sobre quem ele agiu. Não exige
+    associação: quem importa uma coleta não é membro da fazenda.
+    """
+
+    def dependency(
+        session: Session = Depends(get_session),
+        authorization: str | None = Header(default=None),
+        x_tenant_id: str | None = Header(default=None),
+    ) -> Principal:
+        user, sessao_id = _equipe_do_token(session, authorization)
+        _exige_capacidades_de_plataforma(user, capabilities)
+        claims = _claims_from(authorization, expected_kind="user")
+        tenant_id = x_tenant_id or claims.tenant_id
+        if not tenant_id:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Nenhum cliente selecionado. Envie X-Tenant-Id.",
+            )
+        tenant = session.get(Tenant, tenant_id)
+        if tenant is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Cliente não encontrado.")
+        return Principal(
+            user=user,
+            tenant=tenant,
+            role=Role.VIEWER,
+            session_id=sessao_id,
+            platform_role=user.platform_role,
+            via_platform=True,
+        )
+
+    return dependency
+
+
+def require_platform_ou_suporte(
+    *capabilities: str, exige_cliente: bool = True
+) -> Callable[..., Principal | PlatformCaller]:
+    """A equipe pela porta da plataforma **ou de dentro de uma sessão de suporte**.
+
+    Para as consultas da equipe que o editor de contorno faz dentro do cliente — encaixe
+    de contorno pela IA e planejamento de rota. Elas não gravam nada; sem esta porta, a
+    equipe que entrou no cliente (com motivo, prazo e auditoria) via o botão da IA
+    recusar o próprio token. Na sessão de suporte, a requisição vai para a auditoria do
+    cliente e vale só no cliente da sessão; em todos os casos o **papel de plataforma**
+    precisa ter as capacidades.
+    """
+    na_plataforma = (require_platform_in_tenant(*capabilities) if exige_cliente
+                     else require_platform(*capabilities))
+
+    def dependency(
+        request: Request,
+        session: Session = Depends(get_session),
+        authorization: str | None = Header(default=None),
+        x_tenant_id: str | None = Header(default=None),
+    ) -> Principal | PlatformCaller:
+        claims = _claims_from(authorization, expected_kind="user")
+        suporte_id = claims.extra.get("sup")
+        if not suporte_id:
+            if exige_cliente:
+                return na_plataforma(session, authorization, x_tenant_id)
+            return na_plataforma(session, authorization)
+        user = session.get(User, claims.subject_id)
+        if user is None or not user.is_active:
+            raise UNAUTHORIZED
+        sessao_id = _exige_sessao_viva(session, claims)
+        principal = _principal_de_suporte(request, session, user, sessao_id, suporte_id,
+                                          x_tenant_id, consulta=True)
+        _exige_capacidades_de_plataforma(user, capabilities)
         return principal
 
     return dependency
@@ -255,6 +613,7 @@ async def current_device(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(exc)) from exc
 
     credential.last_used_at = datetime.now(UTC)
+    contexto.anotar(tenant_id=device.tenant_id, device_id=device.id)
     return DeviceCaller(device=device, credential=credential)
 
 
@@ -309,6 +668,41 @@ def _burn_nonce(device_id: str, nonce: str) -> None:
                 status.HTTP_401_UNAUTHORIZED,
                 "Nonce já utilizado: a requisição parece ser uma repetição.",
             ) from exc
+
+
+SESSAO_ENCERRADA = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Sessão encerrada. Entre de novo.",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
+def _exige_sessao_viva(session: Session, claims: tokens.TokenClaims) -> str:
+    """Confere no banco se a sessão deste token continua de pé.
+
+    É o passo que transforma o token de *bearer* puro em credencial revogável.
+    Sem ele, tudo o que a tela de sessões faria seria escrever numa tabela que
+    ninguém lê — e "derrubar sessão" seria um botão que não derruba nada.
+
+    Um token sem ``sid`` é recusado, e não tolerado: são os emitidos antes de a
+    tabela existir, e aceitá-los manteria vivas justamente as sessões que não se
+    consegue alcançar.
+    """
+    linha = sessions.viva(session, claims.extra.get("sid"))
+    if linha is None:
+        raise SESSAO_ENCERRADA
+    sessions.marcar_presenca(session, linha)
+    return linha.id
+
+
+def _recusa_token_de_suporte(claims: tokens.TokenClaims) -> None:
+    """Token de sessão de suporte vale dentro do cliente, e só lá."""
+    if claims.extra.get("sup"):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Token de sessão de suporte vale só dentro do cliente. Use o seu login normal "
+            "para as áreas da plataforma.",
+        )
 
 
 def _claims_from(authorization: str | None, *, expected_kind: str) -> tokens.TokenClaims:
