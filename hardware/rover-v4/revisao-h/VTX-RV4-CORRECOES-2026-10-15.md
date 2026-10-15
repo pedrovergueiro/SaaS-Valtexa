@@ -54,3 +54,18 @@ interno precisa ser refeito quando chegarem as fichas técnicas (P-05, P-13, P-1
 - Limite de tensão dos drivers contra a bateria 16S carregada (cerca de 58,4 V) e a regeneração na frenagem.
 - Variante de alimentação do relé de segurança Pilz PNOZ s4 contra os barramentos de 12 V e 48 V do projeto.
 - Orçamento energético e autonomia: faltam 7 consumos (P-05).
+
+## Adendo — onde a bateria cabe (fichas de fabricante, 15/10/2026)
+
+A célula EVE LF105 mede 130,3 × 36,35 × 200,5 mm e pesa 1,98 kg (revendas NKON e Battery Junction). Com a
+varredura de `espaco.cabe_em_pe`:
+
+| Arranjo das 16 células | Planta × altura | Resultado |
+|---|---|---|
+| Deitadas, 2 camadas | até 5 por camada na zona de 490 × 370 | cabem só 10 sob o teto de 87 mm |
+| De lado, 2 fileiras de 8 | 401 × 291 × ~140 mm (130,3 + barramentos) | **não cabe**: o melhor ponto tem 127 mm livres |
+| De lado, limite | 401 × 291 × 90 mm | cabe em X −203…198, Y −162…129, com 127 mm livres |
+
+Quem limita os 127 mm são os dois trilhos transversais centrais **G-02** (X ±30…50, Z 377). Acima deles há
+147 mm até as tampas K-04/K-05. Elevar ou deslocar os G-02 em ~15 mm, ou tirá-los de cima da bateria, fecha o pack
+de lado sem trocar a célula. É mudança de gaiola e depende da decisão do engenheiro.
