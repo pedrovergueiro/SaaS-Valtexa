@@ -502,8 +502,10 @@ def chapa_fundo():
 #    envelope externo de 600 que nunca era usado inteiro. E resolve com CURSO: com ±25 mm
 #    em 530 de bitola a carroceria só consegue rolar 5,4° antes de bater no fim de curso,
 #    então a rolagem é limitada pela geometria, não pela rigidez da mola. Resultado:
-#    envelope de estabilidade 20,9° contra 19,6° do balancim rígido da Rev F. A suspensão
-#    macia fica mais estável que a rígida porque a bitola pagou a conta.
+#    envelope de estabilidade 16,3° contra 15,5° do balancim rígido, no mesmo CG do V4
+#    (inventário de centro_massa.py; até 15/10/2026 o texto dizia 20,9° contra 19,6°, com o
+#    CG da Rev F). A suspensão macia fica mais estável que a rígida porque a bitola pagou
+#    a conta — mas passa a baseline de 16,2° por apenas 0,1°.
 #
 # 2. SEM BARRA ESTABILIZADORA, e isso é resultado de cálculo. Com rigidez de roda de
 #    ~2 N/mm, uma articulação de 60 mm num eixo já transfere quase toda a carga estática

@@ -300,6 +300,37 @@ def requisitos_de_componente() -> list[dict]:
     return out
 
 
+def cabe_na_zona_designada() -> list[dict]:
+    """Cada componente cabe na zona que o projeto reservou para ele — junto com os vizinhos?
+
+    `cabe_em_pe` responde "existe um lugar livre em algum ponto do compartimento", olhando um
+    componente por vez: dois componentes podem receber o MESMO lugar, e o lugar pode estar
+    fora da zona do componente. Esta conferência é a outra metade: planta da zona contra a
+    planta do componente (nas duas orientações), altura contra o teto da zona e, por zona, a
+    área somada dos componentes contra a área da zona.
+    """
+    out = []
+    for (nome, zx, zy, nota) in ZONAS:
+        comps = [c for c in COMPONENTES if c[1] == nome]
+        if not comps:
+            continue
+        v = _vao_na_zona(zx, zy)
+        lx, ly = zx[1] - zx[0], zy[1] - zy[0]
+        area_zona = lx * ly / 100.0
+        area_comps = sum(c[2] * c[3] for c in comps) / 100.0
+        linhas = []
+        for (cn, _, cl, cw, ch, origem) in comps:
+            planta = (cl <= lx and cw <= ly) or (cw <= lx and cl <= ly)
+            altura = ch <= v['min']
+            linhas.append(dict(componente=cn, l=cl, w=cw, h=ch, origem=origem,
+                               planta_ok=planta, altura_ok=altura, cabe=planta and altura))
+        out.append(dict(zona=nome, planta_zona=(lx, ly), teto=v['min'],
+                        area_zona_cm2=area_zona, area_componentes_cm2=area_comps,
+                        area_ok=area_comps <= area_zona, componentes=linhas,
+                        cabe=all(x['cabe'] for x in linhas) and area_comps <= area_zona))
+    return out
+
+
 def zonas() -> list[dict]:
     out = []
     for (nome, zx, zy, nota) in ZONAS:

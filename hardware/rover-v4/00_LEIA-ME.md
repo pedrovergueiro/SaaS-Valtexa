@@ -36,6 +36,20 @@ São **cálculos sobre massas estimadas** (OAK-D 0,25 kg, térmica 0,20 kg, ante
 OAK-D em 0,50 kg já tira o mastro do requisito. O que fecha a conta é o ensaio V-12 (espectro do mastro em marcha) e a
 massa real dos sensores.
 
+## Correções de 15/10/2026
+
+Revisão dos cálculos para a tarefa de requisitos e compatibilidade das peças. Nenhuma geometria mudou; o detalhe
+está em `revisao-h/VTX-RV4-CORRECOES-2026-10-15.md`. O que muda a leitura do projeto:
+
+- **Estabilidade:** com o CG real do V4 (336 mm, mastro cheio) o envelope é **16,3°**, não 20,9° — passa os 16,2° da
+  baseline por 0,1°. A suspensão pneumática continua mais estável que o balancim no mesmo CG.
+- **Barramento de 12 V:** sensores + Jetson + compressor chegam a **387–401 W** contra o conversor de 360 W.
+- **Rede:** contando a ligação à Jetson e o satélite, são **12 portas**; o switch de 12 não sobra para térmica Ethernet.
+- **Espaço:** **4 de 6 zonas** internas não comportam os componentes estimados que o projeto põe nelas.
+- **BOM:** 9 OAK-D (não 8).
+
+O caderno de 42 folhas não foi reemitido: a cotação em andamento usa a Rev I, que existe só em PDF.
+
 ## Por que V4, e por que a revisão continua em H
 
 O **número de versão** mudou porque a arquitetura de sensores mudou: a interface deixou de ser uma chapa furada e passou
@@ -139,6 +153,7 @@ python dimensional.py   # levantamento dimensional e 7 CSVs
 ## Estado em uma linha
 
 O V4 resolve a modularidade, mas **o mastro cheio passa os 7,5 Hz por 5 % sobre massas que ninguém mediu e não fecha a
-margem contra o terreno**. Continua faltando o FEA (9 casos, nenhum rodado), a massa oficial, o modelo do fole, a ficha
+margem contra o terreno**. A estabilidade lateral passa a baseline por 0,1°, o conversor de 12 V não atende o pico
+e o leiaute interno não comporta os componentes estimados (correções de 15/10/2026). Continua faltando o FEA (9 casos, nenhum rodado), a massa oficial, o modelo do fole, a ficha
 da OAK-D, o modelo da térmica e da antena, a passagem de cabo das câmeras C7 e C8, e um switch de 12 portas que a 9ª câmera
 obriga. **Este pacote é para cotar, não para fabricar.**

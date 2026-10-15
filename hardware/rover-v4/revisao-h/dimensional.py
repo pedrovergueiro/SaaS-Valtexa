@@ -286,8 +286,8 @@ COMPRADOS = [
      'bandeja', 'PENDENTE ficha técnica. Potência 360 W: FONTE (BOM)'),
     ('X-CONT', 'Contator DC TE Kilovac LEV200', 1, 'ENERGIA', None, None, None, None,
      'bandeja', 'PENDENTE ficha técnica'),
-    ('X-CAM', 'Câmera OAK-D Pro W PoE', 8, 'SENSORES', None, None, None, None,
-     '6 nos mastros (3 níveis × 2 lados), 1 frontal, 1 inferior',
+    ('X-CAM', 'Câmera OAK-D Pro W PoE', 9, 'SENSORES', None, None, None, None,
+     '6 nos mastros (3 níveis × 2 lados), C7 frontal, C8 traseira, C9 de raiz',
      'PENDENTE desenho dimensional (P-06) — bloqueia M-20 e N-09. '
      'Potência: TETO de 12,95 W pela classe 3 de 802.3af, não medição'),
     ('X-LIDAR', 'LiDAR Livox Mid-360', 1, 'SENSORES', None, None, None, None,

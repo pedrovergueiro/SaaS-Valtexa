@@ -103,8 +103,8 @@ engenharia é contínuo. O V3 inteiro está preservado em `../../rover-v3`.
 | **Roteiro de usinagem** | coluna "processo" na BOM | **folhas 28 a 31 + `VTX-RV4-USINAGEM-G`** | corte e usinagem separados, com tolerância, referência e acabamento por operação |
 | **Conferência de espaço** | não havia | **`VTX-RV4-ESPACO-G`** | volume interno medido em grade de 8 mm: 76,8 L livres, e o teto de altura de cada zona |
 | **Conferência de interferência** | não havia | automática, par a par | achou E-02 × colar, bucha × orelha e flange × berço — ver auditoria G-05 e G-06 |
-| **Massa** | 110,07 kg @ Z 294,1 | **126,52 kg @ Z 285,9** | +16,45 kg de suspensão; o CG desceu 8,2 mm |
-| **Tombamento / envelope** | 39,44° / 19,57° (balancim) | **39,92° / 20,89°** | a bitola compensa a rolagem macia com sobra |
+| **Massa** | 110,07 kg @ Z 294,1 | **126,52 kg** para dimensionar os foles · **121,1 kg @ Z 336,2** no inventário do V4 | os foles são dimensionados na massa alta; a estabilidade, no CG do inventário (correção de 15/10/2026: antes constava Z 285,9, sem o mastro do V4) |
+| **Tombamento / envelope** | 34,95° / 15,51° (balancim, mesmo CG) | **34,89° / 16,31°** | a bitola compensa a rolagem macia, mas a margem sobre os 16,2° da baseline é de 0,1° (correção de 15/10/2026: antes 39,92° / 20,89°, no CG da Rev F) |
 
 ### Pendências que a Rev H abre
 
@@ -314,7 +314,7 @@ iguais). São três outros:
 **Energia disponível** (da BOM, 21/09/2026): bateria 16S LiFePO4 105 Ah = **5.376 Wh**,
 úteis a 80 % = **4.301 Wh**. Barramento 12 V limitado a **360 W**.
 
-**O orçamento energético NÃO FECHA.** Consumo conhecido: 103,6 W (as 8 câmeras, pelo teto
+**O orçamento energético NÃO FECHA.** Consumo conhecido: 103,6 W (as 8 câmeras da Rev E; no V4 são 9, 116,6 W, pelo teto
 normativo de PoE 802.3af — teto, não medição). **Faltam 7 consumos:** LiDAR, GNSS, IMU,
 Jetson, rádio, E-STOP e, nas extensões, o sensor novo. Nenhum documento da Rev E traz
 tabela de consumo, e o documento técnico ressalva que as capacidades operacionais da

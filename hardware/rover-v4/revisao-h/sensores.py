@@ -53,12 +53,13 @@ def _s(**kw):
 MODULOS = {
     # ----------------------------------------------------- configuração-base (Vision)
     'OAKD': _s(
-        nome='Câmera OAK-D Pro W PoE', qtd_base=8, v=48.0, w=12.95,
+        nome='Câmera OAK-D Pro W PoE', qtd_base=9, v=48.0, w=12.95,
         interface='Ethernet 100BASE-TX com PoE 802.3af (alimentação e dados no mesmo cabo)',
         mbps=None, massa=None,
         onde='3 no mastro esquerdo, 3 no direito (três níveis, visão bilateral), '
-             '1 frontal, 1 inferior voltada ao solo e à raiz',
-        origem='FONTE (quantidade e preço) · BOM 21/09/2026 · 8 un a R$ 3.490,06. '
+             'C7 frontal, C8 traseira e C9 de raiz voltada ao solo (9 postos no V4)',
+        origem='FONTE (preço) · BOM 21/09/2026 · 8 un a R$ 3.490,06 — a BOM é do V3; o V4 tem 9 '
+               'postos e a compra precisa de 9 un. '
                'TETO (potência) · classe 3 de 802.3af, 12,95 W na carga — não é consumo '
                'medido. PENDENTE: consumo típico, massa e taxa de dados por fluxo.',
         calibracao='Intrínseca de fábrica; extrínseca (posição e orientação de cada uma '
@@ -178,7 +179,7 @@ CONFIGURACOES = {
     'HYDRO': dict(
         nome='VALTEXA Hydro — extensão térmica',
         proposito='Acrescenta informação térmica para investigar estresse hídrico. '
-                  'Extensão da base, não substituição: as 8 OAK-D continuam.',
+                  'Extensão da base, não substituição: as 9 OAK-D continuam.',
         modulos=['OAKD', 'LIDAR', 'GNSS', 'IMU', 'COMPUTA', 'RADIO', 'ESTOP', 'TERMICA'],
         status='PROPOSTA. Nenhum sensor especificado; arquitetura de interface definida '
                'abaixo. Depende de `REQUISITOS_TERMICA`.'),
@@ -300,7 +301,7 @@ interface para um sensor imaginário.
 """
 
 INTERFACE_ELETRICA = """\
-**Barramento PoE é o caminho principal.** As 8 OAK-D já são PoE: alimentação e dados no
+**Barramento PoE é o caminho principal.** As 9 OAK-D já são PoE: alimentação e dados no
 mesmo cabo. Um módulo novo que fale PoE entra sem cabo novo, sem conector novo e sem
 tocar na distribuição — e é por isso que `REQUISITOS_TERMICA` pede Ethernet.
 
