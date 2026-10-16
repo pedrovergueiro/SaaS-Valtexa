@@ -23,6 +23,7 @@ sys.path.insert(0, str(AQUI))
 
 import modelo as M                      # noqa: E402
 from folhas import FOLHAS, TITULOS, DOC  # noqa: E402
+import opcao as OP  # noqa: E402
 from folhas_b import FOLHAS_B  # noqa: E402
 from folhas_w import FOLHAS_W  # noqa: E402
 from folhas_t import FOLHAS_T  # noqa: E402
@@ -32,9 +33,10 @@ PARTES = {'A': (1, 16, 'Parte A — chassi, suspensão pneumática e gaiola'),
           'B': (17, 22, 'Parte B — interfaces: mastro, câmeras, bateria, eletrônica e sensores'),
           'C': (23, 27, 'Parte C — fechamento: pendências, massa, solda/FEA, validação e motor'),
           'D': (28, 35, 'Parte D — usinagem do grupo W e manual de montagem'),
-          'E': (36, 42, 'Parte E — V4: mastro, interface modular de sensores, térmicas removíveis, antena e cabos')}
+          'E': (36, 43, 'Parte E — V4: mastro, interface modular de sensores, térmicas removíveis, antena, cabos '
+                        'e registro de alterações')}
 
-SAIDA = AQUI / 'saida'
+SAIDA = AQUI / 'saida' / OP.PASTA          # uma pasta por opção de material (Rev I/J)
 FONTES = AQUI / 'fontes'
 TITULO = 'Chassi e Gaiola Rover V4'
 
@@ -230,6 +232,8 @@ def exporta_dxf():
         e = round(p.comprimento(), 1)
         mat = {'5052': 'Al5052-H32', '6061': 'Al6061-T6', 'pc': 'PC', 'uhmw': 'UHMW-PE',
                'aco': 'Aco-A36', 'inox': 'Inox-304', 'pu': 'PU-90ShA', 'borracha': 'NBR'}.get(p.mat, p.mat)
+        if p.mat == 'aco':  # o aço exato vem da lista de peças: A36, SAE 1010 ou SAE 1020
+            mat = it['mat'].replace('Aço ', 'Aco-').replace(' ', '')
         ents.append(_texto(0, -12, 5, f'{p.item} {it["nome"]} - e={str(e).replace(".", ",")} mm - {mat}'))
         sem_acento = unicodedata.normalize('NFKD', it['nome'].lower()).encode('ascii', 'ignore').decode()
         slug = nomes.get(chave, f'{p.item}_' + re.sub(r'[^a-z0-9]+', '-', sem_acento).strip('-'))

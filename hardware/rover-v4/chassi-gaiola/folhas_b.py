@@ -64,7 +64,7 @@ def _mastro():
 
 # ======================================================================== F17
 def f17():
-    F = Folha(17, escala='1:2', material=f'Al 6061-T6 · luva Ø{num(M.D_LUVA, 0)}×{num(M.E_LUVA, 0)} · chapa {num(M.E_REF_M, 0)}')
+    F = Folha(17, escala='1:2', material=f'{M.OP.MAT_FOLHA_17} · luva Ø{num(M.D_LUVA, 0)}×{num(M.E_LUVA, 0)} · chapa {num(M.E_REF_M, 0)}')
     MA = _mastro()
     m_base = MA.GALHO_N * (Z_TOTAL - M.Z_REF_M[1]) / 1000.0        # N·m
     k_m = m_base / 71.8                                              # a conta anterior: 50 N × 1436 mm

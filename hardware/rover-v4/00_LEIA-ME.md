@@ -1,7 +1,34 @@
 # ValTexa Rover **V4** — engenharia mecânica
 
-**Revisão atual: H** (corrigida em 12/10/2026) · EMITIDO PARA COTAÇÃO E VALIDAÇÃO — **NÃO LIBERADO PARA
-FABRICAÇÃO**
+**Revisão atual: J** (16/10/2026), em duas opções de material · EMITIDO PARA COTAÇÃO E VALIDAÇÃO — **NÃO
+LIBERADO PARA FABRICAÇÃO**
+
+## Rev J — a Rev I na fonte (16/10/2026)
+
+A **Rev I** (13/10/2026) foi enviada para cotação em duas opções, mas só existia em PDF (`ENVIO_COTACAO_REV_I/`,
+fora do repositório), editado sobre o caderno da Rev H. A **Rev J** a traz para o modelo paramétrico — mesma
+geometria, mesmos materiais — e soma as correções de cálculo de 15/10. Como os números calculados mudaram, a
+letra mudou. O registro completo está na **folha 43** de cada caderno.
+
+| | Opção A — alumínio | Opção B — aço carbono |
+|---|---|---|
+| Caderno | `chassi-gaiola/saida/opcao-A-aluminio/VTX-RV4-CG-J-AL.pdf` | `chassi-gaiola/saida/opcao-B-aco-carbono/VTX-RV4-CG-J-AC.pdf` |
+| Chassi (Q, C, G, base M) | Al 6061-T6 / 5052-H32, TIG ER5356 | aço SAE 1020 / A36 / SAE 1010, MAG ER70S-6 |
+| Parte A | 31,61 kg | 55,72 kg |
+| Pressão de projeto do fole (teto 8 bar) | 7,41 bar | **8,81 bar — acima do teto** |
+| Envelope de estabilidade (baseline 16,2°) | 16,4° | 16,8° |
+
+Nas duas: **W-12 e W-13 em aço A36**, e **sem a cota individual de planeza 0,1** na face do motor (W-02) e nas juntas
+do colar (W-13) — vale a ISO 2768-mK. Tudo o que muda entre as opções está em `chassi-gaiola/opcao.py`.
+
+```
+cd chassi-gaiola
+set VTX_OPCAO=AL && python gerar.py     # opção A (padrão)   — no bash: VTX_OPCAO=AL python gerar.py
+set VTX_OPCAO=AC && python gerar.py     # opção B
+```
+
+Os documentos de `revisao-h/` são gerados na opção A (padrão); rode-os com `VTX_OPCAO=AC` para a B. O pacote de
+cotação em `pacote-rev-h/` continua sendo o da Rev H e não foi reemitido.
 
 > O **V3** está preservado, inteiro e intocado, em `../rover-v3`. Nada lá foi sobrescrito.
 > Um backup das fontes do V4 **antes** da correção de 12/10/2026 está em `_historico/`.
@@ -72,7 +99,7 @@ passa o requisito, mas **não fecha a margem** — ver acima.
 
 | Pasta | O que é |
 |---|---|
-| **`chassi-gaiola/`** | **o CAD.** Modelo paramétrico — dele saem as 42 folhas, os 37 DXF, as listas de corte e as massas |
+| **`chassi-gaiola/`** | **o CAD.** Modelo paramétrico — dele saem as 43 folhas, os 37 DXF, as listas de corte e as massas, por opção de material |
 | **`revisao-h/`** | cálculos e documentos, em `.py` e `.md`, com os PDFs em `revisao-h/pdf/` |
 | **`pacote-rev-h/`** | gerador do pacote de cotação |
 | **`_historico/`** | fontes do V4 antes da correção de 12/10/2026 |
@@ -119,7 +146,7 @@ pacote-rev-h/saida/VALTEXA_ROVER_V4_REV_H/
 ## Regenerar tudo
 
 ```
-cd chassi-gaiola && python gerar.py            # 42 folhas: HTML + 37 DXF + 6 PDFs
+cd chassi-gaiola && python gerar.py            # 43 folhas: HTML + 37 DXF + 6 PDFs (VTX_OPCAO=AL ou AC)
 cd chassi-gaiola && python verifica_layout.py  # MEDE o layout de cada folha no navegador (0 defeitos = passa)
 cd revisao-h     && python relatorios.py       # os 6 documentos gerados do modelo
 cd revisao-h     && python gerar_docs.py       # PDF de todos os documentos

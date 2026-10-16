@@ -634,4 +634,126 @@ def f42():
 
 
 
-FOLHAS_T = [f36, f37, f38, f39, f40, f41, f42]
+# ======================================================================== F43
+def _rev_h_mod(nome):
+    """Carrega um módulo de ../revisao-h com o mesmo modelo deste caderno."""
+    import sys
+    import pathlib
+    pasta = pathlib.Path(__file__).resolve().parent.parent / 'revisao-h'
+    if str(pasta) not in sys.path:
+        sys.path.insert(0, str(pasta))
+    import importlib
+    return importlib.import_module(nome)
+
+
+# Valores que a Rev I PUBLICOU (folha 43 dela, 13/10/2026). Ficam aqui só para comparação:
+# partiam do CG e do envelope da Rev H, que a correção de 15/10 mostrou otimistas.
+REV_I_PUBLICADA = {
+    'AL': dict(cg=313.2, tomb=40.2, env=21.3, p_fole=7.4),
+    'AC': dict(cg=311.3, tomb=40.4, env=21.5, p_fole=8.8),
+}
+
+
+def f43():
+    OP = M.OP
+    F = Folha(43, escala='sem escala', material='—')
+    SU = _rev_h_mod('suspensao')
+    CM = _rev_h_mod('centro_massa')
+    MD = _rev_h_mod('modular')
+
+    # ---- massa por grupo: Rev H (alumínio, W-12/W-13 em Al) contra esta revisão e opção
+    linhas, tot_h, tot_j = [], 0.0, 0.0
+    for g in ('Q', 'C', 'W', 'G', 'M', 'K'):
+        pecas = [p for p in M.conjunto('A') if p.grupo == g and p.estilo != 'ref']
+        mh = sum(M.massa_rev_h(p) for p in pecas)
+        mj = sum(p.massa() for p in pecas)
+        tot_h += mh
+        tot_j += mj
+        d = mj - mh
+        linhas.append([f'<b>{g}</b>', M.GRUPOS[g], dec(mh, 2), dec(mj, 2),
+                       ('+' + dec(d, 2)) if d > 0.005 else '—'])
+    linhas.append(['', '<b>Parte A, total</b>', f'<b>{dec(tot_h, 2)}</b>', f'<b>{dec(tot_j, 2)}</b>',
+                   f'<b>+{dec(tot_j - tot_h, 2)}</b>'])
+
+    # ---- grandezas recalculadas pela fonte corrigida
+    pr = CM.analisa('projeto')
+    rl = SU.roll()
+    fl = SU.fole(SU.massa()['massa'])
+    en = MD.energia(0)
+    pub = REV_I_PUBLICADA[OP.OPCAO]
+    grand = [
+        ['Massa do inventário, mastro cheio', '—', f'{dec(pr["kg"], 1)} kg'],
+        ['Altura do CG, Z', f'{dec(pub["cg"], 1)} mm', f'{dec(pr["z"], 1)} mm'],
+        ['Tombamento lateral', f'{dec(pub["tomb"], 1)}°', f'{dec(pr["lateral"]["tomba_deg"], 1)}°'],
+        ['Envelope de estabilidade (fórmula 6.1)', f'{dec(pub["env"], 1)}°',
+         f'<b>{dec(pr["envelope_deg"], 1)}°</b> (baseline {dec(CM.ENVELOPE_BASELINE, 1)}°)'],
+        ['Pressão de projeto do fole (teto 8 bar)', f'{dec(pub["p_fole"], 1)} bar',
+         f'<b>{dec(fl["p_projeto_bar"], 2)} bar</b>' + (' — ACIMA do teto' if fl['p_projeto_bar'] > 8.0 else '')],
+        ['Pico do barramento de 12 V (conversor 360 W)', '—',
+         f'{dec(en["pico_barramento_12v_W"], 0)} W'],
+    ]
+
+    pedidos = [
+        ['1', 'Chassi de alumínio para aço carbono',
+         ('<b>Opção B</b>: quadro Q, chapa de fundo C-01, nervuras C-02, gaiola G e base dos mastros M-01/M-02 em '
+          'aço (tubos SAE 1020, chapas A36, chapa de fundo SAE 1010), mesma geometria. Solda MAG ER70S-6.')
+         if OP.ACO else
+         '<b>Opção A</b>: chassi mantido em alumínio, como na Rev H, para cotação comparativa com a opção B.'],
+        ['2', 'Parafuso em vez de rebite em cima e nos lados',
+         'Já estava na Rev H; confirmado. Rebite só por baixo da chapa de fundo (F-09 e F-35).'],
+        ['3', 'Tirar a planicidade de 0,1',
+         'Feito: retirada a cota individual de planeza da face do motor (W-02) e das juntas do colar (W-13). '
+         'Vale a ISO 2768-mK, planeza classe K. Ficam a perpendicular 0,3 a A e o Ra 3,2.'],
+        ['4', 'Flanges da roda em aço',
+         'W-02 já era aço A36. Passam de Al 6061-T6 para aço A36 o flange W-13 e o tubo W-12, soldados entre si.'],
+    ]
+
+    atencao = []
+    if OP.ACO:
+        atencao += [
+            f'<b>Fole.</b> Com o chassi em aço a pressão de projeto vai a {dec(fl["p_projeto_bar"], 2)} bar, '
+            'acima do teto de 8 bar da folha 07: rever a área efetiva ou a pressão admissível antes de comprar.',
+            '<b>Aço contra alumínio.</b> Carenagens K, haste M-10, grupo T, batentes B-01, bandejas E e berço W-11 '
+            'seguem em alumínio: barreira com arruela de nylon e pintura (folhas 07, 30, 33 e 34).',
+            '<b>Rebites F-09 e F-35</b> sobre aço: de aço ou inox, nunca de alumínio.',
+            '<b>Espessuras.</b> 30×30×1,5, 20×20×1,2 e chapa de 1,5 devolvem cerca de 7 kg, com FEA novo.',
+        ]
+    else:
+        atencao += [
+            '<b>Aço contra alumínio.</b> O flange W-13, agora em aço, assenta na chapa de fundo de alumínio: a junta '
+            'NBR das duas faces faz a barreira; entregar o flange zincado ou pintado.',
+        ]
+    atencao += [
+        '<b>Estabilidade.</b> Os números da Rev I partiam do CG da Rev H. Com o CG do inventário do V4 o envelope '
+        f'fica em {dec(pr["envelope_deg"], 1)}°, contra {dec(CM.ENVELOPE_BASELINE, 1)}° da baseline.',
+        '<b>Planeza do motor.</b> Sem cota própria até a resposta da ElectroCraft (P-04).',
+        '<b>Liberação.</b> O selo continua NÃO LIBERADO: falta o parecer do engenheiro (folha 15).',
+    ]
+
+    F.bloco(26, 22, 190, f"""
+<h3>1 · Por que Rev J</h3>
+<p>A <b>Rev I</b> (13/10/2026) foi enviada para cotação em duas opções de material, mas só existia em PDF,
+editado sobre o caderno da Rev H. A <b>Rev J</b> traz a Rev I para o modelo paramétrico — mesma geometria,
+mesmos materiais — e soma as <b>correções de cálculo de 15/10/2026</b>
+(<code>revisao-h/VTX-RV4-CORRECOES-2026-10-15.md</code>). Como os números calculados mudaram, a letra muda.
+{tag('REV J')}</p>
+<p>Este caderno: <b>{OP.DOC}</b> — {OP.NOME}.</p>
+<h3>2 · Pedidos da Rev I</h3>
+{tabela(['#', 'Pedido', 'Situação'], pedidos, 'micro', col=[5, 28, 67])}
+<h3>3 · Massa da Parte A em relação à Rev H (kg)</h3>
+{tabela(['Gr.', 'Conjunto', 'Rev H', f'Rev J {OP.LETRA}', 'Δ'], linhas, 'micro', col=[7, 45, 16, 16, 16])}""")
+    F.bloco(222, 22, 188, f"""
+<h3>4 · Grandezas: o que a Rev I publicou e o que a fonte calcula</h3>
+{tabela(['Grandeza', 'Rev I publicada', 'Rev J (fonte corrigida)'], grand, 'micro', col=[46, 22, 32])}
+<p class="mini">Rev J: inventário de <code>centro_massa.py</code> (estado projeto), rolagem limitada por curso de
+<code>suspensao.py</code>, energia de <code>modular.py</code>. Nada digitado.</p>
+<h3>5 · O que pede atenção</h3>
+<ol class="notas">{''.join(f'<li>{a}</li>' for a in atencao)}</ol>
+<h3>6 · Folhas com conteúdo alterado</h3>
+<p class="mini">Em todas: revisão J, data {OP.DATA}, documento e NN/43. Conteúdo: 01, 02, 04, 06 a 09, 11, 12,
+14 a 17, 24, 25, 27, 29 a 31, 33 a 35 e esta, 43. Materiais e massas saem do modelo; os DXF trazem o material
+no nome.</p>""")
+    return F
+
+
+FOLHAS_T = [f36, f37, f38, f39, f40, f41, f42, f43]
