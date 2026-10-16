@@ -18,10 +18,14 @@ from desenho import (Svg, Vista, Iso, projeta, desenha, desenha_corte, desenha_i
                      cota_vista_h, cota_vista_v, chamada, balao, linha_centro, cruz_centro, plano_corte,
                      rotulo, num, dec, milhar, seta, f, fcf, referencia, rugosidade, simbolo_solda, T)
 
-DOC = 'VTX-RV4-CG-H'
-DATA = '12/10/2026'
-REV = 'H'
-REV_DESC = 'V4: sensores modulares, mastro de 5 postos e antena, 9 câmeras'
+import opcao as OP
+
+# Rev J = a Rev I (13/10/2026, só em PDF) trazida para a fonte + as correções de 15/10/2026.
+# Documento, revisão, data e opção de material vêm de opcao.py (VTX_OPCAO = AL | AC).
+DOC = OP.DOC
+DATA = OP.DATA
+REV = OP.REV
+REV_DESC = OP.REV_DESC
 
 # Por que a letra continua em H e não recomeça em A: o hardware é contínuo. Chassi,
 # suspensão, gaiola e carenagens são os mesmos da Rev G do V3, sem uma cota alterada. O
@@ -56,7 +60,7 @@ def _meta_liberacao():
         selo=('LIBERAÇÃO PARCIAL · VER FOLHA 15' if parcial else 'LIBERADO PARA FABRICAÇÃO'),
         verificado=f"{LIBERACAO['nome']} · CREA {LIBERACAO['crea']}",
         aprovado=f"{LIBERACAO['data']} · {LIBERACAO['escopo']}")
-TOTAL = 42
+TOTAL = 43
 
 # As partes do caderno, como aparecem na capa. O PDF de cada parte (gerar.py) tem a descrição longa.
 PARTES_CAPA = OrderedDict([
@@ -64,7 +68,7 @@ PARTES_CAPA = OrderedDict([
     ('B', (17, 22, 'Interfaces: mastro, câmeras, bateria, eletrônica, sensores')),
     ('C', (23, 27, 'Fechamento: pendências, massa, solda/FEA, validação, motor')),
     ('D', (28, 35, 'Usinagem do grupo W e manual de montagem')),
-    ('E', (36, 42, 'V4: mastro, térmicas removíveis, antena, cabos')),
+    ('E', (36, 43, 'V4: mastro, térmicas removíveis, antena, cabos · registro da Rev J')),
 ])
 D = 8.0          # espaçamento entre linhas de cota
 
@@ -111,6 +115,7 @@ TITULOS = OrderedDict([
     (40, ('Provisão de satélite e pendências do V4', 'O que cabe no deck e o que fica acima de Z 400')),
     (41, ('Módulo térmico removível e posto fixo', 'A OAK-D fica calibrada; a térmica sai com a mão e volta à mesma pose')),
     (42, ('Roteamento de cabos e interligação', 'Potência, dados e sinais: de onde a onde e por onde passam')),
+    (43, ('Registro de alterações — Rev J', 'O que a Rev I mudou da Rev H, as correções de 15/10 e o que pede atenção')),
 ])
 
 
@@ -153,7 +158,7 @@ class Folha:
 
 TAGS = {'FONTE': 'fonte', 'BASE': 'base', 'CALC': 'calc', 'NOVO': 'novo', 'A VALIDAR': 'val',
         'REV G': 'novo',
-        'HIPÓTESE': 'hip', 'ESTIMATIVA': 'est', 'REV F': 'novo'}
+        'HIPÓTESE': 'hip', 'ESTIMATIVA': 'est', 'REV F': 'novo', 'REV I': 'novo', 'REV J': 'novo'}
 
 
 def tag(t):
@@ -583,7 +588,7 @@ def f02():
         ['Diagonais dos 4 centros de roda', 'Δ ≤ 2', tag('NOVO')],
         ['Face de montagem ⊥ a A', '0,3', tag('NOVO')],
         ['Face de montagem // eixo X', '0,3', tag('NOVO')],
-        ['Planicidade da face de montagem', '0,1', tag('NOVO')],
+        ['Planicidade da face de montagem', OP.PLANEZA_GERAL, tag('REV I')],
         ['Planicidade do anel superior', '1,5', tag('NOVO')],
         [f'Diagonais do quadro {num(L_Q)} × {num(W_Q)}', 'Δ ≤ 2', tag('NOVO')],
         ['Posição de furos a laser', '± 0,2', tag('NOVO')],
@@ -613,37 +618,29 @@ barra estabilizadora. O fole é comprado: a folha 07 dá a <b>interface e os req
 As cotas de ajuste e as planicidades são cota de fabricação, e o DXF não as carrega.</p>
 <h3>3 · Materiais</h3>
 <ul>
-<li>Tubos 30×30×2 e 20×20×1,5: Al 6061-T6 (ASTM B221).</li>
-<li>Chapas 3, 5, 6, 8, 10: Al 6061-T6.</li>
-<li>Chapas 1,2 e 2: Al 5052-H32 (ASTM B209).</li>
-<li>Cantoneira 40×40×4, barra Ø12: Al 6061-T6.</li>
-<li>Grupo W: aço A36 / 1020 / 1045 e inox 304 (folhas 28 a 31).</li>
-<li>Fixadores: inox A4 (folha 13).</li>
+{''.join(f'<li>{m}</li>' for m in OP.MATERIAIS_LISTA)}
 </ul>
 <p><b>Certificado de material</b> — nível por peça, conforme EN 10204:</p>
 <ul>
 <li><b>3.1</b> (ensaio da corrida fornecida) para a <b>chapa 10 de W-02</b>, que recebe o motor-roda.</li>
 <li><b>2.2</b> (ensaio não específico) para o restante de tubo e chapa.</li>
 </ul>
-<p class="mini">Exigir 3.1 em todos os códigos seria pagar certificado de produção numa unidade. O engenheiro pode ampliar
+<p class="mini">Exigir 3.1 em tudo seria pagar certificado de produção numa unidade. O engenheiro pode ampliar
 a exigência a W-05 e W-07 {tag("A VALIDAR")}.</p>''')
     F.bloco(154, 24, 118, f'''
 <h3>4 · Processos</h3>
 <ul>
 <li><b>Tubos:</b> serra, 90°, sem rebarba (planos de corte nas folhas 06 e 12).</li>
 <li><b>Chapas:</b> laser/CNC pelos DXF da pasta <b>dxf/</b>.</li>
-<li><b>Solda:</b> TIG, ER5356 (ER4043 se for pintar). Filete contínuo a2 nos tubos, a3 nas peças W.
-Soldador qualificado para alumínio (AWS D1.2 / ISO 9606-2); aço do grupo W: processo e consumível a definir com o
-soldador {tag("A VALIDAR")}.</li>
+<li><b>Solda:</b> {OP.SOLDA} {tag("A VALIDAR")}</li>
 <li><b>Gabarito:</b> quadro e módulos soldados em gabarito, sequência balanceada.</li>
 <li><b>Usinagem:</b> grupo W conforme o roteiro das folhas 28 a 31 — torno, fresa e alargador; ajustes H7/h6.</li>
 <li><b>Porcas-rebite:</b> depois da solda e do acabamento.</li>
 <li><b>Arestas:</b> quebrar cantos vivos ≥ 0,5; cantos externos de carenagens e tampas R3.</li>
 </ul>
-<h3>6 · Acabamento — cotar as 4 opções</h3>
+<h3>6 · Acabamento — cotar as opções</h3>
 <ul>
-<li><b>A</b> natural, desengraxado.</li>
-<li><b>B</b> anodização preta ≥ 15 µm (furos de dreno Ø4 em cavidades fechadas, posição a informar).</li>
+{''.join(f'<li><b>{a}</b> {b}.</li>' for (a, b) in OP.ACABAMENTOS[:2])}
 <li><b>C</b> pintura eletrostática preta sobre conversão química. <b>Cotar os dois pré-tratamentos em
 separado</b>: cromatização sobre alumínio e fosfatização sobre aço são processos e preços
 diferentes, e um conjunto híbrido passa pelos dois.</li>
@@ -670,8 +667,8 @@ registrar):</p>
 <p>Não alterar a geometria sem consulta. Alternativas mais baratas: propor com preço.</p>''')
     lc = lista_corte()
     resumo = []
-    proc = {'Q': 'tubo + TIG', 'C': 'laser + rebite', 'W': 'laser + torno + TIG + usinagem',
-            'G': 'tubo + TIG + laser', 'K': 'laser', 'M': 'tubo + laser + TIG'}
+    proc = {'Q': f'tubo + {OP.PROC}', 'C': 'laser + rebite', 'W': f'laser + torno + {OP.PROC} + usinagem',
+            'G': f'tubo + {OP.PROC} + laser', 'K': 'laser', 'M': f'tubo + laser + {OP.PROC}'}
     for g in ('Q', 'C', 'W', 'G', 'K', 'M'):
         itens = [i for i in lc if i.startswith(g)]
         resumo.append([f'<b>{g}</b>', GRUPOS[g], str(sum(lc[i]['qtd'] for i in itens)),
@@ -747,7 +744,7 @@ def f03():
 
 # ======================================================================== F04
 def f04():
-    F = Folha(4, escala='1:5', material='Al 6061-T6 · tubo 30×30×2')
+    F = Folha(4, escala='1:5', material=OP.MAT_QUADRO)
     Q = quadro()
     vl = Vista('lateral', 5, 283, 130)
     vf = Vista('frontal', 5, 92, 130)
@@ -802,7 +799,7 @@ def f04():
     F.bloco(30, 202, 124, f'''
 <h3>Notas do quadro</h3>
 <ol class="notas">
-<li>Tubo 30×30×2, Al 6061-T6; cortes retos a 90°. Filete contínuo a2, todo o contorno (TIG, ER5356).</li>
+<li>Tubo 30×30×2, {OP.MAT_FOLHA_06}; cortes retos a 90°. Filete contínuo a2, todo o contorno ({OP.SOLDA_CURTA}).</li>
 <li>Anéis Z 250→280 e Z 310→340, ligados por 16 montantes Q-04 de 30.</li>
 <li>Quadro {num(L_Q)} × {num(W_Q)}: com as carenagens de 2, o envelope é {milhar(L_EXT)} × {num(W_EXT)}.</li>
 <li>Buchas Q-05 e porcas-rebite: folhas 05 e 08.</li>
@@ -901,7 +898,7 @@ def f05():
 
 # ======================================================================== F06
 def f06():
-    F = Folha(6, escala='sem escala', material='Al 6061-T6')
+    F = Folha(6, escala='sem escala', material=OP.MAT_FOLHA_06)
     Q = [p for p in quadro() if p.estilo == 'solid']
     cam = iso_no_retangulo(Q, 36, 30, 226, 142, 6.2)
     desenha_iso(F.s, cam, Q)
@@ -937,7 +934,7 @@ def f06():
     F.s.rect(49, 178, 59, 196, 'hach2')
     for (xa, sgn) in ((49, -1), (59, 1)):
         F.s.pl([(xa, 196), (xa + sgn * 2.6, 196), (xa, 193.4)], 'cheio', True)
-    simbolo_solda(F.s, 46.6, 194.6, 76, 182, a='a2', cauda='TIG · ER5356', comp=44)
+    simbolo_solda(F.s, 46.6, 194.6, 76, 182, a='a2', cauda=OP.SOLDA_CURTA, comp=44)
     rotulo(F.s, 104, 218, 'SÍMBOLO DE SOLDA', 'sem escala', 'ISO 2553 · filete a2, todo o contorno')
     F.bloco(30, 234, 198, '''
 <h3>Sequência de soldagem</h3>
@@ -1054,21 +1051,20 @@ tabela abaixo monta sem alterar desenho de usinagem nenhum — e um cilindro pne
      f'{num(fl["h_min"], 1)} · {num(fl["h_nominal"], 1)} · {num(fl["h_max"], 1)} mm'],
     ['Curso útil', f'{num(fl["curso"], 0)} mm'],
     ['Pressão de trabalho (carga estática)', f'{dec(fl["p_estatica_bar"], 2)} bar'],
-    ['Pressão de projeto a suportar', f'{dec(fl["p_projeto_bar"], 2)} bar · admissível ≥ 8 bar'],
+    ['Pressão de projeto a suportar', f'{dec(fl["p_projeto_bar"], 2)} bar · admissível ≥ 8 bar' +
+     (' · <b>ACIMA do teto de 8 bar: rever a área efetiva ou o fole</b>' if fl['p_projeto_bar'] > 8.0 else '')],
     ['Batente interno de compressão', 'integrado, ≥ 4,5 kN'],
     ['Fixação inferior · superior', 'M12 central · M12 central + porta R1/8'],
 ], 'micro', col=[58, 42])}
 <h3>Por que a bitola subiu de 470 para 530</h3>
-<p>Fole é mola macia, e rolagem macia derruba o tombamento — foi por isso que as Rev E e F
-ficaram no suporte rígido. A bitola de 530 paga essa conta, e sobrava dentro do envelope de
-600 mm, que nunca era usado inteiro. A rolagem também fica <b>limitada pelo curso</b>
-({dec(g["rolagem_max_deg"], 2)}°), não pela rigidez da mola.</p>
+<p>Fole é mola macia, e rolagem macia derruba o tombamento. A bitola de 530 paga essa conta, e a
+rolagem fica <b>limitada pelo curso</b> ({dec(g["rolagem_max_deg"], 2)}°). Todos no CG do inventário do V4.</p>
 {tabela(['Arranjo', 'Bitola', 'Tombamento', 'Envelope'], [
-    ['Rev F — balancim, rolagem rígida', '470', f'{dec(rl["rev_f_tombamento"], 2)}°',
-     f'{dec(rl["rev_f_envelope"], 2)}°'],
+    ['Balancim da Rev F, rolagem rígida', '470', f'{dec(rl["balancim_470_tombamento"], 2)}°',
+     f'{dec(rl["balancim_470_envelope"], 2)}°'],
     ['Esta suspensão, se a bitola fosse 470', '470', f'{dec(rl["bitola_470_tombamento"], 2)}°',
      f'{dec(rl["bitola_470_envelope"], 2)}°'],
-    ['<b>Rev H — como desenhada</b>', '<b>530</b>', f'<b>{dec(rl["tombamento_deg"], 2)}°</b>',
+    [f'<b>Rev {REV} — como desenhada</b>', '<b>530</b>', f'<b>{dec(rl["tombamento_deg"], 2)}°</b>',
      f'<b>{dec(rl["envelope_deg"], 2)}°</b>'],
 ], 'micro', col=[46, 14, 20, 20])}
 <p class="mini">Cálculo completo em <code>revisao-h/suspensao.py</code>. A barra estabilizadora
@@ -1088,7 +1084,7 @@ tem limite de fadiga. Caso 9 do FEA {tag('A VALIDAR')}.</li>
 
 # ======================================================================== F08
 def f08():
-    F = Folha(8, escala='1:5 · 1:1', material='C-01 Al 5052-H32 e = 2 · C-02 Al 6061-T6')
+    F = Folha(8, escala='1:5 · 1:1', material=OP.MAT_FOLHA_08)
     C = chapa_fundo()
     vs = Vista('superior', 5, 150, 104)
     desenha(F.s, vs, so(C, 'C-01'))
@@ -1176,7 +1172,7 @@ def f08():
 
 # ======================================================================== F09
 def f09():
-    F = Folha(9, escala='1:5', material='Al 6061-T6 · tubo 20×20×1,5 · chapas 3 e 5')
+    F = Folha(9, escala='1:5', material=OP.MAT_FOLHA_09)
     G = gaiola() + suporte_lidar()
     ctx = [p.como('ctx') for p in quadro() if p.estilo == 'solid']
     oy = 70 + Z_G2 * 0.2
@@ -1362,7 +1358,7 @@ def _plano(F, p, x0, y0, k, ia=0, ib=1, cotas=True, dx_cota=8.0):
 
 
 def f11():
-    F = Folha(11, escala='1:5 · 1:10 · 1:2', material='Al 5052-H32 · Al 6061-T6 (G-05, G-06)')
+    F = Folha(11, escala='1:5 · 1:10 · 1:2', material=OP.MAT_FOLHA_11)
     K = carenagens()
     G = gaiola() + suporte_lidar()
     s = F.s
@@ -1426,7 +1422,7 @@ def f11():
 
 # ======================================================================== F12
 def f12():
-    F = Folha(12, escala='sem escala', material='Al 6061-T6 · tubo 20×20×1,5')
+    F = Folha(12, escala='sem escala', material=OP.MAT_FOLHA_12)
     G = gaiola() + suporte_lidar()
     ex = [p.movido(dx=90 if p.bbox()[0][0] > 0 else -90) for p in G]
     cam = iso_no_retangulo(ex, 36, 30, 226, 146, 5.9)
@@ -1523,7 +1519,7 @@ def classes_de_uniao():
     desenho a resposta a "o que preciso soltar para abrir isto?".
     """
     linhas = [
-        ['<b>1</b>', 'Estrutural permanente', 'Solda TIG',
+        ['<b>1</b>', 'Estrutural permanente', f'Solda {OP.PROC}',
          'Quadro Q, gaiola G, suspensão W, base M'],
         ['<b>2</b>', 'Estrutural desmontável', 'M8 / M6 com trava ou autotravante',
          'suspensão W→quadro (F-01, F-30), MPW86→W-02 (F-10), bateria (F-23)'],
@@ -1666,9 +1662,7 @@ def f16():
         ('K', '6 carenagens + 3 tampas', '1 jg'),
         ('F', 'Fixadores + porcas-rebite instaladas', '1 jg'),
         ('B', 'Parte B (folhas 17–22): mastros, suportes, bandejas, E-STOP e interfaces de sensores', '1 jg'),
-        ('—', 'Acabamento A — natural', '1'),
-        ('—', 'Acabamento B — anodização preta', '1'),
-        ('—', 'Acabamento C — pintura eletrostática', '1'),
+        *[('—', f'Acabamento {a} — {b}', '1') for (a, b) in OP.ACABAMENTOS],
         ('—', 'Relatório dimensional e certificados', '1'),
         ('—', 'Embalagem e frete', '1'),
     ]
@@ -1691,12 +1685,12 @@ def f16():
 <p><b>Parte A</b> — folhas 01 a 16 e a pasta <b>dxf/</b>: é o objeto da cotação.<br>
 <b>Parte B</b> — folhas 17 a 22: linha <b>B</b> da tabela, cotar em separado.<br>
 <b>Parte C</b> — folhas 23 a 27: informativo, não entra no preço.</p>''')
-    F.bloco(30, 176, 196, '''
-<h3>Informe na proposta</h3>
+    F.bloco(30, 176, 196, f'''
+<h3>Informe na proposta — {OP.NOME}</h3>
 <ol class="notas">
 <li>Validade, pagamento, impostos e frete.</li>
 <li>Prazo a partir do pedido (liberação: folha 15).</li>
-<li>Qualificação do soldador para alumínio.</li>
+<li>{OP.QUALIFICACAO}</li>
 <li>Desvios e alternativas que reduzam custo.</li>
 </ol>''')
     F.bloco(284, 146, 124, '''

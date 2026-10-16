@@ -109,8 +109,10 @@ def massa() -> dict:
     m_c = sum(q * kg for (_, _, q, kg, _, _) in COMPRADOS)
     z_c = sum(q * kg * z for (_, _, q, kg, z, _) in COMPRADOS) / m_c
 
-    m = MASSA_REV_F - m_s + m_w + m_c
-    mz = MASSA_REV_F * ZCG_REV_F - m_s * z_s + m_w * z_w + m_c * z_c
+    # Rev I/J: na opção B o chassi (Q, C, G, M) é de aço — a diferença entra aqui.
+    m_op, z_op = M.delta_massa_opcao()
+    m = MASSA_REV_F - m_s + m_w + m_c + m_op
+    mz = MASSA_REV_F * ZCG_REV_F - m_s * z_s + m_w * z_w + m_c * z_c + m_op * z_op
     return dict(
         m_w=m_w, z_w=z_w, m_s=m_s, z_s=z_s, m_c=m_c, z_c=z_c,
         massa=m, zcg=mz / m, delta=m - MASSA_REV_F, delta_z=mz / m - ZCG_REV_F,

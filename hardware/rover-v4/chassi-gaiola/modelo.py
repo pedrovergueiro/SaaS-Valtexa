@@ -9,6 +9,8 @@ Mudou uma cota? Mude aqui e rode `python gerar.py` de novo.
 """
 import math
 
+import opcao as OP
+
 # ------------------------------------------------------------------ baseline
 L_EXT = 1050.0       # comprimento externo            CALC  (envelope externo, com carenagens)
 W_EXT = 600.0        # largura externa                CALC  (envelope externo, com carenagens)
@@ -195,7 +197,7 @@ class Prisma:
         self.e0, self.e1 = min(e0, e1), max(e0, e1)
         self.perfil = [tuple(p) for p in perfil]
         self.furos = [[tuple(p) for p in f] for f in furos]
-        self.mat = mat
+        self.mat = OP.mat_fisico(item, mat)   # Rev I/J: aço na opção B e em W-12/W-13
         self.estilo = estilo          # solid | ctx (contexto) | ref (não fornecido)
         self.circulos = list(circulos)  # (a, b, d) no plano do perfil
         self.curvo = curvo
@@ -1568,6 +1570,12 @@ ITENS.update({
     'N-08': dict(nome='Reforço do farol', desc='Chapa 60×35×2', mat='Al 5052-H32', origem='NOVO'),
 })
 
+# Rev I/J: o material exibido segue a opção (A alumínio, B aço) e W-12/W-13 em aço nas duas.
+# `mat_rev_h` guarda o da Rev H, para o registro de alterações (folha 43).
+for _cod, _it in ITENS.items():
+    _it['mat_rev_h'] = _it['mat']
+    _it['mat'] = OP.mat_exibido(_cod, _it['mat'], _it.get('desc', ''))
+
 GRUPOS = {
     'Q': 'Quadro estrutural soldado',
     'C': 'Chapa de fundo e nervuras',
@@ -1731,6 +1739,29 @@ BASELINE_MASSAS = [  # (componente, kg, Z mm) — tabela 5.1 da baseline Rev E
     ('Gaiola de proteção (base)', 5.0, 370),
 ]
 M_NOM, ZCG_NOM, M_MIN = 97.8, 297.0, 85.04
+
+
+def massa_rev_h(p):
+    """Massa da peça nos materiais da Rev H (antes da Rev I): alumínio onde hoje há aço trocado."""
+    if p.mat == 'aco' and OP.em_aco(p.item):
+        orig = ITENS.get(p.item, {}).get('mat_rev_h', '')
+        return p.volume() * (RHO['5052'] if '5052' in orig else RHO['6061'])
+    return p.massa()
+
+
+def delta_massa_opcao(grupos=('Q', 'C', 'G', 'M'), parte='A'):
+    """(kg, Z do CG) que a opção de material soma ao chassi em relação à Rev H.
+
+    Por padrão só o chassi (Q, C, G, M): a suspensão W já é somada peça a peça onde é usada.
+    """
+    dm = dmz = 0.0
+    for p in conjunto(parte):
+        if p.estilo == 'ref' or p.grupo not in grupos:
+            continue
+        d = p.massa() - massa_rev_h(p)
+        dm += d
+        dmz += d * p.centroide()[2]
+    return dm, (dmz / dm if abs(dm) > 1e-9 else 0.0)
 
 
 def resumo_massas(parte='A'):

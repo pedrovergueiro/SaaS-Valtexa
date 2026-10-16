@@ -1,4 +1,4 @@
-Peças planas do caderno VTX-RV4-CG-H — corte a laser/CNC
+Peças planas do caderno VTX-RV4-CG-J-AL — corte a laser/CNC
 Unidades: mm. Escala 1:1. Camadas: CORTE (contorno), FUROS, GRAVAR-NAO (identificação — não cortar).
 Quantidades e material: folhas 14 (Parte A) e 21 (Parte B); T-04 e os opcionais, folha 41.
 Peças esquerdas; as direitas são espelhadas (W-02, W-03, W-05, W-06, W-09, W-11, W-13:
@@ -44,4 +44,4 @@ W-05_orelha-da-torre-do-pivo_e6,0_Aco-A36.dxf
 W-06_berco-do-pivo_e8,0_Aco-A36.dxf
 W-09_orelha-do-prato-do-fole_e8,0_Aco-A36.dxf
 W-11_berco-do-fole_e10,0_Al6061-T6.dxf
-W-13_flange-do-colar_e4,0_Al6061-T6.dxf
+W-13_flange-do-colar_e4,0_Aco-A36.dxf

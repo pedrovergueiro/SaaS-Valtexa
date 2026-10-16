@@ -42,8 +42,8 @@ sem que ninguém perceba — até o eixo não entrar.
 | **W-09** | Orelha do prato do fole | 8 | Aço A36 | 3 | 1 | 1 | 1 | 24 |
 | **W-10** | Pino do prato | 4 | Inox 304 | 2 | 0 | 2 | 0 | 8 |
 | **W-11** | Berço do fole | 4 | Al 6061-T6 | 4 | 1 | 3 | 0 | 16 |
-| **W-13** | Flange do colar | 4 | Al 6061-T6 | 3 | 1 | 1 | 1 | 12 |
-| **W-12** | Tubo do colar de vedação | 4 | Al 6061-T6 | 3 | 0 | 2 | 1 | 12 |
+| **W-13** | Flange do colar | 4 | Aço A36 | 3 | 1 | 1 | 1 | 12 |
+| **W-12** | Tubo do colar de vedação | 4 | Aço A36 | 3 | 0 | 2 | 1 | 12 |
 | **Q-05** | Bucha de compressão | 16 | Al 6061-T6 | 2 | 0 | 1 | 1 | 32 |
 | **M-01** | Luva do mastro | 2 | Al 6061-T6 | 4 | 1 | 2 | 1 | 8 |
 | **T-01** | Braçadeira do mastro (metade) | 20 | Al 6061-T6 | 4 | 1 | 3 | 0 | 80 |
@@ -85,8 +85,8 @@ sem que ninguém perceba — até o eixo não entrar.
 | **USINAR** 2 | Furar o alojamento do motor | torno vertical ou fresa + interpolação | Ø88 H8, concentricidade 0,1 ao datum C | Ra 3,2 |
 | **USINAR** 3 | Furar os 7 passantes do flange do motor | broca Ø4,5 | 7× Ø4,5 eq. esp. em PCD 95, posição Ø0,2 (B, C) | Ra 12,5 |
 | **SOLDA** 4 | SOLDAR o braço W-01 e a tampa W-03 | TIG/MIG | filete a4 em cima e embaixo da sobreposição | — |
-| **USINAR** 5 | DEPOIS da solda: faceamento da face de montagem (datum B) | fresa de facear Ø63 | planeza 0,1 · perpendicular 0,3 a A · e ≥ 9,5 | Ra 3,2 |
-| **USINAR** 6 | Conferir a planicidade na face usinada | desempeno + relógio | planeza 0,1 na área de contato Ø105,7 | — |
+| **USINAR** 5 | DEPOIS da solda: faceamento da face de montagem (datum B) | fresa de facear Ø63 | perpendicular 0,3 a A · planeza ISO 2768-K · e ≥ 9,5 | Ra 3,2 |
+| **USINAR** 6 | Conferir a planicidade na face usinada | desempeno + relógio | planeza pela ISO 2768-K (0,4) na área de contato Ø105,7 — a cota de 0,1 saiu na Rev I | — |
 
 ### W-03 — Tampa-gusset da ponta do braço
 
@@ -182,17 +182,17 @@ sem que ninguém perceba — até o eixo não entrar.
 
 ### W-13 — Flange do colar
 
-4 un · Al 6061-T6 · Chapa Ø140×4, cortada em |X| 470
+4 un · Aço A36 · Chapa Ø140×4, cortada em |X| 470
 
 | op | operação | ferramenta | cota / tolerância | acabamento |
 |---|---|---|---|---|
 | corte 1 | Cortar a flange e os 6 rebites | laser (DXF 1:1) | perfil de círculo cortado em |X| 470; 6× Ø4,9 | — |
-| **USINAR** 2 | Facear as duas faces de junta | fresa | planeza 0,1 nas duas faces que recebem junta NBR | Ra 3,2 |
-| **SOLDA** 3 | SOLDAR no tubo W-12 | TIG | filete a3 estanque em todo o contorno — a junta tem de selar | — |
+| **USINAR** 2 | Facear as duas faces de junta | fresa | planeza pela ISO 2768-K nas duas faces que recebem junta NBR (0,1 saiu na Rev I) | Ra 3,2 |
+| **SOLDA** 3 | SOLDAR no tubo W-12 (os dois em aço A36 desde a Rev I) | MAG/TIG | filete a3 estanque em todo o contorno — a junta tem de selar | — |
 
 ### W-12 — Tubo do colar de vedação
 
-4 un · Al 6061-T6 · Tubo Ø100×3 × 32
+4 un · Aço A36 · Tubo Ø100×3 × 32
 
 | op | operação | ferramenta | cota / tolerância | acabamento |
 |---|---|---|---|---|

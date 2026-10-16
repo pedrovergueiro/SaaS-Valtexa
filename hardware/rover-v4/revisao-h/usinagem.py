@@ -61,10 +61,10 @@ OPERACOES = OrderedDict([
         (4, 'SOLDAR o braço W-01 e a tampa W-03', 'TIG/MIG',
          'filete a4 em cima e embaixo da sobreposição', '—'),
         (5, 'DEPOIS da solda: faceamento da face de montagem (datum B)',
-         'fresa de facear Ø63', f'planeza 0,1 · perpendicular 0,3 a A · e ≥ {M.E_PLACA - 0.5:.1f}',
+         'fresa de facear Ø63', f'perpendicular 0,3 a A · planeza ISO 2768-K · e ≥ {M.E_PLACA - 0.5:.1f}',
          'Ra 3,2'),
         (6, 'Conferir a planicidade na face usinada', 'desempeno + relógio',
-         'planeza 0,1 na área de contato Ø105,7', '—'),
+         'planeza pela ISO 2768-K (0,4) na área de contato Ø105,7 — a cota de 0,1 saiu na Rev I', '—'),
     ]),
     ('W-03', [
         (1, 'Cortar o contorno', 'laser (DXF 1:1)', f'{M.B_BRACO:.0f} × {M.H_BRACO:.0f} ± 0,3', '—'),
@@ -137,8 +137,8 @@ OPERACOES = OrderedDict([
         (1, 'Cortar a flange e os 6 rebites', 'laser (DXF 1:1)',
          'perfil de círculo cortado em |X| 470; 6× Ø4,9', '—'),
         (2, 'Facear as duas faces de junta', 'fresa',
-         'planeza 0,1 nas duas faces que recebem junta NBR', 'Ra 3,2'),
-        (3, 'SOLDAR no tubo W-12', 'TIG',
+         'planeza pela ISO 2768-K nas duas faces que recebem junta NBR (0,1 saiu na Rev I)', 'Ra 3,2'),
+        (3, 'SOLDAR no tubo W-12 (os dois em aço A36 desde a Rev I)', 'MAG/TIG',
          'filete a3 estanque em todo o contorno — a junta tem de selar', '—'),
     ]),
     ('W-12', [

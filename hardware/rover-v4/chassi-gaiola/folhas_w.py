@@ -224,7 +224,6 @@ def f29():
     face = va.P((0, M.Y_FACE, M.Z_EIXO + 60))
     F.s.ln(face[0], face[1], 228, face[1], 'gdt')
     seta(F.s, face[0], face[1], 0.0)
-    fcf(F.s, 228, face[1] - 6, 'plan', '0,1')
     fcf(F.s, 228, face[1], 'perp', '0,3', ('A',))
     referencia(F.s, *va.P((0, M.Y_FACE, M.Z_EIXO)), 'B', 0.0)
     fr = va.P((0, M.Y_FACE, M.Z_EIXO - 36))
@@ -250,16 +249,16 @@ fabricante, que pedia esta peça em aço, está <b>implementada</b> nesta revis�
     ['A', 'face de assento do berço do pivô, em Z 248',
      'orienta o conjunto no rover; dela se mede a perpendicularidade da face do motor'],
     ['B', f'face de montagem do motor, em |Y| {num(M.Y_FACE, 0)}',
-     'é a face usinada: planeza 0,1 e perpendicular 0,3 a A'],
+     'é a face usinada: perpendicular 0,3 a A; planeza pela ISO 2768-K (0,4)'],
     ['C', f'eixo do alojamento Ø{num(M.D_BORE, 0)} H8',
      'referência de posição dos 7 furos do flange'],
 ], col=[12, 42, 46])}
-<h3>Planicidade 0,1 — por que fica, e o que falta</h3>
-<p>O fabricante sugeriu revisar os 0,1 mm {tag('A VALIDAR')}. A planicidade fica em 0,1, e a
-razão é o aço: numa face de alumínio apertada por 7 parafusos M4 que saem e voltam a cada
-manutenção, especificar 0,1 é inútil — a face amassa na terceira desmontagem. Em A36 a face
-se mantém, e aí a cota passa a significar algo. <b>O que ainda falta é a resposta da
-ElectroCraft</b>: a planicidade que o motor realmente exige não está publicada (P-04).</p>
+<h3>Planicidade — a cota de 0,1 saiu na Rev I</h3>
+<p>O fabricante pediu a revisão dos 0,1 mm, e a Rev I a retirou {tag('REV I')}: a face do motor
+segue a tolerância geral ISO 2768-mK (planeza classe K, 0,4 na faixa de 100 a 300 mm). Ficam a
+perpendicular 0,3 a A e o Ra 3,2. <b>O que ainda falta é a resposta da ElectroCraft</b>: a
+planicidade que o motor realmente exige não está publicada (P-04); se ela vier mais apertada que
+0,4, a cota volta.</p>
 <ol class="notas">
 <li>Faceamento SEMPRE depois de soldar o braço. A solda distorce a chapa, e o que importa
 é a planeza da peça pronta, não a da chapa cortada.</li>
@@ -365,7 +364,7 @@ soldar. Coaxialidade 0,05 — desalinhamento aqui força a bucha e come o curso 
 
 # ======================================================================== F31
 def f31():
-    F = Folha(31, escala='—', material='W-08/09/10 Aço e inox · W-11/12/13 Al 6061-T6',
+    F = Folha(31, escala='—', material=M.OP.MAT_FOLHA_31,
               tolerancia='ISO 2768-mK · soldado ISO 13920-BF')
     canto = _canto()
     fole = [p.como('ref') for p in M.fole_ref(1, 1)]
@@ -559,7 +558,7 @@ def f33():
          'interferência leve; a bucha não gira, o eixo gira'),
         ('8', 'Soldar W-05 + W-06 em dispositivo, alargar Ø20 H7 no mesmo passe', 'TIG + alargador',
          'coaxialidade 0,05 entre as duas orelhas'),
-        ('9', 'Soldar W-12 + W-13 e ensaiar estanqueidade', 'TIG + bolha',
+        ('9', 'Soldar W-12 + W-13 (aço A36) e ensaiar estanqueidade', 'MAG/TIG + bolha',
          '0,5 bar em água, sem bolha em 60 s'),
         ('10', 'Soldar W-09 em W-08 e alargar Ø12 H7', 'TIG + alargador',
          'eixo do pino paralelo à face do disco em 0,1'),
@@ -582,7 +581,7 @@ a tolerância foi feita antes, ela se perdeu e ninguém vai notar até o eixo n�
 {tabela(['O que medir', 'Critério'], [
     ['Sobreposição braço × chapa', '72 mm'],
     ['Coaxialidade do alojamento da bucha', '0,05 entre as duas paredes'],
-    ['Planeza da face de montagem do motor', '0,1 na área Ø105,7'],
+    ['Planeza da face de montagem do motor', 'ISO 2768-K (0,4) — cota de 0,1 retirada na Rev I'],
     ['Perpendicularidade da face ao datum A', '0,3'],
     ['Espessura da chapa após faceamento', f'≥ {num(M.E_PLACA - 0.5, 1)} mm'],
     ['Giro livre do braço no eixo, sem fole', 'de batente a batente, sem ponto duro'],

@@ -247,7 +247,7 @@ CONFERENCIAS = [
     ('Bitola', '530 ± 1 mm, medida face a face das rodas',
      'é a cota que paga a estabilidade desta revisão'),
     ('Entre-eixos', '700 ± 1 mm', 'define a geometria do braço'),
-    ('Face de montagem do motor', 'planeza 0,1 mm, perpendicular 0,3 a A',
+    ('Face de montagem do motor', 'perpendicular 0,3 a A; planeza ISO 2768-K',
      'sugestão 2.3 do fabricante — ver folha 29'),
     ('Alinhamento do braço', 'eixo do pivô paralelo a Y em 0,2/100',
      'desalinhamento força a bucha e come o curso'),
