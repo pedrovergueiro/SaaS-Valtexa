@@ -6,7 +6,7 @@ X-BAT;Bateria 16S LiFePO4 (16× EVE 105 Ah);1;ENERGIA;36.5;36.5;460.0;350.0;130.
 X-BMS;BMS Daly Smart 16S 100 A com CAN;1;ENERGIA;;;;;;bandeja;D;massa, L, W, H;PENDENTE ficha técnica
 X-DCDC;Conversor DC/DC 48→12 V 30 A;1;ENERGIA;;;;;;bandeja;D;massa, L, W, H;PENDENTE ficha técnica. Potência 360 W: FONTE (BOM)
 X-CONT;Contator DC TE Kilovac LEV200;1;ENERGIA;;;;;;bandeja;D;massa, L, W, H;PENDENTE ficha técnica
-X-CAM;Câmera OAK-D Pro W PoE;8;SENSORES;;;;;;6 nos mastros (3 níveis × 2 lados), 1 frontal, 1 inferior;D;massa, L, W, H;PENDENTE desenho dimensional (P-06) — bloqueia M-20 e N-09. Potência: TETO de 12,95 W pela classe 3 de 802.3af, não medição
+X-CAM;Câmera OAK-D Pro W PoE;9;SENSORES;;;;;;6 nos mastros (3 níveis × 2 lados), C7 frontal, C8 traseira, C9 de raiz;D;massa, L, W, H;PENDENTE desenho dimensional (P-06) — bloqueia M-20 e N-09. Potência: TETO de 12,95 W pela classe 3 de 802.3af, não medição
 X-LIDAR;LiDAR Livox Mid-360;1;SENSORES;;;;;;suporte G-06, sobre a gaiola;D;massa, L, W, H;PENDENTE dimensões, massa e centro óptico (pendência 11 do caderno)
 X-GNSS;GNSS RTK ZED-F9P + antena;1;SENSORES;;;;;;antena no suporte N-01, na tampa;D;massa, L, W, H;PENDENTE ficha técnica
 X-IMU;IMU Xsens MTi-630 (CAN);1;SENSORES;;;;;;berço N-02, próximo ao CG;D;massa, L, W, H;PENDENTE furação real e offset ao CG (pendência 18 do caderno)

@@ -21,10 +21,15 @@ Mas o balancim tem dois custos que a Rev F não fechou:
 A Rev H troca a maciez de rolagem por BITOLA. Com bitola 530 em vez de 470 — dentro do
 mesmo envelope externo de 600, que nunca era usado inteiro — e com a rolagem limitada pelo
 curso (±25 mm em 530 de bitola dão 5,40° e nada mais, porque depois disso bate o fim de
-curso), o envelope de estabilidade sai em 20,9° contra 19,6° do balancim.
+curso), o envelope de estabilidade sai em 16,3° contra 15,5° do balancim rígido, os dois
+no CG do inventário do V4 (121,1 kg, Z 336 mm, mastro cheio).
 
 **A suspensão macia fica mais estável que a rígida.** Não por mágica: porque 60 mm de
-bitola valem mais que 5° de rolagem, e os 60 mm estavam sobrando no envelope.
+bitola valem mais que 5° de rolagem, e os 60 mm estavam sobrando no envelope. A margem
+sobre os 16,2° da baseline, porém, é de só 0,1° — ver `centro_massa.py`.
+
+(Até 15/10/2026 este módulo publicava 20,9° contra 19,6°: o cálculo usava o CG da Rev F do
+V3, 50 mm mais baixo, sem o mastro do V4.)
 
 ---
 
@@ -376,6 +381,13 @@ def folgas() -> list[dict]:
 
 
 # =============================================== rolagem, tombamento, envelope
+def cg_v4(estado: str = 'projeto') -> dict:
+    """Massa e CG do inventário do V4 (`centro_massa`), para os cálculos de estabilidade."""
+    import centro_massa as CM  # noqa: PLC0415 — import tardio: centro_massa importa este módulo
+    s = CM.soma(CM.inventario(estado))
+    return dict(massa=s['kg'], zcg=s['z'], estado=estado)
+
+
 def roll(massa_kg: float | None = None) -> dict:
     """Rolagem, tombamento e envelope de estabilidade — o cálculo que decide a arquitetura.
 
@@ -388,9 +400,13 @@ def roll(massa_kg: float | None = None) -> dict:
     8,5° e perdia 4,9° de envelope. Com o batente no cálculo, e com a bitola de 530, o
     resultado vira o contrário.
     """
-    m = massa()
-    mm = massa_kg if massa_kg is not None else m['massa']
-    zcg = m['zcg']
+    # A massa e o CG da estabilidade vêm do inventário do V4 (centro_massa, estado 'projeto':
+    # mastro cheio, térmicas e antena), somado peça a peça. `massa()` parte da Rev F do V3 e
+    # não tem o mastro do V4: o CG dela fica 50 mm mais baixo e o tombamento sai otimista.
+    # `massa()` continua dimensionando os foles, porque ali a massa maior é o lado seguro.
+    cg = cg_v4()
+    mm = massa_kg if massa_kg is not None else cg['massa']
+    zcg = cg['zcg']
     f = fole(mm)
     meia = M.BITOLA / 2
 
@@ -429,6 +445,10 @@ def roll(massa_kg: float | None = None) -> dict:
             a470 = math.atan((235.0 - zcg * math.sin(p470)) / (zcg * math.cos(p470)))
         env_470 = M.envelope_estabilidade(zcg * math.cos(p470), phi_c=3.0 + math.degrees(p470))
         tomb_470 = math.degrees(a470)
+        # o balancim da Rev F (rolagem rígida, bitola 470) no MESMO CG: é a comparação justa.
+        # Os 19,57° da Rev F foram calculados no CG da Rev F (294 mm) e não servem de régua.
+        bal_env = M.envelope_estabilidade(zcg)
+        bal_tomb = math.degrees(math.atan(235.0 / zcg))
     finally:
         M.BITOLA = bit
 
@@ -441,6 +461,7 @@ def roll(massa_kg: float | None = None) -> dict:
         envelope_deg=env, envelope_se_rigido_deg=env_rigido,
         bitola_470_tombamento=tomb_470, bitola_470_envelope=env_470,
         rev_f_envelope=19.57, rev_f_tombamento=39.44,
+        balancim_470_tombamento=bal_tomb, balancim_470_envelope=bal_env,
     )
 
 
@@ -732,6 +753,12 @@ por isso que o monitoramento de ciclo entra como requisito.
 """
 
 
+def _wh_bateria() -> float:
+    """Energia nominal da bateria do projeto, da mesma fonte que o orçamento elétrico."""
+    import sensores as S  # noqa: PLC0415
+    return S.BATERIA['wh']
+
+
 def energia() -> dict:
     """O que a suspensão tira da bateria."""
     medio = COMPRESSOR_W * CICLO_TRABALHO
@@ -745,7 +772,9 @@ def energia() -> dict:
                 total_W=total,
                 ar_por_subida_L_normal=dv * (p + 1.013) / 1.013,
                 circuitos=4,
-                nota='Não é o problema: 1,5 % de uma bateria de 600 Wh por hora.')
+                nota=('Não é o problema: ' + f'{100 * total / _wh_bateria():.2f}'.replace('.', ',')
+                      + ' % por hora da bateria de ' + f'{_wh_bateria():,.0f}'.replace(',', '.')
+                      + ' Wh.'))
 
 
 REQUISITOS_CONTROLE = [
@@ -890,8 +919,9 @@ def main() -> None:
         '',
         f'de onde vem o ganho — mesma suspensão, bitola 470:',
         f'  tombamento {r["bitola_470_tombamento"]:.2f}° · envelope {r["bitola_470_envelope"]:.2f}°',
-        f'contra a Rev F (balancim, rolagem rígida, bitola 470):',
-        f'  tombamento {r["rev_f_tombamento"]:.2f}° · envelope {r["rev_f_envelope"]:.2f}°',
+        f'contra o balancim da Rev F (rolagem rígida, bitola 470) no MESMO CG:',
+        f'  tombamento {r["balancim_470_tombamento"]:.2f}° · envelope {r["balancim_470_envelope"]:.2f}°',
+        f'  (a Rev F publicou {r["rev_f_tombamento"]:.2f}° / {r["rev_f_envelope"]:.2f}° no CG dela, 294 mm)',
     ])
 
     b = barra_estabilizadora()

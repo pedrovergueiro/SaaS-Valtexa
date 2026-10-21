@@ -248,6 +248,10 @@ W_SATELITE = 30.0
 orçamento mesmo sendo provisão: reservar energia é mais honesto que descobrir depois."""
 
 MBPS_OAKD = 60.0
+
+W_JETSON_MAX = 40.0
+"""W — perfil de potência mais alto da Jetson Orin NX 16 GB (os perfis vão de 10 a 40 W).
+FAIXA do fabricante, não medição; o perfil adotado está em aberto (ver componentes comprados)."""
 """Mbit/s por câmera, estimado para fluxo estéreo comprimido + profundidade.
 ESTIMATIVA: a taxa real depende de resolução, taxa de quadros e codec, e o projeto não
 tem essa configuração fechada."""
@@ -271,6 +275,11 @@ def energia(n_termicas: int = None) -> dict:
     # perdas de PoE: injeção, cabo e conversão no dispositivo
     rend_poe = 0.85
     total_sensores = (base + termicas) / rend_poe + sat
+    # o mesmo conversor alimenta a Jetson, o compressor e as válvulas (CABOS-H, ligação 5)
+    import suspensao as SU  # noqa: PLC0415
+    jetson = W_JETSON_MAX
+    compressor = SU.COMPRESSOR_W
+    pico_12v = total_sensores + jetson + compressor
     return dict(
         n_oakd=N_OAKD, w_por_oakd=W_OAKD, w_oakd=base,
         n_termica=n_term, w_termica=termicas,
@@ -279,10 +288,15 @@ def energia(n_termicas: int = None) -> dict:
         capacidade_dcdc_W=dc['w_max'],
         folga_W=dc['w_max'] - total_sensores,
         cabe=total_sensores <= dc['w_max'],
+        w_jetson_max=jetson, w_compressor=compressor,
+        pico_barramento_12v_W=pico_12v,
+        folga_pico_W=dc['w_max'] - pico_12v,
+        cabe_no_pico=pico_12v <= dc['w_max'],
         delta_vs_v3=(base - 8 * W_OAKD) / rend_poe + termicas / rend_poe + sat,
-        nota=('O conversor de 360 W não é o limite. O limite é o INJETOR PoE: 9 portas a '
-              '12,95 W pedem 117 W de PoE, e um switch PoE de 8 portas não tem 9 portas. '
-              'Ver `rede`.'))
+        nota=('Só os sensores cabem nos 360 W. Mas o conversor também alimenta a Jetson (até '
+              f'{jetson:.0f} W) e o compressor da suspensão ({compressor:.0f} W quando liga): '
+              f'no pico são {pico_12v:.0f} W. Conversor maior, um segundo conversor para a '
+              'suspensão, ou o compressor travado durante a captura (P-17). Portas: ver `rede`.'))
 
 
 SWITCH_12_PORTAS = 12
@@ -296,20 +310,22 @@ def rede(n_termicas: int = 0) -> dict:
     """
     n = N_OAKD
     banda = n * MBPS_OAKD
+    # +1 LiDAR, +1 ligação à Jetson, +1 terminal satelital (provisão) — CABOS-H, ligações 12 a 14
+    portas = n + 1 + 1 + 1 + n_termicas
     return dict(
         n_cameras=n, n_termicas=n_termicas,
-        portas_necessarias=n + 1 + n_termicas,          # +1 para o LiDAR
+        portas_necessarias=portas,
         portas_com_12=SWITCH_12_PORTAS,
-        cabe_em_12=n + 1 + n_termicas <= SWITCH_12_PORTAS,
+        cabe_em_12=portas <= SWITCH_12_PORTAS,
         portas_do_switch=SWITCH_PORTAS,
-        portas_ok=n + 1 + n_termicas <= SWITCH_PORTAS,
+        portas_ok=portas <= SWITCH_PORTAS,
         banda_total_Mbps=banda, uplink_Mbps=SWITCH_UPLINK_MBPS,
         ocupacao_uplink=banda / SWITCH_UPLINK_MBPS,
         banda_ok=banda <= SWITCH_UPLINK_MBPS * 0.7,
         poe_total_W=n * W_OAKD,
-        nota=('Com 9 câmeras mais o LiDAR são 10 portas Ethernet, e o switch de 8 não '
-              'serve. Trocar por um de 12 portas PoE+ resolve as duas coisas — portas e '
-              'orçamento de PoE — e é o item elétrico que a 9ª câmera obriga. '
+        nota=('9 câmeras, o LiDAR, a ligação à Jetson e o terminal satelital somam 12 portas '
+              'Ethernet, e o switch de 8 não serve. Um de 12 portas PoE+ atende sem térmicas '
+              'Ethernet; cada térmica Ethernet pede mais uma porta (16 portas com duas ou mais). '
               'ESTE É UM ITEM NOVO DE BOM, não um ajuste de desenho.'))
 
 

@@ -664,7 +664,7 @@ def f23():
          f'Modelo e interface (USB ou Ethernet); caber em {num(M.ENVELOPE_TERMICA[0], 0)}×{num(M.ENVELOPE_TERMICA[1], 0)}×'
          f'{num(M.ENVELOPE_TERMICA[2], 0)} e deixar livres os 4 parafusos (P-30, P-38).',
          'Sensores', 'Ficha técnica + ensaio V-16'],
-        ['26', 'Switch PoE', 'Portas: 12 cobrem 9 OAK-D + LiDAR + 2 térmicas por Ethernet; 4 térmicas exigem 16 (P-31).',
+        ['26', 'Switch PoE', 'Portas: 9 OAK-D + LiDAR + Jetson + satélite = 12; cada térmica Ethernet soma uma (16 com quatro) (P-31).',
          'Eng. elétrica', 'Componente escolhido'],
         ['27', 'Margem do mastro contra o terreno',
          f'Razão {dec(vp["razao"], 2)} contra {dec(vp["margem_minima"], 1)} a {MA.VELOCIDADE_MS} m/s com o mastro cheio: '

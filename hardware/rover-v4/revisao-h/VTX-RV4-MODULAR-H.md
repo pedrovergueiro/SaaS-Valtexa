@@ -120,16 +120,24 @@ lavoura.
 | Térmicas a 3,0 W (FAIXA) | 0 W | 6,0 W | 12,0 W |
 | Terminal satelital (provisão) | 30 W | 30 W | 30 W |
 | **Total com 15 % de perda de PoE** | **167 W** | **174 W** | **181 W** |
-| Conversor de 360 W | cabe, folga 193 W | cabe, folga 186 W | cabe, folga 179 W |
-| Portas Ethernet (OAK-D + LiDAR + térmicas por Ethernet) | 10 | 12 | 14 |
+| Conversor de 360 W, só os sensores | cabe, folga 193 W | cabe, folga 186 W | cabe, folga 179 W |
+| + Jetson (até 40 W) + compressor (180 W ao ligar) | **387 W** | **394 W** | **401 W** |
+| Conversor de 360 W, no pico do barramento | **não cabe**, -27 W | **não cabe**, -34 W | **não cabe**, -41 W |
+| Portas Ethernet (OAK-D + LiDAR + Jetson + satélite + térmicas por Ethernet) | 12 | 14 | 16 |
 | Cabe em switch de 8 portas? | **não** | **não** | **não** |
-| Cabe em switch de 12 portas? | sim | sim | **não — exige 16 portas** |
+| Cabe em switch de 12 portas? | sim | não | **não — exige 16 portas** |
 | Banda agregada | 540 Mbit/s | 540 Mbit/s | 540 Mbit/s |
 
-**A 9ª câmera não dói na energia — dói na rede.** São 10 portas com o LiDAR, e o switch PoE
-de 8 não atende. Trocar por um de 12 portas PoE+ é **item novo de BOM**, não ajuste de
-desenho (P-31). O de 12 portas cobre até **2 térmicas por Ethernet**; as 4 posições
-cheias, por Ethernet, exigem 16 portas. Se a térmica escolhida for USB, ela entra pela Jetson e
+**A 9ª câmera dói na rede, e o barramento de 12 V dói no pico.** São 12 portas com o LiDAR, a
+ligação à Jetson e o terminal satelital, e o switch PoE de 8 não atende. Trocar por um de 12 portas PoE+ é **item
+novo de BOM**, não ajuste de desenho (P-31). O de 12 portas não sobra para nenhuma térmica por Ethernet; com
+térmicas Ethernet, 16 portas.
+
+Na energia, os sensores sozinhos cabem no conversor de 360 W, mas ele também alimenta a Jetson e o
+compressor da suspensão (CABOS-H, ligação 5). Com o compressor ligado o pico passa do conversor: conversor maior,
+um segundo conversor só para a suspensão, ou o compressor travado durante a captura (P-17). Correção de
+15/10/2026: até então esta seção conferia só os sensores contra o conversor e contava 10 portas, sem a ligação
+à Jetson e sem o terminal satelital. Se a térmica escolhida for USB, ela entra pela Jetson e
 não ocupa porta — o modelo ainda não existe (P-30). A banda é 54 % de um uplink de 1 Gbit/s
 com as OAK-D; as térmicas somam pouco a ela.
 

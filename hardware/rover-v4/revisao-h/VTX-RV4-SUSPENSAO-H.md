@@ -60,16 +60,25 @@ resultado inverte.
 
 ### O resultado
 
+Todos os arranjos no **mesmo CG**, o do inventário do V4 (`centro_massa.py`, estado projeto: 121,1 kg,
+Z 336,2 mm, mastro cheio):
+
 | Arranjo | Bitola | Tombamento | Envelope de estabilidade |
 |---|---|---|---|
-| Rev F — balancim, rolagem rígida | 470 | 39,44° | 19,57° |
-| Esta suspensão, se a bitola fosse 470 | 470 | 35,76° | 16,02° |
-| **Rev H — como desenhada** | **530** | **39,92°** | **20,89°** |
+| Balancim da Rev F, rolagem rígida | 470 | 34,95° | 15,51° |
+| Esta suspensão, se a bitola fosse 470 | 470 | 30,82° | 11,72° |
+| **Rev H — como desenhada** | **530** | **34,89°** | **16,31°** |
 
 **A suspensão macia fica mais estável que a rígida.** Não há mágica: 60 mm de bitola valem
 mais que 5,4° de rolagem, e os 60 mm estavam disponíveis de graça. A linha do meio da tabela
-é a que mostra de onde vem o ganho — sem a bitola, esta arquitetura perderia 3,5° de
+é a que mostra de onde vem o ganho — sem a bitola, esta arquitetura perderia 3,8° de
 envelope contra o balancim.
+
+**Correção de 15/10/2026.** Esta tabela mostrava 39,92° / 20,89° para a Rev H e 39,44° / 19,57°
+para o balancim. Os números da Rev H vinham do CG da Rev F do V3 (285,9 mm), sem o mastro do V4;
+os do balancim, do CG da Rev F (294 mm). A conclusão continua de pé, mas a margem encolheu: o
+envelope passa os **16,2° da baseline por apenas 0,1°**, e qualquer massa a mais no alto do mastro
+o derruba abaixo do requisito.
 
 ---
 
@@ -275,11 +284,11 @@ a massa é a pressão do fole, e ela tem margem dos dois lados:
 
 | Massa (kg) | p estática | p projeto | k roda | freq | tombamento | envelope |
 |---|---|---|---|---|---|---|
-| 85,04 | 1,22 bar | 4,94 bar | 3,76 N/mm | 2,12 Hz | 39,92° | 20,89° |
-| 97,80 | 1,40 | 5,68 | 4,07 | 2,05 | 39,92° | 20,89° |
-| 110,07 | 1,58 | 6,39 | 4,37 | 2,01 | 39,92° | 20,89° |
-| **126,52** | **1,81** | **7,34** | **4,77** | **1,95** | **39,92°** | **20,89°** |
-| 130,00 | 1,86 | 7,55 | 4,85 | 1,94 | 39,92° | 20,89° |
+| 85,04 | 1,22 bar | 4,94 bar | 3,76 N/mm | 2,12 Hz | 34,89° | 16,31° |
+| 97,80 | 1,40 | 5,68 | 4,07 | 2,05 | 34,89° | 16,31° |
+| 110,07 | 1,58 | 6,39 | 4,37 | 2,01 | 34,89° | 16,31° |
+| **126,52** | **1,81** | **7,34** | **4,77** | **1,95** | **34,89°** | **16,31°** |
+| 130,00 | 1,86 | 7,55 | 4,85 | 1,94 | 34,89° | 16,31° |
 
 Em toda a faixa a pressão estática fica entre 1 e 3 bar (o fole mantém a forma) e a de
 projeto fica abaixo de 8. **A suspensão não depende de fechar P-02 para ser cotada.** A
@@ -290,7 +299,7 @@ estrutura do rover, sim.
 ## 8. Energia
 
 **10,8 W médios** — compressor 9,0 (180 W a 5 % de ciclo) + solenoides 0,32 + controle 1,5.
-Cerca de 1,5 % de uma bateria de 600 Wh por hora. Não é o problema.
+Cerca de 0,2 % por hora da bateria de 5.376 Wh (16S LiFePO4, 105 Ah). Não é problema de energia, é de pico: os 180 W do compressor dividem o conversor de 360 W com os sensores e a Jetson (ver `modular.energia`).
 
 Uma subida completa dos quatro cantos consome 1,53 L normais de ar.
 
