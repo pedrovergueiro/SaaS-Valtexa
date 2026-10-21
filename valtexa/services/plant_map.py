@@ -30,13 +30,29 @@ class PlantMapUnavailableError(RuntimeError):
 
 
 class PlantMapRefusedError(PlantMapUnavailableError):
-    """O serviço respondeu e recusou o pedido (409/422): mandar de novo não adianta."""
+    """O serviço respondeu e recusou o pedido (409/422): mandar de novo não adianta.
+
+    ``status_code`` é o da inferência: 409 quando falta algo no talhão (passada, tempo, um
+    ajuste já em andamento), 422 quando o pedido em si é proibido (bula, carência).
+    """
+
+    def __init__(self, message: str, status_code: int = 422) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _request(
-    method: str, path: str, params: dict | None = None, json_body: dict | None = None
+    method: str,
+    path: str,
+    params: dict | None = None,
+    json_body: dict | None = None,
+    timeout: float | None = None,
 ) -> Any | None:
-    """Chama o serviço de inferência; ``None`` quando o talhão ainda não tem histórico."""
+    """Chama o serviço de inferência; ``None`` quando o talhão ainda não tem histórico.
+
+    ``timeout``: o do pedido, quando ele é sabidamente mais longo que o padrão (o ajuste do
+    gêmeo digital leva minutos num talhão grande).
+    """
     if settings.simulated_inference or not settings.inference_enabled:
         raise PlantMapUnavailableError(
             "Sem serviço de inferência neste processo (inferência simulada ou desligada)."
@@ -49,7 +65,7 @@ def _request(
             params=params,
             json=json_body,
             headers=settings.inference_headers(),
-            timeout=settings.inference_timeout_seconds,
+            timeout=max(timeout or 0.0, settings.inference_timeout_seconds),
         )
     except httpx.HTTPError as exc:
         raise PlantMapUnavailableError(f"Serviço de inferência fora do ar: {exc}") from exc
@@ -64,7 +80,7 @@ def _request(
             detalhe = response.json().get("detail", "Recusado pela inferência.")
         except ValueError:
             detalhe = response.text[:200]
-        raise PlantMapRefusedError(str(detalhe))
+        raise PlantMapRefusedError(str(detalhe), response.status_code)
     try:
         response.raise_for_status()
         return response.json()
@@ -97,6 +113,11 @@ def evolution(field_id: str, plant_id: str) -> dict | None:
     return _request("GET", f"/fields/{_seg(field_id)}/plants/{_seg(plant_id)}/evolution")
 
 
+def lesoes(field_id: str, plant_id: str) -> dict | None:
+    """As lesões da planta no referencial dela, reencontradas entre passadas (Nível 2)."""
+    return _request("GET", f"/fields/{_seg(field_id)}/plants/{_seg(plant_id)}/lesoes")
+
+
 def prevalence(field_id: str, model_key: str) -> dict | None:
     return _request("GET", f"/fields/{_seg(field_id)}/prevalence", {"model": model_key})
 
@@ -112,6 +133,70 @@ def prescription(field_id: str, pedido: dict, formato: str = "json") -> dict | N
     return _request(
         "POST", f"/fields/{_seg(field_id)}/prescription", {"formato": formato}, json_body=pedido
     )
+
+
+# ---------------------------------------------------------------------------
+# Gêmeo digital (``app.gemeo`` de VALTEXA-B)
+# ---------------------------------------------------------------------------
+
+GEMEO_AJUSTE_TIMEOUT_SECONDS = 900.0
+"""O ajuste percorre as passadas centenas de vezes: minutos num talhão de dezenas de milhares
+de pés."""
+GEMEO_TIMEOUT_SECONDS = 300.0
+"""Previsão e prescrição rodam o conjunto (e a prescrição, quatro cenários)."""
+
+
+def clima(field_id: str, dias: bool = False) -> dict | None:
+    """A série climática do talhão na inferência, por fonte (``dias``: com a série dia a dia)."""
+    return _request("GET", f"/fields/{_seg(field_id)}/clima", {"dias": "true"} if dias else None)
+
+
+def enviar_clima(field_id: str, pedido: dict) -> dict | None:
+    """Acrescenta tempo (estação, ou Open-Meteo se a inferência tiver a busca ligada)."""
+    return _request("POST", f"/fields/{_seg(field_id)}/clima", json_body=pedido,
+                    timeout=GEMEO_TIMEOUT_SECONDS)
+
+
+def gemeo(field_id: str) -> dict | None:
+    """O grafo do talhão e os modelos epidemiológicos ajustados."""
+    return _request("GET", f"/fields/{_seg(field_id)}/gemeo")
+
+
+def ajustar_gemeo(field_id: str, doenca: str) -> dict | None:
+    return _request("POST", f"/fields/{_seg(field_id)}/gemeo/ajuste", {"doenca": doenca},
+                    timeout=GEMEO_AJUSTE_TIMEOUT_SECONDS)
+
+
+def previsao_gemeo(field_id: str, params: dict) -> dict | None:
+    """Risco por planta, janelas de infecção e focos de agora e do horizonte."""
+    return _request("GET", f"/fields/{_seg(field_id)}/gemeo/previsao", params,
+                    timeout=GEMEO_TIMEOUT_SECONDS)
+
+
+def prescricao_gemeo(field_id: str, pedido: dict, formato: str = "json") -> dict | None:
+    """A prescrição sobre o risco previsto, com a data de aplicação e os cenários."""
+    return _request("POST", f"/fields/{_seg(field_id)}/gemeo/prescricao", {"formato": formato},
+                    json_body=pedido, timeout=GEMEO_TIMEOUT_SECONDS)
+
+
+def prioridades_gemeo(field_id: str, params: dict) -> dict | None:
+    """Onde vale olhar (``/gemeo/prioridades``): as tarefas pelo valor da informação."""
+    return _request("GET", f"/fields/{_seg(field_id)}/gemeo/prioridades", params,
+                    timeout=GEMEO_TIMEOUT_SECONDS)
+
+
+def levantamento_gemeo(field_id: str, pedido: dict) -> dict | None:
+    """Levantamento aéreo importado: regiões suspeitas viram evidência no canal do drone."""
+    return _request("POST", f"/fields/{_seg(field_id)}/gemeo/levantamento", json_body=pedido,
+                    timeout=GEMEO_TIMEOUT_SECONDS)
+
+
+def aplicacao_localizada_gemeo(field_id: str, pedido: dict) -> dict | None:
+    """O mapa de aplicação localizada (``/gemeo/aplicacao-localizada``): taxa por trecho e PWM
+    por bico sobre o risco previsto. Proposta: a missão ainda precisa de aprovação e do Safety
+    Engine."""
+    return _request("POST", f"/fields/{_seg(field_id)}/gemeo/aplicacao-localizada",
+                    json_body=pedido, timeout=GEMEO_TIMEOUT_SECONDS)
 
 
 def ingest_edge_frame(field_id: str, model_key: str, frame: dict) -> dict:

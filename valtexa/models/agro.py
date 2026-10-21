@@ -68,6 +68,18 @@ class Product(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
         Float, doc="Vento máximo da bula. Quando nulo vale o limite global da plataforma."
     )
     notes: Mapped[str | None] = mapped_column(Text)
+    modo_de_acao: Mapped[str | None] = mapped_column(
+        String(32),
+        doc="Grupo de modo de ação (ex.: 'FRAC 3', 'IRAC 28'), como está na bula vigente. "
+        "Sem ele, o produto fica fora da análise de rotação.",
+    )
+    fonte_documento_id: Mapped[str | None] = mapped_column(
+        String(32),
+        ForeignKey("documento_conhecimento.id", ondelete="SET NULL"),
+        doc="A bula ou o registro MAPA (repositório de conhecimento) de onde saíram o "
+        "ingrediente, o registro e o modo de ação. A rotação só usa produto com fonte "
+        "regulatória vigente e verificada.",
+    )
 
     batches: Mapped[list[ProductBatch]] = relationship(
         back_populates="product", cascade="all, delete-orphan", passive_deletes=True

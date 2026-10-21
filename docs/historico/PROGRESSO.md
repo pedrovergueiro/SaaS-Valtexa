@@ -1,5 +1,8 @@
 # Progresso — branch `claude/plataforma`
 
+> **Rodada 4** (branch `claude/cerebro-agronomico`, 18–19/10/2026): **concluída** — Partes 1, 2 e 3
+> logo abaixo; o **resumo da rodada com a lista completa de arquivos** está no fim da Parte 3.
+
 > **Rodada 3** (branch `claude/base-fazenda`): a **Parte 13** (enlace à prova de falha:
 > verificação hostil, malha com repetidoras, levantamento de cobertura, missão ciente do
 > enlace, ensaio de 24 h, FASE ENLACE), a Parte 12 (comunicação da fazenda: base, protocolo
@@ -19,6 +22,425 @@
 > alterados nas Partes 6–9** (para integrar localmente) está em
 > [§ Arquivos das Partes 6–9](#arquivos-das-partes-69). O que falta para o piloto está no
 > `README.md` da raiz. Leia antes `docs/CONTEXTO_NUVEM.md`.
+
+## Rodada 4 — Parte 3 (19/10/2026, nuvem) — planejamento (8.3), Princípio de Ouro (8.4) e verificação final
+
+Branch `claude/cerebro-agronomico`. **Concluída.** Além do escopo pedido (8.3, 8.4, verificação
+final), fechou as lacunas do 7.x que a Parte 1 tinha deixado (7.1 sem nada; 7.2 sem a
+importação aérea nem a regra de voo; 7.3 sem calibração) — o critério do ACEITE de cada uma
+está em `docs/ACEITE.md` (Rodada 4).
+
+### Suítes antes de mudar (números reais, 19/10, Python 3.12, este ambiente)
+
+| Suíte | Resultado |
+| --- | --- |
+| IA (`KERAS_BACKEND=torch pytest`) | **802 passed, 7 failed, 6 skipped** — as 7 falhas pré-existentes de sempre (calibração real em `ia/models/`, `framing_vision.onnx` ausente): `test_conformal`, `test_edge_frames`, `test_fields_api` ×2, `test_fit_edge`, `test_quality`, `test_safeguards`. (A Parte 2 contou 832 noutro ambiente: a diferença é de pacotes opcionais instalados, não de código.) |
+| SaaS (`pytest`) | só a falha pré-existente do `test_isolamento_openapi` (geocodificação externa sem rede) |
+| Rover (`pytest`) | **356 passed, 3 skipped** |
+| Base (`pytest`) | **41 passed** |
+| Console (`vitest` / `build`) | **154 passed** / ok |
+| `ruff` | saas, rover, base limpos; ia com os 5 erros pré-existentes dos arquivos de terreno intocáveis |
+
+### Blocos
+
+1. **Verificação hostil da Parte 2** (`docs/VERIFICACAO.md`; `saas/tests/test_cerebro_hostil.py`,
+   9): **5 furos corrigidos com teste** — o nome do talhão/título de fonte que vira instrução
+   no texto do parecer (e o texto recusado do compositor que era publicado mesmo assim), número
+   dentro de texto livre aceito como evidência, fictícia recuperada em produção, fonte que
+   venceu depois do parecer sem aviso na leitura (`fontes_hoje`, também no console); a regra
+   "dado, não instrução" no provedor. Sem achado em: afirmação sem citação, chamada externa
+   por padrão, vazamento entre clientes.
+2. **Planejamento (8.3)** — `docs/PLANEJAMENTO.md`. Pacote `saas/valtexa/planejamento/`:
+   fitossanitário (fila risco × incerteza × impacto, histórico de sintomas com lesões
+   persistentes/novas, regiões do gêmeo, 5 alternativas de manejo sem produto nem dose,
+   rotação por modo de ação **só** com produto com modo de ação, registro e fonte regulatória
+   vigente e verificada), robótico (o alocador do enxame + inclinação, obstáculos da leitura de
+   terreno da IA — lidos, não editados —, orçamento de dados da Starlink de cada Rover),
+   insumos (bootstrap por blocos com semente fixa, p10/p50/p90, comprometido, estoque,
+   reposição; sem histórico, não estima). Premissas com origem (`padrao`, `pedido`, `medido`,
+   `cadastro`, `simulado`), `sha256`, revisão humana por tipo (fitossanitário: agrônomo;
+   robótico: quem cria missão; insumos: quem gere produto). Migração **0035**. Console:
+   `/talhoes/:id/planejamento`, `/planejamento/:id`, `/planejamento/insumos`, modo de ação e
+   fonte no cadastro de produto.
+3. **Princípio de Ouro (8.4)** — `docs/SEGURANCA.md` §6; `saas/tests/test_principio_de_ouro.py`
+   (16): varredura AST do copiloto, planejamento, enxame e federado; varredura **dinâmica de
+   todas as 24 rotas** com a foto do banco (nada autorizado muda; só missões de inspeção novas,
+   em RASCUNHO); fio de disparo para rota nova e para qualquer atribuição nova a campo de
+   liberação no código inteiro; aprovação só pelo papel de agrônomo, humano (o Rover e os
+   outros papéis recusados), reconferida pelo Safety Engine; o Safety Engine é o único
+   caminho a `AUTHORIZED` (ordem conferida no AST) e é determinístico. Mutação conferida (uma
+   revisão "aceito" que gravasse `approved_by` foi pega pelas duas provas).
+4. **Contrato com a leitura de terreno da IA** — `ia/tests/test_contrato_planejamento.py` (2):
+   chama `app.obstacles` e o esquema `TerrainInfo` sem editar os arquivos de terreno.
+5. **Consenso federado (7.1)** — `docs/FEDERADO.md`: `merge_priors` do dNATY medido
+   (`ia/tests/test_dnaty_merge_priors.py`, 3: apaga o nível e o tamanho da amostra — **não
+   serve** para prevalência); contagens conferidas pelo agrônomo por estrato, compatibilidade
+   (taxonomia, modelo/cabeça, validação, janela), anti-eco por observação e por origem,
+   Beta-binomial hierárquica com encolhimento (κ por momentos, força ≤ 200), avaliação
+   deixa-um-talhão-de-fora antes de distribuir, bytes medidos (carga de um talhão/dia 576 B
+   JSON / 279 B gzip; prior de 5 classes 1 202 / 330 B), rota só de leitura
+   `GET /v1/fields/{id}/federado/prior` (só do próprio cliente). `saas/tests/test_federado.py`
+   (13). **Não** distribui ao Rover (decisão).
+6. **Calibração do 7.3 e o enxame com as mesmas restrições**: valor mínimo por minuto de robô
+   (do produtor; sem ele, não corta) e piso de vigilância (trecho esquecido há 14 dias ou mais
+   ganha o menor valor positivo); o plano do enxame que cria as missões em RASCUNHO passa a
+   usar o mesmo contexto (inclinação, obstáculos, dados, calibração), com as premissas em
+   `plano_do_enxame.entradas`. Mudança **aditiva** no `alocar` (sem os parâmetros, o mesmo
+   plano de antes — os testes do enxame não mudaram).
+7. **7.2: levantamento aéreo importado** (GeoJSON de cobertura + regiões suspeitas →
+   `POST /v1/fields/{id}/gemeo/levantamento-aereo` → IA `POST /fields/{id}/gemeo/levantamento`,
+   módulo novo `ia/app/gemeo/levantamento.py`, aditivo: LLR por planta no canal do drone,
+   inclusive o "vi e não havia nada") e a **regra de segurança do voo de observação**
+   desenhada e **desligada** (`saas/valtexa/services/regra_voo_observacao.py`: ninguém a
+   importa; o Safety Engine continua bloqueando o voo).
+8. **Verificação final**: `docs/ACEITE.md` (Rodada 4) com OK/PARCIAL/NÃO e a evidência de
+   cada critério.
+
+### Suítes depois (números reais, 19/10, verificação final sobre o último commit)
+
+| Suíte | Resultado |
+| --- | --- |
+| IA (`KERAS_BACKEND=torch pytest`) | **809 passed, 7 failed, 6 skipped** — as mesmas 7 pré-existentes; +7 testes novos (contrato de terreno 2, `merge_priors` 3, levantamento aéreo 2) |
+| SaaS (`pytest`) | **1113 passed, 1 failed, 3 skipped** (18 min 46 s). A falha é a pré-existente do `test_isolamento_openapi` (`/v1/mapa/localizar` faz geocodificação externa → 502 sem rede); com a geocodificação em dublê (plugin só da execução), **6/6** — inclusive as rotas novas (planejamento, federado, levantamento aéreo) e o plano de apoio da vítima |
+| Rover (`pytest`) | **356 passed, 3 skipped** (não mudou nesta parte) |
+| Base (`pytest`) | **41 passed** (legado, não mudou) |
+| Console (`build` / `vitest`) | ok / **160 passed** (26 arquivos; +6: `planejamento.test.ts` 5, aviso de hoje em `parecer.test.ts` 1) |
+| `ruff` | saas, rover, base: **limpos**; ia: os 5 erros pré-existentes dos arquivos de terreno intocáveis (nenhum arquivo novo com erro) |
+| Testes novos do SaaS nesta parte | `test_cerebro_hostil.py` 9, `test_planejamento.py` 22, `test_principio_de_ouro.py` 16, `test_federado.py` 13, `test_levantamento_aereo.py` 3, `test_regra_voo_observacao.py` 3 |
+
+### O que ficou simulado e por quê
+
+* **IA nos testes do cérebro e do planejamento**: dublês com números inventados (fusão, lesões,
+  evolução, gêmeo, prioridades, clima) — os pesos reais não estão aqui. A leitura real é o
+  serviço de inferência da ValTexa (`FonteDaIAPadrao`) — **a verificar com o modelo real**.
+* **`bytes_por_metro` = 88 000 B/m** no plano robótico: SIMULADO (a estimativa do dia normal,
+  `docs/ROVER_RUNTIME.md` §27). Trocar pelo medido quando houver dias reais de Starlink.
+* **Talhões, contagens e taxas do 7.1**: simulados com semente fixa; os bytes são medidos sobre
+  essa representação.
+* **Canal do drone** (sensibilidade 0,45 / alarme falso 0,06): suposição de projeto (já era),
+  agora usada pela importação do levantamento — dito na resposta.
+* **Produtos, bulas e fontes dos testes**: fictícios (marcados).
+* **Console**: conferido por `tsc`, `build` e `vitest`; **não visto no navegador** nesta sessão.
+
+### Arquivos da Parte 3
+
+* **SaaS, novos**: `valtexa/planejamento/{__init__,premissas,fitossanitario,robotico,insumos,servico}.py`,
+  `valtexa/models/planejamento.py`, `valtexa/api/routers/{planejamento,federado}.py`,
+  `valtexa/services/{federado,regra_voo_observacao}.py`,
+  `migrations/versions/0035_planejamento_apoio.py`,
+  `tests/test_{cerebro_hostil,planejamento,principio_de_ouro,federado,levantamento_aereo,regra_voo_observacao}.py`.
+* **SaaS, alterados**: `valtexa/cerebro/{parecer,validador,servico,rag,provedor}.py`,
+  `valtexa/api/routers/{cerebro,enxame,agro,plants}.py`, `valtexa/services/{enxame,plant_map}.py`,
+  `valtexa/models/{__init__,agro,enums}.py`, `valtexa/schemas.py`, `valtexa/security/rbac.py`
+  (`planejamento:generate`), `valtexa/main.py`, `tests/test_isolamento_openapi.py` (plano de
+  apoio da vítima), `docs/ENXAME.md`.
+* **Console**: novos `src/lib/planejamento.ts`, `src/lib/planejamento.test.ts`,
+  `src/pages/{Planejamento,PlanoDetail,PlanejamentoInsumos}.tsx`; alterados
+  `src/lib/parecer.ts`, `src/lib/parecer.test.ts`, `src/pages/{ParecerDetail,FieldDetail,Inputs}.tsx`,
+  `src/router.tsx`.
+* **IA**: novos `app/gemeo/levantamento.py`, `tests/test_{contrato_planejamento,dnaty_merge_priors,gemeo_levantamento}.py`;
+  alterado `app/gemeo_api.py` (rota nova, aditiva). Nenhum arquivo de terreno, `edge_ai`,
+  `fit_edge`, `fit_fusion`, perfil ou `plant_fusion.py` tocado.
+* **Docs**: novos `docs/PLANEJAMENTO.md`, `docs/FEDERADO.md`; alterados `docs/ACEITE.md`,
+  `docs/SEGURANCA.md` (§6), `docs/VERIFICACAO.md`, `docs/CEREBRO.md`, `docs/PROGRESSO.md`.
+
+## Resumo da Rodada 4 (Partes 1, 2 e 3) — para a integração local do Pedro
+
+**O que a rodada entregou**: orçamento de dados pela Starlink de cada Rover (Parte 1);
+cérebro agronômico neuro-simbólico — repositório de conhecimento versionado, dossiê, parecer
+determinístico com citação, provedor plugável desligado, validador (Parte 2); planejamento de
+apoio à decisão, a prova do Princípio de Ouro, o consenso federado, a calibração do 7.3, a
+importação aérea e a regra de voo desligada, e a verificação final (Parte 3). Estado de cada
+critério: `docs/ACEITE.md` (Rodada 4). Migrações novas, **em ordem**: `0033` (orçamento de
+dados), `0034` (cérebro), `0035` (planejamento e modo de ação/fonte do produto) — todas
+aditivas (tabelas novas e colunas anuláveis).
+
+### Lista completa de arquivos da rodada (desde `86321f6`, a base com o retrato local)
+
+**Nenhum arquivo apagado.** `A` = novo, `M` = alterado.
+
+**SaaS (plataforma)** (57):
+
+* `M` `saas/docs/ENXAME.md`
+* `A` `saas/migrations/versions/0033_orcamento_dados.py`
+* `A` `saas/migrations/versions/0034_cerebro_agronomico.py`
+* `A` `saas/migrations/versions/0035_planejamento_apoio.py`
+* `A` `saas/tests/test_cerebro_conhecimento.py`
+* `A` `saas/tests/test_cerebro_hostil.py`
+* `A` `saas/tests/test_cerebro_parecer.py`
+* `A` `saas/tests/test_cerebro_principio.py`
+* `A` `saas/tests/test_federado.py`
+* `M` `saas/tests/test_isolamento_openapi.py`
+* `A` `saas/tests/test_levantamento_aereo.py`
+* `A` `saas/tests/test_orcamento_dados.py`
+* `A` `saas/tests/test_planejamento.py`
+* `A` `saas/tests/test_principio_de_ouro.py`
+* `A` `saas/tests/test_regra_voo_observacao.py`
+* `M` `saas/valtexa/api/middleware.py`
+* `M` `saas/valtexa/api/routers/agro.py`
+* `A` `saas/valtexa/api/routers/cerebro.py`
+* `A` `saas/valtexa/api/routers/dados.py`
+* `M` `saas/valtexa/api/routers/enxame.py`
+* `A` `saas/valtexa/api/routers/federado.py`
+* `A` `saas/valtexa/api/routers/planejamento.py`
+* `M` `saas/valtexa/api/routers/plants.py`
+* `M` `saas/valtexa/api/routers/platform_rover.py`
+* `A` `saas/valtexa/cerebro/__init__.py`
+* `A` `saas/valtexa/cerebro/conhecimento.py`
+* `A` `saas/valtexa/cerebro/dossie.py`
+* `A` `saas/valtexa/cerebro/ingestao.py`
+* `A` `saas/valtexa/cerebro/parecer.py`
+* `A` `saas/valtexa/cerebro/provedor.py`
+* `A` `saas/valtexa/cerebro/rag.py`
+* `A` `saas/valtexa/cerebro/servico.py`
+* `A` `saas/valtexa/cerebro/validador.py`
+* `M` `saas/valtexa/config.py`
+* `M` `saas/valtexa/main.py`
+* `M` `saas/valtexa/models/__init__.py`
+* `M` `saas/valtexa/models/agro.py`
+* `A` `saas/valtexa/models/cerebro.py`
+* `M` `saas/valtexa/models/comando.py`
+* `M` `saas/valtexa/models/enums.py`
+* `M` `saas/valtexa/models/fleet.py`
+* `A` `saas/valtexa/models/planejamento.py`
+* `A` `saas/valtexa/planejamento/__init__.py`
+* `A` `saas/valtexa/planejamento/fitossanitario.py`
+* `A` `saas/valtexa/planejamento/insumos.py`
+* `A` `saas/valtexa/planejamento/premissas.py`
+* `A` `saas/valtexa/planejamento/robotico.py`
+* `A` `saas/valtexa/planejamento/servico.py`
+* `M` `saas/valtexa/schemas.py`
+* `M` `saas/valtexa/security/rbac.py`
+* `M` `saas/valtexa/services/enxame.py`
+* `A` `saas/valtexa/services/federado.py`
+* `M` `saas/valtexa/services/mission_manager.py`
+* `A` `saas/valtexa/services/orcamento_dados.py`
+* `M` `saas/valtexa/services/plant_map.py`
+* `A` `saas/valtexa/services/regra_voo_observacao.py`
+* `M` `saas/valtexa/services/saude_rover.py`
+
+**Console (saas/web)** (16):
+
+* `A` `saas/web/src/components/DadosStarlink.tsx`
+* `A` `saas/web/src/lib/dados.test.ts`
+* `A` `saas/web/src/lib/dados.ts`
+* `A` `saas/web/src/lib/parecer.test.ts`
+* `A` `saas/web/src/lib/parecer.ts`
+* `A` `saas/web/src/lib/planejamento.test.ts`
+* `A` `saas/web/src/lib/planejamento.ts`
+* `M` `saas/web/src/pages/DeviceDetail.tsx`
+* `M` `saas/web/src/pages/FieldDetail.tsx`
+* `M` `saas/web/src/pages/Inputs.tsx`
+* `A` `saas/web/src/pages/ParecerDetail.tsx`
+* `A` `saas/web/src/pages/Pareceres.tsx`
+* `A` `saas/web/src/pages/Planejamento.tsx`
+* `A` `saas/web/src/pages/PlanejamentoInsumos.tsx`
+* `A` `saas/web/src/pages/PlanoDetail.tsx`
+* `M` `saas/web/src/router.tsx`
+
+**Rover** (14):
+
+* `A` `rover/tests/test_orcamento.py`
+* `M` `rover/valtexa_rover/cli.py`
+* `M` `rover/valtexa_rover/config.py`
+* `M` `rover/valtexa_rover/hal/interfaces.py`
+* `M` `rover/valtexa_rover/hal/local.py`
+* `M` `rover/valtexa_rover/runtime/client.py`
+* `M` `rover/valtexa_rover/runtime/comandos.py`
+* `M` `rover/valtexa_rover/runtime/core.py`
+* `M` `rover/valtexa_rover/runtime/events.py`
+* `M` `rover/valtexa_rover/runtime/health.py`
+* `A` `rover/valtexa_rover/runtime/orcamento.py`
+* `M` `rover/valtexa_rover/runtime/sync.py`
+* `M` `rover/valtexa_rover/sim/nuvem.py`
+* `A` `rover/valtexa_rover/sim/orcamento.py`
+
+**IA (VALTEXA-B)** (5):
+
+* `A` `ia/app/gemeo/levantamento.py`
+* `M` `ia/app/gemeo_api.py`
+* `A` `ia/tests/test_contrato_planejamento.py`
+* `A` `ia/tests/test_dnaty_merge_priors.py`
+* `A` `ia/tests/test_gemeo_levantamento.py`
+
+**Docs** (9):
+
+* `M` `docs/ACEITE.md`
+* `A` `docs/AUDITORIA_RODADA4.md`
+* `A` `docs/CEREBRO.md`
+* `A` `docs/FEDERADO.md`
+* `A` `docs/PLANEJAMENTO.md`
+* `M` `docs/PROGRESSO.md`
+* `M` `docs/ROVER_RUNTIME.md`
+* `M` `docs/SEGURANCA.md`
+* `M` `docs/VERIFICACAO.md`
+
+(O commit base `86321f6` trouxe o retrato local de 18/10 e os briefs — `docs/RODADA4.md`,
+`docs/BRIEF_ENXAME_HETEROGENEO.md`, `docs/BRIEF_CEREBRO_AGRONOMICO.md`, `docs/CONTEXTO_NUVEM.md`
+—, que já são do Pedro.)
+
+### Decisões pendentes do Pedro (todas da rodada)
+
+1. **Orçamento de dados**: o teto padrão de 2 GB/dia (o certo é o do plano Starlink de cada
+   Rover); os metadados (ligar `sync.comprimir_registros` e/ou `tile_probabilities: top`,
+   medido contra a calibração da fusão); a política de baixa confiança em ORIGINAL.
+2. **Cérebro**: o provedor de linguagem/visão (qual, contrato, LGPD, custo — interface pronta,
+   desligada); quem ingere e verifica as fontes reais (bulas, MAPA, Embrapa, escalas) e o prazo
+   padrão de `valido_ate`.
+3. **Planejamento**: os padrões não medidos (`fator_declive` 0,5; `reserva_dados` 10%;
+   `limiar_risco` 0,3; `limiar_tendencia` 0,05; `piso_vigilancia_dias` 14); o
+   `valor_minimo_por_minuto` do produtor; quem cadastra modo de ação e fonte dos produtos e se o
+   limite de aplicações seguidas do mesmo grupo vira cadastro por produto.
+4. **Consenso federado**: quem consome o prior fundido (a fusão por planta da IA, que está sob
+   calibração dele) e se desce ao Rover; compartilhar entre clientes (consentimento próprio);
+   solo no cadastro do talhão; a força máxima (200 plantas); `merge_priors` no treino (licença
+   BSL-1.1).
+5. **Voo de observação do drone**: ligar a regra (`regra_voo_observacao.py`, desligada) — a
+   altura máxima (120 m) e a exigência de piloto em linha de visada são premissas **a
+   confirmar na regulação vigente**; até lá, o levantamento aéreo entra por arquivo.
+6. **Canal do drone** (0,45 / 0,06): calibrar com plantas rotuladas.
+
+### O que ficou simulado na rodada (resumo)
+
+Pesos e inferência real (dublês nos testes); consumo real da Starlink (estimativas SIMULADAS
+em `ROVER_RUNTIME.md` §27 e `bytes_por_metro`); hardware (OAK-D, Jetson, RTK, Starlink);
+fontes regulatórias (repositório vazio de propósito; fictícias nos testes); canal do drone;
+console não visto no navegador nesta rodada.
+
+## Rodada 4 — Parte 2 (19/10/2026, nuvem) — cérebro agronômico neuro-simbólico (8.1, 8.2)
+
+Branch `claude/cerebro-agronomico`. **Concluída** (8.1 e 8.2). Arquitetura em `docs/CEREBRO.md`.
+
+### Suítes antes de mudar (números reais, 19/10)
+
+| Suíte | Resultado |
+| --- | --- |
+| IA (`KERAS_BACKEND=torch pytest`, Python 3.12) | **832 passed, 7 failed, 4 skipped** — as 7 pré-existentes da Parte 1 (calibração real em `ia/models/`, `framing_vision.onnx` ausente) |
+| SaaS (`pytest`) | **995 passed, 2 failed, 3 skipped** — `test_isolamento_openapi` (geocodificação externa sem rede, pré-existente) e `test_migracoes_reproduzem_os_modelos`, que falhou porque a migração 0034 foi criada **durante** a execução (modelos antigos em memória, migração nova no disco); rodado de novo depois: verde |
+| Rover (`pytest`) | **350 passed, 3 skipped** |
+| Console (`vitest`) | **149 passed** |
+
+### Blocos
+
+1. **Verificação hostil da Parte 1** (`docs/VERIFICACAO.md`, seção da Rodada 4): 3 furos do
+   orçamento de dados corrigidos com teste (vídeo ao vivo sem contar, pedido que cai no meio
+   sem contar, prioridade 1 retida por configuração) e o roteador `dados` registrado duas vezes
+   (aviso de *operation id* duplicado). Rover: **356 passed, 3 skipped**. O consenso federado
+   (7.1) não chegou à branch: nada a verificar.
+2. **Repositório de conhecimento versionado** (`saas/valtexa/cerebro/conhecimento.py`,
+   `rag.py`, migração **0034**): versões imutáveis com origem, datas, `verificado_em`,
+   `valido_ate`, `sha256`, licença; regulatório vencido/não verificado/fictício bloqueia uso
+   operacional; ingestão por arquivo (`.md`/`.txt` + `.meta.json`); busca BM25 local com
+   filtros de cultura/alvo/tipo e citação conferível ao trecho. Repositório **vazio** —
+   nenhuma bula, registro, dose ou publicação inventada. `test_cerebro_conhecimento.py` (21).
+3. **Dossiê, parecer, provedor, validador, API** (`dossie.py`, `parecer.py`, `provedor.py`,
+   `validador.py`, `servico.py`, `api/routers/cerebro.py`): testes
+   `test_cerebro_parecer.py` (24), `test_cerebro_principio.py` (5); isolamento gerado do
+   OpenAPI com parecer e fonte da vítima: **6 passed** com a geocodificação em dublê (sem o
+   dublê, só a falha pré-existente do `/v1/mapa/localizar`).
+
+4. **Console** (`saas/web`): `/talhoes/:id/pareceres` (lista e pedido) e `/pareceres/:id`
+   (afirmações com citação clicável, o que falta verificar, evidências do dossiê com origem,
+   versão do modelo e limitações, fontes com selo de bloqueio/fictício e hash do trecho,
+   recusas do validador, revisão do agrônomo e trilha). `lib/parecer.test.ts` (5).
+   **Não vista no navegador** nesta sessão: conferida por `tsc`, `build` e `vitest`.
+5. **Ingestão por arquivo**: `python -m valtexa.cerebro.ingestao ARQUIVO... [--cliente ID]`.
+6. **Docs**: `docs/CEREBRO.md`.
+
+### Suítes depois (números reais, 19/10)
+
+| Suíte | Resultado |
+| --- | --- |
+| SaaS (`pytest`) | **1047 passed, 1 failed, 3 skipped**; `ruff` limpo. A falha é a pré-existente do `test_isolamento_openapi` (`/v1/mapa/localizar` faz geocodificação externa → 502 sem rede); com a geocodificação em dublê (plugin só da execução), **6/6** — inclusive as rotas do cérebro e a foto do banco da vítima |
+| Testes novos do cérebro | `test_cerebro_conhecimento.py` **22**, `test_cerebro_parecer.py` **24**, `test_cerebro_principio.py` **5** |
+| Rover (`pytest`) | **356 passed, 3 skipped**; `ruff` limpo |
+| IA | não mudou nesta parte (**832 passed, 7 failed** pré-existentes, 4 skipped) |
+| Console (`vitest` / `build`) | **154 passed** / ok |
+
+### O que ficou simulado e por quê
+
+* **Fusão, lesões, evolução, gêmeo e clima nos testes do parecer** são um dublê
+  (`IADuble`) com números inventados: os pesos reais não estão aqui. A leitura real é
+  `FonteDaIAPadrao` (serviço de inferência da ValTexa) — **a verificar com o modelo real**.
+* **Fontes de conhecimento**: só fictícias, nos testes. O repositório da plataforma nasce
+  vazio; nenhuma bula, registro MAPA, dose ou publicação foi escrita.
+* **Provedor de linguagem/visão**: só o dublê de teste; nenhum provedor real implementado.
+
+### Decisões pendentes do Pedro
+
+* Provedor de linguagem/visão (qual, contrato, LGPD, custo) — interface pronta, desligado.
+* Quem ingere e verifica as fontes reais (bulas, MAPA, Embrapa, escalas) e o prazo padrão de
+  `valido_ate` da verificação regulatória.
+* O consenso federado (7.1, Parte 1) não chegou à branch: segue pendente.
+* As da Parte 1 continuam (teto padrão de 2 GB/dia, metadados, baixa confiança).
+
+### Arquivos da Parte 2 (para a integração local)
+
+* **Rover** (verificação): `valtexa_rover/cli.py`, `hal/interfaces.py`, `hal/local.py`,
+  `runtime/client.py`, `runtime/core.py`, `runtime/orcamento.py`, `tests/test_orcamento.py`.
+* **SaaS**, novos: `valtexa/cerebro/{__init__,conhecimento,rag,dossie,parecer,provedor,
+  validador,servico,ingestao}.py`, `valtexa/models/cerebro.py`,
+  `valtexa/api/routers/cerebro.py`, `migrations/versions/0034_cerebro_agronomico.py`,
+  `tests/test_cerebro_{conhecimento,parecer,principio}.py`.
+* **SaaS**, alterados: `valtexa/models/__init__.py`, `models/enums.py` (`SubjectType.PARECER`,
+  `FONTE`), `security/rbac.py` (`parecer:generate`, `knowledge:manage`,
+  `platform:knowledge:manage`), `config.py` (`cerebro_provedor`), `main.py` (roteador
+  `cerebro`; `dados` registrado uma vez só), `services/plant_map.py` (`lesoes`,
+  `clima(dias=)`, aditivo), `tests/test_isolamento_openapi.py` (parecer e fonte da vítima).
+* **Console**: `src/lib/parecer.ts`, `src/lib/parecer.test.ts`, `src/pages/Pareceres.tsx`,
+  `src/pages/ParecerDetail.tsx`, `src/router.tsx`, `src/pages/FieldDetail.tsx`.
+* **Docs**: `docs/CEREBRO.md`, `docs/VERIFICACAO.md`, `docs/PROGRESSO.md`.
+
+## Rodada 4 — Parte 1 (18/10/2026, nuvem) — enxame heterogêneo, consenso federado e orçamento de dados
+
+Branch `claude/cerebro-agronomico`. Concluída (o 7.1, o 7.2 e o 7.3 que ficaram foram fechados na Parte 3).
+
+### Suítes antes de mudar (números reais)
+
+| Suíte | Resultado |
+| --- | --- |
+| IA (`KERAS_BACKEND=torch pytest`, Python 3.12, `dnaty` 2.2.1) | **836 passed, 7 failed, 2 errors** — todas pré-existentes e do ambiente: o retrato local trouxe `ia/models/*.conformal.json`, `*.quality.json`, `*.prior.json` reais, e os testes supõem a pasta sem calibração (`test_conformal`, `test_quality`, `test_fields_api` ×2, `test_safeguards`, `test_edge_frames`) ou exigem `framing_vision.onnx` (`test_fit_edge`) |
+| SaaS (`pytest`) | **990 passed, 1 failed, 3 skipped** — a falha é pré-existente e do ambiente: `test_isolamento_openapi` chama `GET /v1/mapa/localizar`, que faz chamada externa (geocodificação) e dá 502 sem rede |
+| Rover (`pytest`) | **333 passed, 3 skipped** |
+| Console (`vitest` / `build`) | **144 passed** / ok |
+
+### Blocos
+
+1. Auditoria contra o brief 7.x: `docs/AUDITORIA_RODADA4.md` (feito).
+2. **Orçamento de dados** (feito; `docs/ROVER_RUNTIME.md` §27):
+   * Rover (`runtime/orcamento.py`): contabilidade de tudo o que trafega (tabela `uso_dados`
+     por dia da fazenda, missão e classe; gancho no `DeviceClient`), corte por prioridade na
+     fila do `SyncEngine` (nunca cortam: comando, missão, telemetria, eventos, prioridade 1;
+     resultados até 100% do teto; arquivos até a fração da prioridade, 40% reservados aos
+     resultados), tempestade de eventos com histerese (`EVENT_STORM`), deduplicação por
+     planta (k melhores originais pela navegação), status `RETIDO` (no disco, não apagado),
+     amostra dos adiados, avisos `DATA_BUDGET` 80%/100%, teto da plataforma vindo assinado na
+     missão, comandos `liberar_retidos` e `orcamento`, consumo na saúde e no
+     `MISSION_COMPLETED`; gzip opcional do lote de registros (`sync.comprimir_registros`,
+     desligado por padrão).
+   * Plataforma: `device.orcamento_dados` (migração **0033**), `PUT
+     /v1/devices/{id}/orcamento-dados`, `GET /v1/devices/{id}/dados`, `GET /v1/dados/consumo`,
+     `health.dados` padronizado, `orcamento_dados` no corpo da missão, middleware aceita
+     `Content-Encoding: gzip` nas rotas do dispositivo (assinatura nos bytes comprimidos,
+     teto contra bomba). Console: cartão "Dados pela Starlink" na página do robô.
+   * **Números SIMULADOS** (`python -m valtexa_rover.sim.orcamento`, hipóteses no doc): dia
+     normal gera ~54 GB, alta ~118 GB, tempestade ~1 TB; antes sobe o que a banda deixa
+     (~36 GB, fila crescendo), depois ~2 GB (o teto). **Medido** no corpo sintético: resultado
+     com 70 recortes = 12 786 B (`full`) / 6 689 B (`top`); gzip do lote 0,37 / 0,22. Os
+     metadados sozinhos (3,7 GB/dia) não cabem no teto padrão — ver decisões pendentes.
+   * Testes: rover `test_orcamento.py` (18) — suíte **350 passed, 3 skipped**; saas
+     `test_orcamento_dados.py` (6); console `dados.test.ts` (5) — **149 passed**, build ok.
+
+### Decisões pendentes do Pedro (até aqui)
+
+* **Teto padrão** de 2 GB/dia (`orcamento_dados.bytes_dia`) é provisório: o certo é o do
+  plano Starlink contratado por Rover.
+* **Metadados**: com o teto de 2 GB, os resultados com todas as probabilidades por recorte
+  não cabem. Opções medidas: ligar `sync.comprimir_registros` (depois de a plataforma da
+  rodada 4 estar no ar) e/ou trocar o perfil para `tile_probabilities: top` (mexe no que a
+  fusão por planta recebe — medir contra a calibração antes; o perfil não foi tocado).
+* **Política de baixa confiança**: 2% de quadros normais em baixa confiança subindo em
+  ORIGINAL (12 MP) são ~14 GB/dia simulados — a maior fonte depois dos eventos.
 
 ## Rodada 3 — Parte 16 (10/10/2026, local) — do endereço do cliente à rota do rover
 

@@ -12,7 +12,7 @@ target-version = "py311"
 # `hardware/` é o projeto mecânico do Rover — gerador de DXF e de folha de
 # desenho, com convenções próprias e nenhuma linha em comum com a plataforma.
 # Medi-lo com a régua do servidor web só produz ruído que ninguém vai corrigir.
-exclude = ["hardware"]
+exclude = ["hardware", "archive"]  # archive: código arquivado, fora do lint e dos testes
 
 [tool.ruff.lint]
 select = [

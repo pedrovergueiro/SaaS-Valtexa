@@ -207,16 +207,6 @@ REFERENCE_MODELS: list[dict] = [
             SUPPORTS_OFFLINE_MISSION: False,
         },
     },
-    {
-        # A base da fazenda (VALTEXA-BASE): Starlink de um lado, rádios dos Rovers do
-        # outro. Não anda nem fotografa: repassa o que os Rovers assinam e manda o
-        # retrato dela (health.base) — ver valtexa/services/estacao_base.py.
-        "code": "FARM_BASE_V1",
-        "kind": DeviceKind.GATEWAY,
-        "name": "ValTexa Base da Fazenda V1",
-        "manufacturer": "ValTexa",
-        "capabilities": {
-            SUPPORTS_OFFLINE_MISSION: False,
-        },
-    },
+    # FARM_BASE_V1 (a base da fazenda, tipo ``gateway``) saiu do catálogo em 20/10/2026:
+    # cada Rover tem a própria Starlink. Ver archive/legacy/radio-fazenda/.
 ]

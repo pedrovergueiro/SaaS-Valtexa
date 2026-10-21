@@ -1405,6 +1405,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/missions/{mission_id}/mapa-aplicacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anexa o mapa de aplicação localizada (taxa por trecho, PWM por bico)
+         * @description Pede à IA o mapa sobre o risco previsto, com a bula do produto da missão, e o guarda no
+         *     plano. Só em missão de pulverização **em rascunho**; um mapa novo **apaga a aprovação**
+         *     (o agrônomo aprova o mapa que vê) — o Safety Engine confere cada trecho antes de liberar.
+         */
+        post: operations["anexar_mapa_de_aplicacao_v1_missions__mission_id__mapa_aplicacao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/missions/{mission_id}/authorize": {
         parameters: {
             query?: never;
@@ -2006,6 +2028,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fields/{field_id}/clima": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A série climática do talhão, por fonte */
+        get: operations["field_clima_v1_fields__field_id__clima_get"];
+        put?: never;
+        /** Acrescenta tempo ao talhão (estação) */
+        post: operations["field_clima_enviar_v1_fields__field_id__clima_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/gemeo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gêmeo digital: o grafo e os modelos ajustados */
+        get: operations["field_gemeo_v1_fields__field_id__gemeo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/gemeo/ajuste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajusta o modelo epidemiológico às passadas do talhão
+         * @description Leva minutos num talhão grande; um ajuste por talhão de cada vez (409 no segundo).
+         */
+        post: operations["field_gemeo_ajuste_v1_fields__field_id__gemeo_ajuste_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/gemeo/previsao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Onde a doença vai estar: risco por planta, janelas de infecção e focos
+         * @description O risco inclui o que o Rover ainda não vê (o latente). Sem ajuste, o modelo usa o
+         *     prior e o aviso diz; além da previsão de tempo, climatologia, e o aviso diz também.
+         */
+        get: operations["field_gemeo_previsao_v1_fields__field_id__gemeo_previsao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/gemeo/levantamento-aereo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importa um levantamento aéreo: as regiões suspeitas entram no gêmeo (canal drone)
+         * @description O voo não é comandado pela plataforma (não há regra de segurança de voo de observação
+         *     — decisão do Pedro): o resultado chega como arquivo. As regiões suspeitas viram evidência
+         *     por planta no canal ``drone`` do gêmeo (suposição de projeto, dita na resposta) e mudam as
+         *     prioridades; o plano do enxame manda o Rover olhar de perto.
+         */
+        post: operations["field_gemeo_levantamento_v1_fields__field_id__gemeo_levantamento_aereo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/gemeo/prescricao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prescrição sobre o risco previsto, com a data de aplicação (recomendação)
+         * @description Trata onde a doença **vai** estar, antes da próxima janela de infecção, e diz o que
+         *     cada cenário evita no gêmeo. **Recomendação** — nada é aplicado sem o agrônomo aprovar
+         *     uma missão de pulverização.
+         */
+        post: operations["field_gemeo_prescricao_v1_fields__field_id__gemeo_prescricao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fields/{field_id}/validacao/{mission_id}": {
         parameters: {
             query?: never;
@@ -2598,6 +2741,65 @@ export interface paths {
         /** Painel do cliente */
         get: operations["dashboard_v1_dashboard_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dados/consumo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consumo de dados de cada robô do cliente */
+        get: operations["consumo_do_cliente_v1_dados_consumo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/devices/{device_id}/dados": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consumo de dados de um robô
+         * @description O que o Rover contou (Starlink, subida e descida) e o que a plataforma recebeu, por
+         *     dia da fazenda, com os avisos de tempestade de eventos e de teto.
+         */
+        get: operations["consumo_do_robo_v1_devices__device_id__dados_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/devices/{device_id}/orcamento-dados": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Teto de dados do robô
+         * @description Vale a partir da próxima missão (desce assinado dentro dela). Os dois nulos apagam o
+         *     teto da plataforma: o robô volta ao do ``rover.json``.
+         */
+        put: operations["define_orcamento_v1_devices__device_id__orcamento_dados_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3576,57 +3778,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/platform/bases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Bases da fazenda: internet, filas, rádios, Rovers */
-        get: operations["lista_bases_v1_platform_bases_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/platform/bases/{device_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Uma base da fazenda */
-        get: operations["uma_base_v1_platform_bases__device_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/platform/fields/{field_id}/cobertura": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** O mapa de cobertura do rádio de um talhão (o último levantamento da base) */
-        get: operations["cobertura_do_talhao_v1_platform_fields__field_id__cobertura_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/platform/rovers/{device_id}/video": {
         parameters: {
             query?: never;
@@ -3792,57 +3943,6 @@ export interface paths {
         /** Comandos assinados que o robô deve executar */
         get: operations["device_commands_v1_device_commands_get"];
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/device/enlace/chave": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** O robô publica a chave do rádio da fazenda (assinada pela identidade dele) */
-        put: operations["device_enlace_chave_v1_device_enlace_chave_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/device/base/pares": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** A base da fazenda busca as chaves de rádio dos robôs que ela atende */
-        get: operations["device_base_pares_v1_device_base_pares_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/device/base/cobertura/{field_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** A base manda o mapa de cobertura do rádio de um talhão (levantamento) */
-        put: operations["device_base_cobertura_v1_device_base_cobertura__field_id__put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4854,6 +4954,385 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fields/{field_id}/enxame/plano": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * O plano ativo do enxame do talhão
+         * @description Com ``desatualizado`` e o porquê: a frota mudou, ou o plano envelheceu.
+         */
+        get: operations["ver_plano_v1_fields__field_id__enxame_plano_get"];
+        put?: never;
+        /**
+         * Calcula o plano do enxame do talhão
+         * @description Lê a frota disponível da fazenda e as prioridades do gêmeo, aloca, e guarda como o
+         *     plano ativo do talhão (o anterior fica na história). Não cria missão: isso é
+         *     ``POST .../plano/{id}/missoes``.
+         */
+        post: operations["criar_plano_v1_fields__field_id__enxame_plano_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/enxame/plano/{plano_id}/missoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cria, em rascunho, a próxima missão de cada robô do plano
+         * @description Missões em ``DRAFT``: autorizar (camada de segurança) e despachar (assinatura) seguem
+         *     o fluxo de sempre. Recusa plano substituído (409) e o de outro talhão (404).
+         */
+        post: operations["criar_missoes_v1_fields__field_id__enxame_plano__plano_id__missoes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cerebro/fontes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fontes de conhecimento que o cliente lê
+         * @description As da plataforma e as do cliente, com a situação regulatória de cada uma
+         *     (``uso_operacional``, ``bloqueio``). Vazio até alguém ingerir fonte real.
+         */
+        get: operations["lista_fontes_v1_cerebro_fontes_get"];
+        put?: never;
+        /**
+         * Ingere uma fonte do cliente (histórico da propriedade, bula conferida)
+         * @description Uma versão de documento: o mesmo ``(chave, versao)`` com o mesmo conteúdo é idempotente;
+         *     com outro, 422. Só o cliente que ingeriu lê.
+         */
+        post: operations["ingere_fonte_v1_cerebro_fontes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cerebro/fontes/{documento_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uma fonte, com o conteúdo e os trechos */
+        get: operations["detalhe_fonte_v1_cerebro_fontes__documento_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cerebro/fontes/{documento_id}/verificacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Registra a conferência de uma fonte do cliente contra a oficial */
+        post: operations["verifica_fonte_v1_cerebro_fontes__documento_id__verificacao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cerebro/busca": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Busca local (BM25) nas fontes, com citação ao trecho
+         * @description Sem chamada externa. Cada resultado traz documento, versão, trecho, hashes e a situação
+         *     regulatória — a citação que o parecer usaria.
+         */
+        get: operations["busca_v1_cerebro_busca_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/cerebro/fontes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fontes da plataforma (equipe) */
+        get: operations["lista_fontes_plataforma_v1_platform_cerebro_fontes_get"];
+        put?: never;
+        /**
+         * Ingere uma fonte da plataforma (bula, MAPA, Embrapa, escala, artigo)
+         * @description Todo cliente lê. Regulatório sem ``verificado_em``/``valido_ate`` entra, mas fica
+         *     **bloqueado** para uso operacional até a verificação.
+         */
+        post: operations["ingere_fonte_plataforma_v1_platform_cerebro_fontes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/cerebro/fontes/{documento_id}/verificacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Registra a conferência de uma fonte da plataforma */
+        post: operations["verifica_fonte_plataforma_v1_platform_cerebro_fontes__documento_id__verificacao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/pareceres": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pareceres do talhão */
+        get: operations["lista_pareceres_v1_fields__field_id__pareceres_get"];
+        put?: never;
+        /**
+         * Gera o parecer de um caso (planta ou observação)
+         * @description Dossiê de evidências → fontes (busca local) → compositor determinístico (padrão) ou
+         *     provedor de linguagem validado. O parecer sai ``aguardando_revisao`` e não autoriza nada.
+         */
+        post: operations["gera_parecer_v1_fields__field_id__pareceres_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pareceres/{parecer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um parecer: evidências, alternativas, fontes */
+        get: operations["detalhe_parecer_v1_pareceres__parecer_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pareceres/{parecer_id}/auditoria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trilha de auditoria do parecer
+         * @description Quem gerou e quem revisou, quando, com o hash do parecer em cada passo.
+         */
+        get: operations["auditoria_parecer_v1_pareceres__parecer_id__auditoria_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pareceres/{parecer_id}/revisao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O agrônomo registra a revisão do parecer (não autoriza nada) */
+        post: operations["revisa_parecer_v1_pareceres__parecer_id__revisao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/planejamento/fitossanitario": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plano fitossanitário: fila de revisão, histórico, regiões, alternativas, rotação */
+        post: operations["plano_fitossanitario_v1_fields__field_id__planejamento_fitossanitario_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/planejamento/robotico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plano robótico: rotas, bateria, inclinação, obstáculos e dados */
+        post: operations["plano_robotico_v1_fields__field_id__planejamento_robotico_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/planejamento/insumos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plano de insumos: demanda com intervalo e possível reposição */
+        post: operations["plano_insumos_v1_planejamento_insumos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/planejamento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Planos de apoio do cliente (mais novos primeiro) */
+        get: operations["lista_planos_v1_planejamento_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/planejamento/{plano_apoio_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Um plano: premissas, resultado, revisões */
+        get: operations["detalhe_plano_v1_planejamento__plano_apoio_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/planejamento/{plano_apoio_id}/auditoria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trilha de auditoria do plano */
+        get: operations["auditoria_plano_v1_planejamento__plano_apoio_id__auditoria_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/planejamento/{plano_apoio_id}/revisao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A pessoa responsável revisa o plano (não autoriza nada) */
+        post: operations["revisa_plano_v1_planejamento__plano_apoio_id__revisao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/federado/prior": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prior fundido do estrato do talhão (sem o dado dele), avaliado */
+        get: operations["prior_do_talhao_v1_fields__field_id__federado_prior_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics": {
         parameters: {
             query?: never;
@@ -5631,15 +6110,6 @@ export interface components {
             /** Motivo */
             motivo: string;
         };
-        /** ChaveDeEnlaceIn */
-        ChaveDeEnlaceIn: {
-            /** Nome */
-            nome: string;
-            /** Enlace Pub */
-            enlace_pub: string;
-            /** Assinatura */
-            assinatura: string;
-        };
         /** CheckpointOut */
         CheckpointOut: {
             /**
@@ -5901,7 +6371,7 @@ export interface components {
         ComandoIn: {
             /**
              * Kind
-             * @description diagnostico, foto, modo, parar, config, recarregar_modelos, reiniciar
+             * @description diagnostico, foto, modo, parar, config, recarregar_modelos, reiniciar, liberar_retidos, orcamento
              */
             kind: string;
             /** Params */
@@ -6615,6 +7085,23 @@ export interface components {
          * @enum {string}
          */
         DiagnosisStatus: "pending" | "ai_validated" | "needs_review" | "inconclusive" | "human_confirmed" | "human_rejected";
+        /** DocumentoIn */
+        DocumentoIn: {
+            metadados: components["schemas"]["MetadadosIn"];
+            /**
+             * Conteudo
+             * @description O texto do arquivo, como veio da fonte (UTF-8).
+             */
+            conteudo: string;
+            /**
+             * Formato
+             * @default texto
+             * @enum {string}
+             */
+            formato: "texto" | "markdown";
+            /** Arquivo Nome */
+            arquivo_nome?: string | null;
+        };
         /** EdgeFileOut */
         EdgeFileOut: {
             /** Upload Id */
@@ -6670,7 +7157,7 @@ export interface components {
             type: string;
             /**
              * Sha256
-             * @description SHA-256 do JSON canônico de body (ver docs/SYNC.md).
+             * @description SHA-256 do JSON canônico de body (ver VALTEXA-ROVER/docs/SYNC.md).
              */
             sha256: string;
             /** Body */
@@ -7176,6 +7663,31 @@ export interface components {
             /** Notes */
             notes?: string | null;
         };
+        /** FitossanitarioIn */
+        FitossanitarioIn: {
+            /** Doenca */
+            doenca?: string | null;
+            /** Janela Dias */
+            janela_dias?: number | null;
+            /** Pesos Impacto */
+            pesos_impacto?: {
+                [key: string]: number;
+            } | null;
+            /** Limite Fila */
+            limite_fila?: number | null;
+            /** Plantas Com Historico */
+            plantas_com_historico?: number | null;
+            /** Limiar Tendencia */
+            limiar_tendencia?: number | null;
+            /** Limiar Risco */
+            limiar_risco?: number | null;
+            /** Horizonte Dias */
+            horizonte_dias?: number | null;
+            /** Janela Rotacao Dias */
+            janela_rotacao_dias?: number | null;
+            /** Max Seguidas Mesmo Grupo */
+            max_seguidas_mesmo_grupo?: number | null;
+        };
         /**
          * FleetDeviceOut
          * @description Um robô na visão de Operações: o mesmo retrato, com o cliente dono.
@@ -7449,6 +7961,23 @@ export interface components {
             /** Errors */
             errors?: string[];
         };
+        /** InsumosIn */
+        InsumosIn: {
+            /** Farm Id */
+            farm_id?: string | null;
+            /** Horizonte Dias */
+            horizonte_dias?: number | null;
+            /** Janela Dias */
+            janela_dias?: number | null;
+            /** Mesma Epoca */
+            mesma_epoca?: boolean | null;
+            /** Reamostragens */
+            reamostragens?: number | null;
+            /** Min Aplicacoes */
+            min_aplicacoes?: number | null;
+            /** Min Blocos */
+            min_blocos?: number | null;
+        };
         /** JobCountOut */
         JobCountOut: {
             /** Kind */
@@ -7498,6 +8027,31 @@ export interface components {
          */
         JobState: "queued" | "running" | "done" | "failed" | "cancelled";
         /**
+         * LevantamentoAereoIn
+         * @description Um levantamento aéreo processado (fora da plataforma), em GeoJSON.
+         */
+        LevantamentoAereoIn: {
+            /** Doenca */
+            doenca: string;
+            /**
+             * Pass Id
+             * @description Identificador do voo.
+             */
+            pass_id: string;
+            /**
+             * Voado Em
+             * Format: date-time
+             */
+            voado_em: string;
+            /**
+             * Geojson
+             * @description FeatureCollection de Polygon/MultiPolygon com ``properties.tipo`` = ``cobertura`` (a área voada, uma) ou ``anomalia`` (região suspeita).
+             */
+            geojson: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * LinkDeArquivoOut
          * @description Onde baixar um arquivo do cliente (seção 38).
          *
@@ -7527,6 +8081,46 @@ export interface components {
              * @description Cliente a abrir. Opcional quando o usuário pertence a um só.
              */
             tenant?: string | null;
+        };
+        /**
+         * MapaAplicacaoIn
+         * @description O pedido do mapa de aplicação localizada para uma missão de pulverização em rascunho.
+         *
+         *     O produto vem da missão (o cadastro com a bula); o resto vai para a IA como está.
+         */
+        MapaAplicacaoIn: {
+            /** Doenca */
+            doenca: string;
+            /** Equipamento */
+            equipamento: {
+                [key: string]: unknown;
+            };
+            /** Regras */
+            regras?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Trecho M
+             * @default 5
+             */
+            trecho_m: number;
+            /** Exclusoes */
+            exclusoes?: {
+                [key: string]: unknown;
+            }[];
+            /** Aplicacoes Anteriores */
+            aplicacoes_anteriores?: {
+                [key: string]: unknown;
+            }[];
+            /** Data Aplicacao */
+            data_aplicacao?: string | null;
+            /** Dias Ate Colheita */
+            dias_ate_colheita?: number | null;
+            /**
+             * Horizonte Dias
+             * @default 14
+             */
+            horizonte_dias: number;
         };
         /** MeResponse */
         MeResponse: {
@@ -7579,6 +8173,39 @@ export interface components {
         Message: {
             /** Detail */
             detail: string;
+        };
+        /** MetadadosIn */
+        MetadadosIn: {
+            /** Chave */
+            chave: string;
+            /** Versao */
+            versao: string;
+            /** Titulo */
+            titulo: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "bula" | "registro_mapa" | "embrapa" | "escala_diagramatica" | "artigo" | "historico_propriedade" | "gemeo";
+            /** Origem */
+            origem: string;
+            /** Licenca */
+            licenca: string;
+            /** Publicado Em */
+            publicado_em?: string | null;
+            /** Verificado Em */
+            verificado_em?: string | null;
+            /** Valido Ate */
+            valido_ate?: string | null;
+            /** Culturas */
+            culturas?: string[];
+            /** Alvos */
+            alvos?: string[];
+            /**
+             * Ficticio
+             * @default false
+             */
+            ficticio: boolean;
         };
         /**
          * MissionAck
@@ -7788,6 +8415,14 @@ export interface components {
          * @enum {string}
          */
         MissionState: "draft" | "pending_safety" | "blocked" | "authorized" | "dispatched" | "running" | "paused" | "paused_for_recharge" | "ready_to_resume" | "completed" | "aborted" | "expired";
+        /** MissoesIn */
+        MissoesIn: {
+            /**
+             * Device Ids
+             * @description Só estes; nulo = a próxima missão de todos do plano.
+             */
+            device_ids?: string[] | null;
+        };
         /**
          * ModelOptimizationIn
          * @description O relatório de ``ia/training/dnaty_pipeline.py`` (os campos que o registry usa).
@@ -8625,6 +9260,19 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** OrcamentoIn */
+        OrcamentoIn: {
+            /**
+             * Bytes Dia
+             * @description Teto do dia da fazenda; 0 = sem teto.
+             */
+            bytes_dia?: number | null;
+            /**
+             * Bytes Missao
+             * @description Teto por missão; 0 = sem teto.
+             */
+            bytes_missao?: number | null;
+        };
         /** OtaDeploymentIn */
         OtaDeploymentIn: {
             /** Package Id */
@@ -8746,6 +9394,18 @@ export interface components {
             attempts: number;
             /** Last Error */
             last_error: string | null;
+        };
+        /** ParecerIn */
+        ParecerIn: {
+            /**
+             * Caso
+             * @enum {string}
+             */
+            caso: "planta" | "observacao";
+            /** Plant Ref */
+            plant_ref?: string | null;
+            /** Observation Id */
+            observation_id?: string | null;
         };
         /**
          * PasswordChange
@@ -8908,6 +9568,44 @@ export interface components {
              */
             obstacle_margin_m: number;
         };
+        /** PlanoIn */
+        PlanoIn: {
+            /**
+             * Doenca
+             * @default Rust
+             */
+            doenca: string;
+            /**
+             * Dias Ate Visita
+             * @default 1
+             */
+            dias_ate_visita: number;
+            /**
+             * Segmento M
+             * @default 20
+             */
+            segmento_m: number;
+            /** Custo Tratar */
+            custo_tratar?: number | null;
+            /** Perda Planta */
+            perda_planta?: number | null;
+            /** Eficacia */
+            eficacia?: number | null;
+            /**
+             * Max Tarefas
+             * @default 300
+             */
+            max_tarefas: number;
+            /**
+             * Desconto Sobreposicao
+             * @default 0.5
+             */
+            desconto_sobreposicao: number;
+            /** Valor Minimo Por Minuto */
+            valor_minimo_por_minuto?: number | null;
+            /** Piso Vigilancia Dias */
+            piso_vigilancia_dias?: number | null;
+        };
         /**
          * PlatformMeOut
          * @description Quem é a pessoa da equipe e o que ela pode no console interno.
@@ -9058,6 +9756,16 @@ export interface components {
             preharvest_interval_days?: number | null;
             /** Max Wind Ms */
             max_wind_ms?: number | null;
+            /**
+             * Modo De Acao
+             * @description Grupo de modo de ação da bula (ex.: 'FRAC 3').
+             */
+            modo_de_acao?: string | null;
+            /**
+             * Fonte Documento Id
+             * @description A bula/registro no repositório de conhecimento de onde saíram os dados.
+             */
+            fonte_documento_id?: string | null;
         };
         /** ProductOut */
         ProductOut: {
@@ -9085,6 +9793,16 @@ export interface components {
             preharvest_interval_days?: number | null;
             /** Max Wind Ms */
             max_wind_ms?: number | null;
+            /**
+             * Modo De Acao
+             * @description Grupo de modo de ação da bula (ex.: 'FRAC 3').
+             */
+            modo_de_acao?: string | null;
+            /**
+             * Fonte Documento Id
+             * @description A bula/registro no repositório de conhecimento de onde saíram os dados.
+             */
+            fonte_documento_id?: string | null;
             /** Id */
             id: string;
             /** Status */
@@ -9221,6 +9939,41 @@ export interface components {
             } | null;
             /** Error */
             error?: string | null;
+        };
+        /** RoboticoIn */
+        RoboticoIn: {
+            /**
+             * Doenca
+             * @default Rust
+             */
+            doenca: string;
+            /**
+             * Dias Ate Visita
+             * @default 1
+             */
+            dias_ate_visita: number;
+            /**
+             * Segmento M
+             * @default 20
+             */
+            segmento_m: number;
+            /**
+             * Max Tarefas
+             * @default 300
+             */
+            max_tarefas: number;
+            /** Fator Declive */
+            fator_declive?: number | null;
+            /** Bytes Por Metro */
+            bytes_por_metro?: number | null;
+            /** Reserva Dados */
+            reserva_dados?: number | null;
+            /** Desconto Sobreposicao */
+            desconto_sobreposicao?: number | null;
+            /** Valor Minimo Por Minuto */
+            valor_minimo_por_minuto?: number | null;
+            /** Piso Vigilancia Dias */
+            piso_vigilancia_dias?: number | null;
         };
         /**
          * Role
@@ -10726,6 +11479,19 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** VerificacaoIn */
+        VerificacaoIn: {
+            /**
+             * Verificado Em
+             * Format: date
+             */
+            verificado_em: string;
+            /**
+             * Valido Ate
+             * Format: date
+             */
+            valido_ate: string;
+        };
         /**
          * VerificationConclusion
          * @enum {string}
@@ -10795,6 +11561,28 @@ export interface components {
             area_ha: number | null;
             /** Boundary */
             boundary: number[][];
+        };
+        /** RevisaoIn */
+        valtexa__api__routers__cerebro__RevisaoIn: {
+            /**
+             * Decisao
+             * @enum {string}
+             */
+            decisao: "concorda" | "discorda" | "inconclusivo";
+            /** Comentario */
+            comentario?: string | null;
+            /** Diagnostico Revisor */
+            diagnostico_revisor?: string | null;
+        };
+        /** RevisaoIn */
+        valtexa__api__routers__planejamento__RevisaoIn: {
+            /**
+             * Decisao
+             * @enum {string}
+             */
+            decisao: "aceito" | "recusado" | "ajustar";
+            /** Comentario */
+            comentario?: string | null;
         };
     };
     responses: never;
@@ -13232,6 +14020,44 @@ export interface operations {
             };
         };
     };
+    anexar_mapa_de_aplicacao_v1_missions__mission_id__mapa_aplicacao_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapaAplicacaoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     authorize_v1_missions__mission_id__authorize_post: {
         parameters: {
             query?: {
@@ -14174,6 +15000,282 @@ export interface operations {
         };
     };
     field_plant_prescription_v1_fields__field_id__plants_prescription_post: {
+        parameters: {
+            query?: {
+                formato?: "json" | "geojson";
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_clima_v1_fields__field_id__clima_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_clima_enviar_v1_fields__field_id__clima_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_gemeo_v1_fields__field_id__gemeo_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_gemeo_ajuste_v1_fields__field_id__gemeo_ajuste_post: {
+        parameters: {
+            query: {
+                /** @description Classe do modelo, ex.: Rust. */
+                doenca: string;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_gemeo_previsao_v1_fields__field_id__gemeo_previsao_get: {
+        parameters: {
+            query: {
+                doenca: string;
+                horizonte_dias?: number;
+                membros?: number;
+                plantas?: "todas" | "em_risco" | "nenhuma";
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_gemeo_levantamento_v1_fields__field_id__gemeo_levantamento_aereo_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevantamentoAereoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_gemeo_prescricao_v1_fields__field_id__gemeo_prescricao_post: {
         parameters: {
             query?: {
                 formato?: "json" | "geojson";
@@ -15355,6 +16457,120 @@ export interface operations {
             };
         };
     };
+    consumo_do_cliente_v1_dados_consumo_get: {
+        parameters: {
+            query?: {
+                dias?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consumo_do_robo_v1_devices__device_id__dados_get: {
+        parameters: {
+            query?: {
+                dias?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    define_orcamento_v1_devices__device_id__orcamento_dados_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrcamentoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_collections_v1_collections_get: {
         parameters: {
             query?: {
@@ -16194,6 +17410,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-tenant-id"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -17188,111 +18405,6 @@ export interface operations {
             };
         };
     };
-    lista_bases_v1_platform_bases_get: {
-        parameters: {
-            query?: {
-                tenant_id?: string | null;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    uma_base_v1_platform_bases__device_id__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                device_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    cobertura_do_talhao_v1_platform_fields__field_id__cobertura_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     assiste_v1_platform_rovers__device_id__video_post: {
         parameters: {
             query?: never;
@@ -17715,102 +18827,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
-                };
-            };
-        };
-    };
-    device_enlace_chave_v1_device_enlace_chave_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChaveDeEnlaceIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    device_base_pares_v1_device_base_pares_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    device_base_cobertura_v1_device_base_cobertura__field_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -20310,6 +21326,928 @@ export interface operations {
                 authorization?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ver_plano_v1_fields__field_id__enxame_plano_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    criar_plano_v1_fields__field_id__enxame_plano_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    criar_missoes_v1_fields__field_id__enxame_plano__plano_id__missoes_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+                plano_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MissoesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lista_fontes_v1_cerebro_fontes_get: {
+        parameters: {
+            query?: {
+                tipo?: string | null;
+                cultura?: string | null;
+                incluir_substituidos?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingere_fonte_v1_cerebro_fontes_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detalhe_fonte_v1_cerebro_fontes__documento_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                documento_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verifica_fonte_v1_cerebro_fontes__documento_id__verificacao_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                documento_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificacaoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    busca_v1_cerebro_busca_get: {
+        parameters: {
+            query: {
+                q: string;
+                cultura?: string | null;
+                alvo?: string | null;
+                tipo?: string | null;
+                limite?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lista_fontes_plataforma_v1_platform_cerebro_fontes_get: {
+        parameters: {
+            query?: {
+                tipo?: string | null;
+                incluir_substituidos?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingere_fonte_plataforma_v1_platform_cerebro_fontes_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verifica_fonte_plataforma_v1_platform_cerebro_fontes__documento_id__verificacao_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                documento_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificacaoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lista_pareceres_v1_fields__field_id__pareceres_get: {
+        parameters: {
+            query?: {
+                plant_ref?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gera_parecer_v1_fields__field_id__pareceres_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParecerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detalhe_parecer_v1_pareceres__parecer_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                parecer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auditoria_parecer_v1_pareceres__parecer_id__auditoria_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                parecer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revisa_parecer_v1_pareceres__parecer_id__revisao_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                parecer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["valtexa__api__routers__cerebro__RevisaoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plano_fitossanitario_v1_fields__field_id__planejamento_fitossanitario_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FitossanitarioIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plano_robotico_v1_fields__field_id__planejamento_robotico_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoboticoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plano_insumos_v1_planejamento_insumos_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InsumosIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lista_planos_v1_planejamento_get: {
+        parameters: {
+            query?: {
+                tipo?: ("fitossanitario" | "robotico" | "insumos") | null;
+                field_id?: string | null;
+                limite?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detalhe_plano_v1_planejamento__plano_apoio_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                plano_apoio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auditoria_plano_v1_planejamento__plano_apoio_id__auditoria_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                plano_apoio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revisa_plano_v1_planejamento__plano_apoio_id__revisao_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                plano_apoio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["valtexa__api__routers__planejamento__RevisaoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prior_do_talhao_v1_fields__field_id__federado_prior_get: {
+        parameters: {
+            query?: {
+                janela_dias?: number;
+                forca_maxima?: number;
+                referencia_media?: number;
+                referencia_forca?: number;
+                /** @description modelo@cabeça; padrão: o mais conferido */
+                modelo?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

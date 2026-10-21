@@ -76,6 +76,9 @@ class DeviceKind(StrEnum):
     DOCK = "dock"
     SENSOR = "sensor"
     GATEWAY = "gateway"
+    """LEGADO: a base da fazenda, arquivada em 20/10/2026 (cada Rover tem a própria Starlink).
+    O valor fica porque o banco pode ter dispositivos com ele; o catálogo de hardware não
+    oferece mais nenhum modelo deste tipo (``services/hal.py``)."""
 
 
 class DeviceStatus(StrEnum):
@@ -223,6 +226,10 @@ class SubjectType(StrEnum):
     INCIDENT = "incident"
     ALERT = "alert"
     ALERT_RULE = "alert_rule"
+    PARECER = "parecer"
+    FONTE = "fonte"
+    PLANEJAMENTO = "planejamento"
+    """Documento do repositório de conhecimento (cérebro agronômico)."""
 
 
 class ActorType(StrEnum):

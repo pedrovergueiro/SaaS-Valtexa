@@ -1,18 +1,35 @@
-"""Recibo assinado das respostas do dispositivo (Parte 13, base da fazenda hostil).
+"""Recibo assinado das respostas do dispositivo (criado na Parte 13 contra base hostil).
 
-Com o Rover falando pela base, um "200 aceito" fabricado pela base faria o robô apagar da
-fila o que nunca chegou. A plataforma assina ``nonce | status | sha256(corpo)`` quando o
-robô pede; o Runtime (``rover/valtexa_rover/enlace/rpc.py``) confere com a mesma conta.
+A plataforma assina ``nonce | status | sha256(corpo)`` quando o robô pede
+(``X-Valtexa-Recibo: 1``). Quem conferia era a rede "via base" do Rover, arquivada em
+20/10/2026 com o rádio da fazenda (cada Rover fala direto pela Starlink, com TLS). O lado
+da plataforma ficou: é um controle de integridade opcional e sem custo quando não pedido.
+Aqui a conferência é a mesma conta, feita no teste.
 """
 
 from __future__ import annotations
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from helpers import provision, send_telemetry
-from valtexa_rover.enlace.rpc import confere_recibo
 
 from valtexa.api.middleware import texto_do_recibo
 from valtexa.security import signing
+
+
+def confere_recibo(chave_plataforma: str, nonce: str, status: int, corpo: bytes,
+                   cabecalhos: dict[str, str]) -> bool:
+    """A conferência que o Rover fazia (``enlace/rpc.py``, arquivado), refeita aqui."""
+    assinatura = next((v for k, v in cabecalhos.items()
+                       if k.lower() == "x-valtexa-recibo-assinatura"), None)
+    if not assinatura or not nonce:
+        return False
+    try:
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(chave_plataforma)).verify(
+            bytes.fromhex(assinatura), texto_do_recibo(nonce, status, corpo))
+    except (InvalidSignature, ValueError):
+        return False
+    return True
 
 
 def test_recibo_assinado_amarrado_ao_nonce_status_e_corpo(client, admin_token, demo) -> None:
@@ -29,7 +46,7 @@ def test_recibo_assinado_amarrado_ao_nonce_status_e_corpo(client, admin_token, d
     nonce = r.request.headers["X-Valtexa-Nonce"]
     chave = Ed25519PublicKey.from_public_bytes(bytes.fromhex(signing.platform_public_key()))
     chave.verify(bytes.fromhex(assinatura), texto_do_recibo(nonce, r.status_code, r.content))
-    # o Runtime do Rover confere com a mesma conta
+    # a conferência: corpo ou nonce trocados não passam
     assert confere_recibo(signing.platform_public_key(), nonce, r.status_code, r.content,
                           dict(r.headers))
     assert not confere_recibo(signing.platform_public_key(), nonce, r.status_code,

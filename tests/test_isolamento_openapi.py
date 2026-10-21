@@ -376,6 +376,45 @@ def vitima(
     assert alertas.avaliar(session).disparados >= 1
     ids["alert_id"] = session.scalars(select(Alert).where(
         Alert.tenant_id == demo["tenant_id"], Alert.kind == "disco_rover")).one().id
+    # Enxame (Nível 4): um plano ativo da vítima; o atacante tenta ler e criar missão por ele.
+    from valtexa.models.enxame import PlanoDoEnxame
+
+    plano = PlanoDoEnxame(tenant_id=demo["tenant_id"], farm_id=demo["farm_id"],
+                          field_id=demo["field_id"], versao=1, estado="ativo",
+                          entradas_sha256="0" * 64, entradas={},
+                          plano={"proximas_missoes": [], "tarefas": {}})
+    session.add(plano)
+    session.commit()
+    ids["plano_id"] = plano.id
+    # Cérebro agronômico (rodada 4): uma fonte do cliente (fictícia) e um parecer da vítima;
+    # o atacante tenta ler, verificar a fonte e revisar o parecer.
+    from valtexa.cerebro import conhecimento
+    from valtexa.models.cerebro import Parecer
+
+    fonte, _ = conhecimento.ingerir(session, tenant_id=demo["tenant_id"], metadados={
+        "chave": "historico:vitima", "versao": "1", "titulo": "Histórico da vítima",
+        "tipo": "historico_propriedade", "origem": "teste", "licenca": "teste",
+        "culturas": ["coffee"], "ficticio": True}, conteudo="Histórico fictício da vítima.")
+    parecer_vitima = Parecer(
+        tenant_id=demo["tenant_id"], field_id=demo["field_id"], caso_tipo="planta",
+        plant_ref="L03-P0001", modo="deterministico", versao_compositor="teste", dossie={},
+        dossie_sha256="0" * 64, fontes=[], afirmacoes=[], verificacoes=[], recusas=[],
+        texto="Parecer da vítima.", sha256="0" * 64)
+    session.add(parecer_vitima)
+    session.commit()
+    ids["documento_id"] = fonte.id
+    ids["parecer_id"] = parecer_vitima.id
+    # Planejamento (8.3): um plano de apoio da vítima; o atacante tenta ler e revisar.
+    from valtexa.models.planejamento import PlanoDeApoio
+    from valtexa.planejamento import servico as servico_planejamento
+
+    plano_apoio = servico_planejamento.guardar(
+        session, tenant_id=demo["tenant_id"], tipo="robotico", farm_id=demo["farm_id"],
+        field_id=demo["field_id"], versao="teste", pedido={}, premissas=[],
+        resultado={"nota": "plano da vítima"}, ator_id=None)
+    session.commit()
+    assert session.get(PlanoDeApoio, plano_apoio.id) is not None
+    ids["plano_apoio_id"] = plano_apoio.id
     ids["kind"] = "regra-inexistente"
     # Sem recurso desse tipo no cliente de demonstração, um identificador que não
     # existe: a rota precisa responder 404 de qualquer jeito.
@@ -417,7 +456,10 @@ def _foto(session: Session, tenant_id: str) -> dict[str, list]:
         )
     # Tabelas com ``tenant_id`` anulável (avisos da equipe não são de cliente),
     # fora de TenantScoped, mas com dado do cliente: entram na foto também.
-    for classe in (Notification, NotificationPreference, Alert, AlertRule):
+    from valtexa.models.cerebro import DocumentoConhecimento, TrechoConhecimento
+
+    for classe in (Notification, NotificationPreference, Alert, AlertRule,
+                   DocumentoConhecimento, TrechoConhecimento):
         mapeador = classe.__mapper__
         foto[classe.__tablename__] = sorted(
             json.dumps({c.key: str(getattr(linha, c.key)) for c in mapeador.column_attrs

@@ -108,6 +108,21 @@ def test_quadro_no_formato_da_ia() -> None:
                                                 occurred_at=AGORA, payload=so_top))
 
 
+def test_geometria_3d_do_recorte_vai_e_o_conformal_nao() -> None:
+    """Nível 2, 5.3: a lesão no referencial da planta precisa do ponto 3D de cada recorte. O
+    conjunto conformal da borda fica: a fusão da borda foi calibrada sem ele."""
+    payload = corpo(nav={"row_left": "L03", "x_m": 12.5})
+    g = {"centro_mm": [10.0, 200.0, 320.0], "inclinacao_graus": 25.0, "face": "indeterminada"}
+    payload["tiles"]["geometria"] = [g, None]
+    payload["tiles"]["conformal_sets"] = [["Healthy", "Sigatoka"], ["Sigatoka"]]
+    registro = EdgeRecord(record_id="r-1", mission_id="m-1", occurred_at=AGORA, payload=payload)
+    q = fusao_borda.quadro(talhao(), registro)
+    assert q["tiles"][0]["geometria"] == g and "geometria" not in q["tiles"][1]
+    assert all("prediction_set" not in t for t in q["tiles"])
+    payload["tiles"]["geometria"] = [g]  # tamanho errado: ignorada, o quadro segue
+    assert all("geometria" not in t for t in fusao_borda.quadro(talhao(), registro)["tiles"])
+
+
 # ---------------------------------------------------------------------------
 # Worker
 # ---------------------------------------------------------------------------

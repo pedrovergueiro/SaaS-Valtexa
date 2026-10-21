@@ -73,7 +73,7 @@ CATALOGO_INICIAL: list[dict] = [
         "features": ["prescricao", "lavoura_3d", "validacao_campo", "relatorios"],
     },
     # Valores PROVISÓRIOS, para o sistema ter o que aplicar e testar. Os números
-    # e os nomes são decisão comercial do Pedro (PLANO_SAAS.md, seção 9, item 2):
+    # e os nomes são decisão comercial do Pedro (docs/historico/PLANO_SAAS.md, seção 9, item 2):
     # trocar é editar o plano pelo console ou pela API, sem migração.
     {
         "code": "essencial",

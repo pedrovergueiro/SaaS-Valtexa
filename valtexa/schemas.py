@@ -89,10 +89,6 @@ class Message(ApiModel):
     detail: str
 
 
-class ErrorResponse(ApiModel):
-    detail: str
-
-
 # ---------------------------------------------------------------------------
 # Autenticação e organização
 # ---------------------------------------------------------------------------
@@ -1201,6 +1197,22 @@ class MissionOut(ApiModel):
     created_at: datetime
 
 
+class MapaAplicacaoIn(ApiModel):
+    """O pedido do mapa de aplicação localizada para uma missão de pulverização em rascunho.
+
+    O produto vem da missão (o cadastro com a bula); o resto vai para a IA como está."""
+
+    doenca: str = Field(min_length=1, max_length=64)
+    equipamento: dict
+    regras: dict | None = None
+    trecho_m: float = Field(default=5.0, ge=1, le=100)
+    exclusoes: list[dict] = Field(default_factory=list, max_length=5000)
+    aplicacoes_anteriores: list[dict] = Field(default_factory=list, max_length=200)
+    data_aplicacao: str | None = None
+    dias_ate_colheita: int | None = Field(default=None, ge=0)
+    horizonte_dias: int = Field(default=14, ge=1, le=90)
+
+
 class MissionApproval(ApiModel):
     """Assinatura do agrônomo. Sem isto nenhuma pulverização é autorizada."""
 
@@ -1349,6 +1361,13 @@ class ProductCreate(ApiModel):
     reentry_interval_h: float | None = Field(default=None, ge=0)
     preharvest_interval_days: int | None = Field(default=None, ge=0)
     max_wind_ms: float | None = Field(default=None, gt=0)
+    modo_de_acao: Annotated[str, StringConstraints(min_length=1, max_length=32)] | None = Field(
+        default=None, description="Grupo de modo de ação da bula (ex.: 'FRAC 3')."
+    )
+    fonte_documento_id: str | None = Field(
+        default=None, max_length=32,
+        description="A bula/registro no repositório de conhecimento de onde saíram os dados.",
+    )
 
 
 class ProductOut(ProductCreate):
@@ -2830,7 +2849,8 @@ class EdgeRecordIn(ApiModel):
     kind: str = Field(description="result | event")
     type: str = Field(min_length=1, max_length=64)
     sha256: str = Field(min_length=64, max_length=64,
-                        description="SHA-256 do JSON canônico de body (ver docs/SYNC.md).")
+                        description="SHA-256 do JSON canônico de body "
+                                    "(ver VALTEXA-ROVER/docs/SYNC.md).")
     body: dict[str, Any]
 
 

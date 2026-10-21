@@ -57,9 +57,7 @@ def test_catalogo_so_para_a_equipe(client, platform_token, admin_token, demo) ->
     corpo = client.get("/v1/platform/ensaios/catalogo", headers=platform_token).json()
     nomes = {e["nome"] for e in corpo["ensaios"]}
     assert {"calor", "cameras", "profundidade", "gnss", "imu", "rede", "energia", "parada",
-            "homem_morto", "validacao_agronomica", "enlace_rssi", "enlace_latencia",
-            "enlace_troca", "enlace_starlink", "enlace_energia_base", "enlace_travessia",
-            "relogio"} == nomes
+            "homem_morto", "validacao_agronomica", "relogio"} == nomes
     assert corpo["fases"]["1"] == "Segurança" or corpo["fases"][1] == "Segurança"
     assert client.get("/v1/platform/ensaios/catalogo",
                       headers=admin_token).status_code in (401, 403)
@@ -303,3 +301,19 @@ def test_contas_do_servidor_batem_com_as_do_robo() -> None:
     b = estatistica.precisao_horizontal(lats, lons, (-21.25, -45.0))
     for k in ("cep50_cm", "cep95_cm", "drms2_cm", "vies_cm"):
         assert a[k] == pytest.approx(b[k])
+
+
+def test_servidor_refaz_a_conta_do_relogio_e_concorda_com_o_robo() -> None:
+    """O ``relogio`` (FASE 0, só o Rover desde que a base foi arquivada): a mesma conta dos
+    dois lados, para o servidor não confiar no "aprovado" do robô."""
+    rover_relogio = pytest.importorskip("valtexa_rover.ensaios.relogio")
+    amostras = {"rover": {"sincronizado": True, "fonte": "gnss", "offset_ms": 0.004},
+                "atraso_plataforma_s": 0.0}
+    p = ensaios.valida_pedido("relogio", None)
+    assert ensaios.CATALOGO["relogio"].fase == 0
+    crit_s, _, motivo = ensaios.CATALOGO["relogio"].calcula(p, amostras)
+    crit_r, _ = rover_relogio.avalia_relogio(p, amostras)
+    assert [(c["nome"], c["ok"]) for c in crit_s] == [(c["nome"], c["ok"]) for c in crit_r]
+    assert all(c["ok"] for c in crit_s) and motivo is None
+    atrasado = {**amostras, "atraso_plataforma_s": 5.0}
+    assert not all(c["ok"] for c in ensaios.CATALOGO["relogio"].calcula(p, atrasado)[0])

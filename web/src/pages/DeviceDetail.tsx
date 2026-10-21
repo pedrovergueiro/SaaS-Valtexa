@@ -7,6 +7,7 @@ import { keys, useApiMutation, useDevice, useDeviceEvents, useFields, useTanks, 
 import type { DeviceOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { TimeSeries } from '@/components/charts'
+import { DadosStarlink } from '@/components/DadosStarlink'
 import { FarmMap } from '@/components/FarmMap'
 import { Badge, Button, Card, CardHeader, Empty, ErrorBox, FormField, Meter, Modal, PageHeader, Spinner, Tabs } from '@/components/ui'
 import { faultText, fleetStateTone, modelInUse, modelStatus, storageText, storageTone } from '@/lib/fleet'
@@ -132,6 +133,9 @@ export default function DeviceDetail() {
 
         <div className="flex flex-col gap-4">
           <FleetHealthCard device={data} />
+          {(data.kind === 'rover' || data.kind === 'drone') && (
+            <DadosStarlink deviceId={data.id} podeMudar={can('device:manage')} />
+          )}
           <Card>
             <CardHeader title="Estado" />
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 px-5 pb-5 text-[13px]">

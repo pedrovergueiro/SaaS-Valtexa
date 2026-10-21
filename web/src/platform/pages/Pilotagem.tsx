@@ -3,7 +3,6 @@ import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } 
 
 import { Badge, Button, Card, CardHeader } from '@/components/ui'
 import { type Limits, type Setpoint, TELEOP_PERIOD_MS, isMoving, joystickToSetpoint, keysToAxes } from '@/lib/comando'
-import { trechos } from '@/lib/enlace'
 import { fmt } from '@/lib/format'
 import {
   type ControleBruto,
@@ -287,7 +286,6 @@ export function EstacaoDePilotagem({ painel, id, pode, manda }: { painel: RoverP
   const quadro = atual ? quadros[atual] : undefined
   const idade = quadro ? idadeDoQuadro(quadro.capturadoEm, agora) : null
   const ultima = painel.telemetry.at(-1)
-  const caminho = trechos(painel.caminho)
 
   return (
     <Card className="overflow-hidden p-0">
@@ -330,19 +328,12 @@ export function EstacaoDePilotagem({ painel, id, pode, manda }: { painel: RoverP
             </div>
           </div>
         </div>
-        {/* base: velocidade, caminho */}
+        {/* base: velocidade */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/75 to-transparent p-3 text-[12px] text-white">
           <div className="num space-y-1">
             <Barra rotulo="v" valor={mostra.ponto.v} max={limites.v_ms} unidade="m/s" />
             <Barra rotulo="ω" valor={mostra.ponto.w} max={limites.w_rad_s} unidade="rad/s" />
             <div className="text-[#9cc9b2]">enviado {fmt.number(enviado.v, 2)} m/s · {fmt.number(enviado.w, 2)} rad/s · marcha {Math.round(marcha * 100)}%</div>
-          </div>
-          <div className="space-y-0.5 text-right">
-            {caminho.map((t) => (
-              <div key={t.nome} className={TOM_TEXTO[t.tom]}>
-                {t.nome}: {t.detalhe}
-              </div>
-            ))}
           </div>
         </div>
         {!habilitado && (

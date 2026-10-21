@@ -12,7 +12,7 @@
   incluídas: ficam ``EXCLUDED`` e não entram em corte novo. Os cortes já
   congelados guardam a lista de identificadores que tinham (é o que os torna
   reproduzíveis) — apagar o que um modelo já aprendeu é decisão pendente,
-  registrada em docs/PROGRESSO.md.
+  registrada em docs/historico/PROGRESSO.md.
 """
 
 from __future__ import annotations

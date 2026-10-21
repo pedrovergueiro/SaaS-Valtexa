@@ -139,8 +139,13 @@ def quadro(field: Field, registro: EdgeRecord) -> dict:
     geo_ = geometria(field, corpo)
     alturas = recortes.get("heights_mm") or [None] * len(caixas)
     zonas = recortes.get("zones") or [[] for _ in caixas]
+    # A geometria 3D do Rover (Nível 2, 5.3). O conjunto conformal da borda NÃO vai: a fusão da
+    # borda foi calibrada sem ele, e dividir a evidência pelo conjunto mudaria a calibração.
+    geometrias = recortes.get("geometria")
+    if not isinstance(geometrias, list) or len(geometrias) != len(caixas):
+        geometrias = [None] * len(caixas)
     tiles = []
-    for caixa, p, h, z in zip(caixas, probs, alturas, zonas, strict=True):
+    for caixa, p, h, z, g in zip(caixas, probs, alturas, zonas, geometrias, strict=True):
         if len(p) != len(rotulos):
             raise ValueError("recorte com número de probabilidades diferente dos rótulos")
         melhor = max(range(len(p)), key=p.__getitem__)
@@ -148,6 +153,7 @@ def quadro(field: Field, registro: EdgeRecord) -> dict:
             "box": list(caixa), "predicted_class": rotulos[melhor],
             "probabilities": dict(zip(rotulos, map(float, p), strict=True)),
             "confidence": float(p[melhor]), "height_mm": h, "zones": list(z or []),
+            **({"geometria": g} if isinstance(g, dict) else {}),
         })
     frame = corpo.get("frame") or {}
     pos = corpo.get("position") or {}

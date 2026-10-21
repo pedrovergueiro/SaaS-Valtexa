@@ -23,9 +23,10 @@ a memória. Acima de ``max_body_bytes`` a resposta é 413, sem ler o resto.
 navegador de adivinhar tipo de arquivo e de embutir a API num ``<iframe>``.
 
 :class:`ReciboDoDispositivo` (Parte 13) assina a resposta das rotas do dispositivo que
-**mudam estado** quando o robô pede (``X-Valtexa-Recibo: 1``): com o Rover falando pela
-base da fazenda, a base não consegue fingir um "aceito" e fazer o robô apagar o que ainda
-não chegou.
+**mudam estado** quando o robô pede (``X-Valtexa-Recibo: 1``): um intermediário não
+consegue fingir um "aceito" e fazer o robô apagar o que ainda não chegou. Foi feito para a
+base da fazenda; com a base arquivada (20/10/2026, cada Rover fala direto pela Starlink) não
+há hoje quem peça o recibo — o controle fica, opcional e sem custo quando não pedido.
 """
 
 from __future__ import annotations
@@ -89,11 +90,45 @@ class RawBodyMiddleware:
 
         body = b"".join(chunks)
         scope[RAW_BODY_KEY] = body
+        cabecalhos = list(scope.get("headers") or [])
+        if dict(cabecalhos).get(b"content-encoding", b"").lower() == b"gzip":
+            # O robô comprime o lote (Starlink medida, rodada 4). A assinatura confere os bytes
+            # que trafegaram (RAW_BODY_KEY, comprimidos); a rota recebe o JSON descomprimido.
+            aberto = _descomprime(body, self.max_body_bytes)
+            if aberto is None:
+                await _gzip_invalido(send)
+                return
+            scope["headers"] = [(k, v) for k, v in cabecalhos
+                                if k not in (b"content-encoding", b"content-length")] + [
+                (b"content-length", str(len(aberto)).encode())]
+            body = aberto
         await self.app(scope, _replay(body), send)
 
     def _should_buffer(self, scope: Scope) -> bool:
         path = scope.get("path", "")
         return any(path.startswith(prefix) for prefix in self.prefixes)
+
+
+def _descomprime(body: bytes, limite: int) -> bytes | None:
+    """gzip com teto no tamanho aberto (bomba de descompressão não passa). ``None``: inválido."""
+    import zlib
+
+    d = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    try:
+        aberto = d.decompress(body, limite + 1)
+    except zlib.error:
+        return None
+    if len(aberto) > limite or d.unconsumed_tail or not d.eof:
+        return None
+    return aberto
+
+
+async def _gzip_invalido(send: Send) -> None:
+    corpo = b'{"detail":"Corpo gzip inv\xc3\xa1lido ou grande demais depois de aberto."}'
+    await send({"type": "http.response.start", "status": 400,
+                "headers": [(b"content-type", b"application/json"),
+                            (b"content-length", str(len(corpo)).encode())]})
+    await send({"type": "http.response.body", "body": corpo})
 
 
 def _replay(body: bytes) -> Receive:
@@ -181,7 +216,7 @@ class ReciboDoDispositivo:
     ``DELETE`` em ``/v1/device/**``, só quando o pedido traz ``X-Valtexa-Recibo``.
 
     O recibo amarra a resposta ao ``X-Valtexa-Nonce`` do pedido (único, assinado pelo robô):
-    um intermediário (a base da fazenda) não fabrica um "200 aceito" nem reaproveita o
+    um intermediário (era a base da fazenda) não fabrica um "200 aceito" nem reaproveita o
     recibo de outro pedido. ``GET`` não precisa: o que importa nele (missão, comando,
     teleop) já vem em envelope assinado. Resposta sem pedido de recibo: nada muda.
     """

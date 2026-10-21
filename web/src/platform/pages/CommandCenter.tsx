@@ -12,7 +12,6 @@ import {
   PinOff,
   Play,
   Power,
-  RadioTower,
   RefreshCw,
   RotateCcw,
   ScanLine,
@@ -36,7 +35,6 @@ import {
   partLabel,
   partsFromReport,
 } from '@/lib/comando'
-import { resumoDoEnlace, rotuloDoEnlace, tomDoEnlace, trechos } from '@/lib/enlace'
 import { fleetStateLabel, fleetStateTone, faultText } from '@/lib/fleet'
 import { fmt } from '@/lib/format'
 import {
@@ -70,13 +68,6 @@ export function CommandCenterList() {
         eyebrow="Console da plataforma"
         title="Centro de comando"
         subtitle="Escolha um rover para ver cada peça, testar, mudar o modo, dirigir no controle remoto, trocar a configuração e fixar o modelo de IA."
-        actions={
-          <Link to="/plataforma/comando/bases">
-            <Button variant="secondary">
-              <RadioTower className="size-4" /> Bases da fazenda
-            </Button>
-          </Link>
-        }
       />
       <Card className="overflow-hidden p-0">
         {frota.isLoading && <Spinner />}
@@ -205,7 +196,6 @@ export default function CommandCenter() {
           <Cameras painel={p} pode={pode} manda={manda} />
         </div>
         <div className="space-y-5">
-          <CaminhoCard painel={p} />
           <IaEmbarcada painel={p} id={id} pode={pode} manda={manda} />
           <Configuracao pode={pode} manda={manda} />
           <TelemetriaCard painel={p} />
@@ -566,53 +556,6 @@ function Configuracao({ pode, manda }: { pode: boolean; manda: Manda }) {
             <Power className="size-4" /> Reiniciar serviço
           </Button>
         </div>
-      </div>
-    </Card>
-  )
-}
-
-// --- caminho até o rover -------------------------------------------------------------
-
-function CaminhoCard({ painel }: { painel: RoverPanel }) {
-  const c = painel.caminho
-  return (
-    <Card>
-      <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <RadioTower className="size-4" /> Caminho
-          </span>
-        }
-        subtitle={
-          c.modo === 'base'
-            ? `Pela base ${c.base.name} (${c.base.serial_number}); retrato ${c.base.reportado_em ? fmt.ago(c.base.reportado_em) : '—'}.`
-            : 'O Rover fala direto com a nuvem (nenhuma base da fazenda o cita).'
-        }
-      />
-      <ol className="space-y-2">
-        {trechos(c).map((t) => (
-          <li key={t.nome} className="flex items-start gap-2 text-[13px]">
-            <Badge tone={t.tom}>{t.nome}</Badge>
-            <span className="text-muted">{t.detalhe}</span>
-          </li>
-        ))}
-      </ol>
-      {c.modo === 'base' && c.base_rover.enlaces.length > 0 && (
-        <div className="mt-3 space-y-1.5">
-          {c.base_rover.enlaces.map((e) => (
-            <div key={e.nome} className="num flex items-center justify-between gap-2 text-[12px]">
-              <span className="flex items-center gap-1.5">
-                <Badge tone={tomDoEnlace(e)}>{e.nome}</Badge> {rotuloDoEnlace(e)}
-              </span>
-              <span className="text-muted">{resumoDoEnlace(e)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="mt-3 text-[12px]">
-        <Link to="/plataforma/comando/bases" className="text-accent hover:underline">
-          Bases da fazenda
-        </Link>
       </div>
     </Card>
   )

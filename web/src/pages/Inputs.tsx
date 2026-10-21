@@ -1,5 +1,6 @@
 import { FlaskConical, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { api } from '@/api/client'
 import { keys, useApiMutation, useBatches, useDevices, useProducts, useTanks } from '@/api/queries'
@@ -27,11 +28,16 @@ export default function Inputs() {
         title="Insumos"
         subtitle="O elo tanque → lote → produto → missão. A segurança bloqueia qualquer divergência entre o que está no tanque e o que a missão autoriza."
         actions={
-          can('product:manage') && (
-            <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setCreating(true)}>
-              Novo produto
-            </Button>
-          )
+          <>
+            <Link to="/planejamento/insumos">
+              <Button>Planejamento</Button>
+            </Link>
+            {can('product:manage') && (
+              <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setCreating(true)}>
+                Novo produto
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -137,6 +143,8 @@ function ProductModal({ onClose }: { onClose: () => void }) {
     default: '',
     wind: '',
     reentry: '',
+    modo: '',
+    fonte: '',
   })
   const set = (key: keyof typeof form, value: unknown) => setForm((current) => ({ ...current, [key]: value }))
   const toggle = (key: 'crops' | 'targets', value: string) =>
@@ -159,6 +167,8 @@ function ProductModal({ onClose }: { onClose: () => void }) {
           default_rate_l_ha: num(form.default),
           max_wind_ms: num(form.wind),
           reentry_interval_h: num(form.reentry),
+          modo_de_acao: form.modo.trim() || null,
+          fonte_documento_id: form.fonte.trim() || null,
         },
       }),
     [keys.products],
@@ -192,6 +202,12 @@ function ProductModal({ onClose }: { onClose: () => void }) {
         </FormField>
         <FormField label="Ingrediente ativo">
           <input className="input" value={form.active_ingredient} onChange={(event) => set('active_ingredient', event.target.value)} />
+        </FormField>
+        <FormField label="Modo de ação (da bula)" hint="Ex.: FRAC 3. Sem ele, o produto fica fora da análise de rotação.">
+          <input className="input" value={form.modo} maxLength={32} onChange={(event) => set('modo', event.target.value)} />
+        </FormField>
+        <FormField label="Fonte no repositório (id da bula ou registro)" hint="A rotação só usa produto com fonte regulatória vigente e verificada.">
+          <input className="input num" value={form.fonte} maxLength={32} onChange={(event) => set('fonte', event.target.value)} />
         </FormField>
         <FormField label="Culturas autorizadas">
           <div className="flex flex-wrap gap-2">

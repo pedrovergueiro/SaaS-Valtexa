@@ -52,6 +52,11 @@ const MissionDetail = lazyPage(() => import('@/pages/MissionDetail'))
 const MissionReportPage = lazyPage(() => import('@/pages/MissionReportPage'))
 const MissionCompare = lazyPage(() => import('@/pages/MissionCompare'))
 const FieldHistory = lazyPage(() => import('@/pages/FieldHistory'))
+const Pareceres = lazyPage(() => import('@/pages/Pareceres'))
+const ParecerDetail = lazyPage(() => import('@/pages/ParecerDetail'))
+const Planejamento = lazyPage(() => import('@/pages/Planejamento'))
+const PlanejamentoInsumos = lazyPage(() => import('@/pages/PlanejamentoInsumos'))
+const PlanoDetail = lazyPage(() => import('@/pages/PlanoDetail'))
 const Review = lazyPage(() => import('@/pages/Review'))
 const Fields = lazyPage(() => import('@/pages/Fields'))
 const FieldDetail = lazyPage(() => import('@/pages/FieldDetail'))
@@ -79,7 +84,6 @@ const PlatformOta = lazyPage(() => import('@/platform/pages/Ota'))
 const PlatformCommandCenter = lazyPage(() => import('@/platform/pages/CommandCenter'))
 const PlatformCommandList = lazyPage(() => import('@/platform/pages/CommandCenter').then((m) => ({ default: m.CommandCenterList })))
 const PlatformValidation = lazyPage(() => import('@/platform/pages/Validation'))
-const PlatformBases = lazyPage(() => import('@/platform/pages/Bases'))
 const PlatformNotifications = lazyPage(() => import('@/platform/pages/Notifications'))
 const PlatformSupport = lazyPage(() => import('@/platform/pages/Support'))
 const PlatformSupportTicket = lazyPage(() => import('@/platform/pages/SupportTicket'))
@@ -166,7 +170,6 @@ export const router = createBrowserRouter([
       { path: 'observabilidade', element: <PlatformObservability /> },
       { path: 'frota', element: <PlatformFleet /> },
       { path: 'comando', element: <PlatformCommandList /> },
-      { path: 'comando/bases', element: <PlatformBases /> },
       { path: 'comando/:id', element: <PlatformCommandCenter /> },
       { path: 'comando/:id/validacao', element: <PlatformValidation /> },
       { path: 'ia', element: <PlatformAi /> },
@@ -194,6 +197,11 @@ export const router = createBrowserRouter([
       { path: 'talhoes', element: <Fields /> },
       { path: 'talhoes/:id', element: <FieldDetail /> },
       { path: 'talhoes/:id/historico', element: <FieldHistory /> },
+      { path: 'talhoes/:id/pareceres', element: <Pareceres /> },
+      { path: 'pareceres/:id', element: <ParecerDetail /> },
+      { path: 'talhoes/:id/planejamento', element: <Planejamento /> },
+      { path: 'planejamento/insumos', element: <PlanejamentoInsumos /> },
+      { path: 'planejamento/:id', element: <PlanoDetail /> },
       { path: 'lavoura-3d', element: <Field3D /> },
       { path: 'lavoura-3d/:id', element: <Field3D /> },
       { path: 'coletas', element: <Collections /> },

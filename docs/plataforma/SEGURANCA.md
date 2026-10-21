@@ -82,3 +82,89 @@ worker (`docker compose up -d api worker`).
   limite próprio (banco) e os robôs, o balde (Redis).
 - **Varredura de dependências** (pip-audit/npm audit) não roda na CI.
 - **Pentest externo** não foi feito.
+
+## 6. Princípio de Ouro (brief 8.4) — a prova (Rodada 4, Parte 3)
+
+> **O agente raciocina, explica e propõe. O agrônomo responsável valida e autoriza. O Safety
+> Engine determinístico verifica as condições de segurança e libera a execução somente
+> quando todos os requisitos forem atendidos.**
+
+Não é frase de documento: é `saas/tests/test_principio_de_ouro.py` (16 testes), mais os
+específicos do copiloto (`test_cerebro_principio.py`, 5) e do planejamento
+(`test_planejamento.py`). "O agente" é todo código que raciocina ou propõe:
+
+| Grupo | Módulos |
+| --- | --- |
+| Copiloto | `valtexa/cerebro/*`, `api/routers/cerebro.py` |
+| Planejamento | `valtexa/planejamento/*`, `api/routers/planejamento.py` |
+| Enxame | `services/enxame.py`, `api/routers/enxame.py` |
+| Consenso federado (só leitura) | `services/federado.py`, `api/routers/federado.py` |
+
+### 6.1 O agente não escreve estado autorizado
+
+* **Código (AST)**: nenhum módulo do agente importa `safety_engine`, `model_registry`,
+  `decision_engine`, `comando_rover`, `ota`, `plans`, `signing`… (exceção explícita e
+  testada: o enxame **lê** `verification.due`); o único uso de `mission_manager` é
+  `create_mission`, e só no enxame; nenhuma chamada a `authorize`, `approve`, `dispatch`,
+  `resume`, `transition`, `submit_for_safety`, `evaluate_mission`, `check_mission`,
+  `transicionar`, `conclude`, `_store_command`, `sign`…; nenhuma atribuição (nem `setattr`) a
+  `state`, `status`, `approved_*`, `authorized_*`, `safety_*`, `signature`, `nonce`,
+  `command_*`, `expires_at`, `verified`, `conclusion`, `reviewed_*`, `threshold`/`limiar`,
+  `ai_model`, `mission_id`; e só instancia as próprias tabelas (cérebro, planos de apoio,
+  plano do enxame).
+* **`create_mission`** (o que o enxame chama) grava `MissionState.DRAFT` e não toca aprovação,
+  liberação nem assinatura — lido no código da função.
+* **Varredura das rotas**: o teste chama **toda** rota dos quatro roteadores (24 operações) com
+  dados reais de teste — fontes da plataforma e do cliente, verificação, busca, parecer e
+  revisão, os três planos e a revisão "aceito", o plano do enxame e a criação das missões — e
+  compara a foto do banco antes e depois em `mission`, `safety_evaluation`, `application`,
+  `verification`, `decision`, `diagnosis`, `model_version`, `device_command`, `product`,
+  `product_batch`, `tank`, `field`, `device`, `membership`. Tudo idêntico, inclusive uma
+  pulverização em RASCUNHO com produto e quantidade deixada de isca; as únicas linhas novas
+  são as missões de inspeção do enxame, todas em RASCUNHO, sem aprovação, liberação ou
+  assinatura; nenhuma avaliação de segurança. **Fio de disparo**: rota nova num desses
+  roteadores que a varredura não exercite quebra o teste.
+* **Mutação conferida**: uma revisão de plano "aceito" que gravasse `approved_by` numa missão
+  (via `setattr`) foi pega pelas duas provas (estática e varredura).
+
+### 6.2 A autorização exige um usuário humano com o papel de agrônomo
+
+* Só `Role.AGRONOMIST` tem `mission:approve_application`; nenhum papel de plataforma; a sessão
+  de suporte assistida age como gestor (não agrônomo); nenhuma capacidade do agente
+  (`parecer:generate`, `planejamento:generate`, `knowledge:manage`) é de aprovação.
+* `POST /v1/missions/{id}/approve`: dono, gestor, operador, técnico, auditor e leitor → 403;
+  o Rover (token de dispositivo) → recusado; agrônomo → aprova, e **aprovar não libera** (a
+  missão continua em RASCUNHO).
+* O Safety Engine **reconfere** o papel na liberação (`_check_approval`): sem aprovação →
+  bloqueia; aprovador rebaixado a operador depois de aprovar → bloqueia; aprovador que não é
+  membro do cliente → bloqueia.
+
+### 6.3 O Safety Engine é o único caminho de liberação
+
+* `ALLOWED_TRANSITIONS`: só `PENDING_SAFETY` leva a `AUTHORIZED`; só `AUTHORIZED` leva a
+  `DISPATCHED`.
+* No código inteiro, o único `transition(..., AUTHORIZED, ...)` está em
+  `mission_manager.authorize`, **depois** de `safety_engine.evaluate_mission` e do `return`
+  quando o veredito é `BLOCKED` (ordem conferida por AST).
+* **Fio de disparo** dos campos de liberação no pacote inteiro: `authorized_at` só em
+  `authorize`; `signature` só em `_store_command` (chamado só por `dispatch` e `resume`, que
+  exigem `AUTHORIZED`/`READY_TO_RESUME`); `safety_status` só em `authorize` e
+  `_esquece_parecer` (que apaga o veredito quando a rota muda); `approved_by` só na rota do
+  agrônomo e no registro de modelos (equipe de IA, outra tabela); nenhuma atribuição direta
+  de `MissionState` a `.state` fora de `transition`.
+* **Determinístico**: o `safety_engine` não importa IA, cérebro, planejamento, enxame, rede,
+  `random` nem `time`; o mesmo pedido no mesmo instante dá o mesmo relatório.
+* **Dinâmico**: pulverização aprovada pelo agrônomo mas sem tanque/lote → `BLOCKED`, sem
+  assinatura, despacho recusado (409); inspeção proposta pelo enxame → RASCUNHO → despacho
+  recusado antes da avaliação → `authorize` grava uma `SafetyEvaluation` com a versão do
+  motor → `AUTHORIZED` sem assinatura → só o `dispatch` assina.
+
+### 6.4 O que esta prova não cobre (honesto)
+
+* O **Rover** só executa comando assinado pela plataforma (testes do `rover/`, Parte 13); o
+  `edge_ai` local (limiares do perfil) não é alcançado por nenhuma rota da plataforma — e não
+  foi tocado.
+* A regra de segurança de **voo de observação do drone** não existe (decisão do Pedro,
+  `docs/RODADA4.md` item 5): o sobrevoo aparece no plano e não vira missão.
+* Um provedor de linguagem real (desligado; nenhum implementado) seria mais um módulo do
+  agente: entra na lista `AGENTE` do teste.

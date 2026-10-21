@@ -760,12 +760,13 @@ def mission_command_body(session: Session, mission: Mission) -> dict:
     """O corpo do comando que o robô recebe.
 
     Contém tudo que ele precisa para operar **sem consultar a nuvem** durante a
-    missão: a área, a rota, o que fazer com pouca bateria, o que fazer se o
-    enlace cair e, se a base já mediu, o mapa de cobertura do rádio do talhão.
+    missão: a área, a rota, o que fazer com pouca bateria e o que fazer se o
+    enlace (a Starlink do robô) cair.
     """
-    from valtexa.services import cobertura_talhao
+    from valtexa.services import compartilhamento
 
     remaining = pending_segments(session, mission)
+    device = session.get(Device, mission.device_id)
     return {
         "mission_id": mission.id,
         "kind": mission.kind.value,
@@ -777,7 +778,15 @@ def mission_command_body(session: Session, mission: Mission) -> dict:
         "plan": mission.plan,
         "energy_policy": mission.energy_policy,
         "offline_policy": mission.offline_policy,
-        "cobertura": cobertura_talhao.para_missao(session.get(Field, mission.field_id)),
+        # Onde vale gastar a percepção ativa (Nível 4, ``services/compartilhamento.py``): só
+        # para quem a política deixa, só os trechos desta missão, só para decidir a bordo.
+        "prioridades": (
+            compartilhamento.prioridades_para_missao(session, mission, device.kind)
+            if device is not None else None
+        ),
+        # O teto de dados da Starlink do robô (``services/orcamento_dados.py``): assinado aqui,
+        # vale por cima do rover.json. Nulo = o robô usa o dele.
+        "orcamento_dados": (device.orcamento_dados or None) if device is not None else None,
         "application": (
             {
                 "product_id": mission.product_id,

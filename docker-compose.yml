@@ -1,5 +1,5 @@
-# AMBIENTE DE ENSAIO LOCAL. Para produção, use ../deploy/producao/ (Parte 9): segredos
-# por arquivo, S3/MinIO, Redis, réplicas da API, IA e Prometheus — docs/DEPLOY.md.
+# AMBIENTE DE ENSAIO LOCAL. Para produção, use deploy/producao/ (Parte 9): segredos
+# por arquivo, S3/MinIO, Redis, réplicas da API, IA e Prometheus — docs/plataforma/DEPLOY.md.
 # Este arquivo exige também OTA_SIGNING_SECRET e INFERENCE_SERVICE_TOKEN (≥ 32
 # caracteres, distintos) e REDIS_URL, senão a API recusa subir em produção.
 #

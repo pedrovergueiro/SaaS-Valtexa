@@ -1,7 +1,7 @@
 # Observabilidade e alertas (Parte 7 — brief, seções 34 e 35)
 
 > O que a plataforma mede, de onde vem cada número, como os alertas funcionam e o que
-> **não** é medido. Exemplo de Prometheus/Grafana: [`deploy/observabilidade/`](../deploy/observabilidade/).
+> **não** é medido. Exemplo de Prometheus/Grafana: [`deploy/observabilidade/`](../../deploy/observabilidade/).
 
 ## 1. Visão geral
 

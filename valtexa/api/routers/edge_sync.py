@@ -11,7 +11,7 @@ Do robô (assinadas, como todo ``/v1/device/**``):
 Do cliente: ``GET /v1/edge/records`` — o que os robôs dele sincronizaram, com os
 arquivos de cada registro.
 
-O contrato e o lado do robô estão em ``docs/SYNC.md``; a regra de cada passo,
+O contrato e o lado do robô estão em ``VALTEXA-ROVER/docs/SYNC.md``; a regra de cada passo,
 em :mod:`valtexa.services.edge_sync`.
 """
 

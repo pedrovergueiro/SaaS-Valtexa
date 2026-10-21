@@ -27,7 +27,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from valtexa.models import Diagnosis, DiagnosisStatus, Field, Observation, Zone
+from valtexa.models import Diagnosis, DiagnosisStatus, Field, Observation
 
 BASELINE_MIN_SAMPLE = 30
 """Observações mínimas na linha de base antes de acusar desvio.
@@ -234,14 +234,6 @@ def anomalies(
                 )
             )
     return sorted(found, key=lambda item: item.current_ratio, reverse=True)
-
-
-def zones_of(session: Session, tenant_id: str, field_id: str) -> list[Zone]:
-    return list(
-        session.scalars(
-            select(Zone).where(Zone.tenant_id == tenant_id, Zone.field_id == field_id)
-        )
-    )
 
 
 def _counts_between(

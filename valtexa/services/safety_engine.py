@@ -458,6 +458,7 @@ def _check_product_chain(session: Session, mission: Mission, now: datetime) -> l
         )
     )
     checks.append(_check_rate(mission, product))
+    checks += _check_mapa_de_aplicacao(mission, product)
     checks.append(_check_batch(session, mission, now))
     checks += _check_tank(session, mission)
     return checks
@@ -474,6 +475,23 @@ def _check_rate(mission: Mission, product: Product) -> Check:
     if maximum is not None and rate > maximum:
         return Check(RATE_RANGE, False, f"Dose {rate} acima da máxima de bula ({maximum}).")
     return Check(RATE_RANGE, True, f"Dose {rate} L/ha dentro da faixa de bula.")
+
+
+def _check_mapa_de_aplicacao(mission: Mission, product: Product) -> list[Check]:
+    """A taxa variável (``plan.mapa_aplicacao``): cada trecho conferido, e a aprovação presa ao
+    hash do mapa. Sem mapa, a missão é de taxa única e só o :func:`_check_rate` vale."""
+    from valtexa.services import aplicacao_localizada
+
+    plano = mission.plan or {}
+    mapa = plano.get("mapa_aplicacao")
+    if mapa is None:
+        return []
+    return [Check(codigo, passou, texto) for codigo, passou, texto in
+            aplicacao_localizada.conferencias(
+                mapa, aprovado=plano.get("mapa_aplicacao_aprovado"),
+                taxa_autorizada=mission.authorized_rate_l_ha, dose_min=product.min_rate_l_ha,
+                dose_max=product.max_rate_l_ha,
+                registro_do_produto=product.registration_number)]
 
 
 def _check_batch(session: Session, mission: Mission, now: datetime) -> Check:

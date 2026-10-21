@@ -19,6 +19,7 @@ from valtexa.models import (
     ActorType,
     Application,
     Device,
+    DocumentoConhecimento,
     Product,
     ProductBatch,
     SubjectType,
@@ -85,6 +86,19 @@ def create_product(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, "Dose mínima maior que a máxima."
         )
+
+    if payload.fonte_documento_id is not None:
+        doc = session.get(DocumentoConhecimento, payload.fonte_documento_id)
+        if doc is None or doc.tenant_id not in (None, principal.tenant_id):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                "fonte_documento_id: documento não encontrado no repositório de conhecimento.",
+            )
+        if doc.tipo not in ("bula", "registro_mapa"):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                "fonte_documento_id: a fonte do produto é a bula ou o registro MAPA.",
+            )
 
     product = Product(tenant_id=principal.tenant_id, **payload.model_dump())
     session.add(product)
@@ -358,6 +372,8 @@ def _product_out(row: Product) -> ProductOut:
         reentry_interval_h=row.reentry_interval_h,
         preharvest_interval_days=row.preharvest_interval_days,
         max_wind_ms=row.max_wind_ms,
+        modo_de_acao=row.modo_de_acao,
+        fonte_documento_id=row.fonte_documento_id,
     )
 
 

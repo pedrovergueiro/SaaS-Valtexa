@@ -197,6 +197,15 @@ executar hoje uma autorização de ontem.
 
 ---
 
+## Prioridades na missão (Nível 4)
+
+O corpo da missão de Rover leva, quando o talhão tem plano do enxame ativo e com menos de
+24 h, o campo `prioridades`: os trechos de rua **desta** missão com a prioridade relativa (0 a
+1) que o gêmeo deu pelo valor da informação, o plano de origem e `valido_ate`. O Rover usa só
+para decidir a bordo — onde gastar a percepção ativa —, nunca como evidência; o dinheiro em
+jogo e a posterior por planta não descem. A política de quem recebe o quê está em
+`valtexa/services/compartilhamento.py`; o desenho inteiro, em [`ENXAME.md`](ENXAME.md).
+
 ## Assinatura e validade
 
 A assinatura só existe depois do parecer favorável de segurança. Missão bloqueada
@@ -234,3 +243,31 @@ disponível a praticamente todos os papéis operacionais: parar não pode depend
 de permissão rara.
 
 Abortar libera o dispositivo e registra o motivo na auditoria.
+
+## Taxa variável: o mapa de aplicação localizada (19/10/2026)
+
+Uma missão de pulverização pode levar, em vez de uma dose única, um **mapa de aplicação
+localizada**: o risco previsto pelo gêmeo vira taxa por trecho de rua e ciclo de PWM por bico.
+
+1. `POST /v1/missions/{id}/mapa-aplicacao` (`mission:create`), só em missão `spray` **em
+   rascunho** e com produto definido. O corpo traz a doença, o equipamento (vazão nominal por
+   bico, faixa por bico, bicos por lado, velocidades, ciclo mínimo e máximo do PWM), as regras
+   (limiares de risco, vento, temperatura, umidade), o tamanho do trecho, as exclusões (APP,
+   curso d'água) e as aplicações anteriores (residual). **O produto sai do cadastro**: registro,
+   culturas, alvos, doses mínima, padrão e máxima de bula, carência e vento máximo — sem eles,
+   409. A plataforma pede o mapa à IA (`POST /fields/{id}/gemeo/aplicacao-localizada`) e só o
+   aceita íntegro (o `sha256` recalculado bate com o conteúdo).
+2. O mapa fica em `plan.mapa_aplicacao`, e **a aprovação anterior é apagada**: o agrônomo
+   aprova o mapa que vê. Ao aprovar (`POST /approve`), o hash vai para
+   `plan.mapa_aplicacao_aprovado` e para a auditoria.
+3. O Safety Engine confere, em cada autorização: `map_integrity` (o conteúdo não mudou),
+   `map_approved` (a aprovação é deste mapa), `map_rates_label` (todo trecho aplicado dentro
+   da faixa da bula do produto cadastrado), `map_rates_authorized` (nenhum trecho acima da dose
+   autorizada da missão, que vira o teto), `map_pwm` (ciclo dentro dos limites da máquina,
+   nenhum trecho inviável) e `map_product` (o mapa é do produto da missão). Qualquer um falso
+   bloqueia; o vento do dia continua conferido pela verificação de tempo de sempre.
+
+A taxa por trecho é **regra** (limiares do agrônomo, da dose mínima à padrão de bula, nunca
+acima da padrão), não curva dose-resposta medida; os limites de vento, temperatura e umidade do
+mapa são boas práticas configuráveis — a bula e a regulação vigente prevalecem. Testes:
+`tests/test_mapa_aplicacao.py`; na IA, `tests/test_aplicacao_localizada.py`.

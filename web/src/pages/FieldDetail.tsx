@@ -69,6 +69,12 @@ export default function FieldDetail() {
             <Link to={`/talhoes/${id}/historico`}>
               <Button>Linha do tempo</Button>
             </Link>
+            <Link to={`/talhoes/${id}/pareceres`}>
+              <Button>Pareceres</Button>
+            </Link>
+            <Link to={`/talhoes/${id}/planejamento`}>
+              <Button>Planejamento</Button>
+            </Link>
             <Link to={`/mapa?modo=missao&talhao=${id}`}>
               <Button>Mapa por missão</Button>
             </Link>

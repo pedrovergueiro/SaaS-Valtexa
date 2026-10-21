@@ -1,5 +1,8 @@
 # Critérios de aceite (brief, seção 58) — estado em 10/10/2026
 
+> **19/10/2026 (rodada 4)**: os critérios dos briefs 7.x e 8.x e do orçamento de dados estão
+> em [Rodada 4](#rodada-4--enxame-heterogêneo-7x-cérebro-agronômico-8x-e-orçamento-de-dados-19102026).
+
 > **10/10/2026 (rodada 3, local):**
 > * **Pesos reais:** os 31 critérios rodaram também com o modelo real do café, fotos de
 >   folha reais e o serviço `ia/` de verdade: **31 de 31**, mais 21b, 22b e 23b (fusão
@@ -123,6 +126,112 @@ câmera de folhas monta um recorte por quadro (`docs/SIMULATOR.md`).
 
 Nada da rodada 3 rodou em hardware: rádios, Starlink, OAK-D, RTK e Jetson só em emulador ou
 bancada simulada.
+
+## Rodada 4 — enxame heterogêneo (7.x), cérebro agronômico (8.x) e orçamento de dados (19/10/2026)
+
+> Verificação final da rodada, branch `claude/cerebro-agronomico`, Parte 3. Régua: os dois
+> briefs (`docs/BRIEF_ENXAME_HETEROGENEO.md`, `docs/BRIEF_CEREBRO_AGRONOMICO.md`) lidos com
+> `docs/RODADA4.md`. **OK** = feito e provado por teste (ou número medido); **PARCIAL** = existe
+> e é testado, mas não fecha o item; **NÃO** = não feito. Nada rodou com modelo real (os pesos
+> não estão aqui) nem em hardware: a IA dos testes é dublê e os números de Starlink são
+> simulados, marcados como tal. Suítes da verificação final: ver `docs/PROGRESSO.md`
+> (Rodada 4 — Parte 3).
+
+### 7.1 — Fusão federada de priores (`docs/FEDERADO.md`)
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| 7.1a | `merge_priors` do dNATY avaliado, conclusão escrita | **OK** | `ia/tests/test_dnaty_merge_priors.py` (3): 2% e 20% viram o mesmo prior; 10 e 10 000 plantas pesam igual; serve para operadores de mutação. Não adotado |
+| 7.1b | Representação compartilhada + compatibilidade (taxonomia, modelo/cabeça, validação, janela) | **OK** | `saas/tests/test_federado.py::test_compatibilidade_recusa_com_motivo` (6 casos); a cabeça antiga é recusada na API |
+| 7.1c | Fusão matemática definida (hierárquica, encolhimento) | **OK** | Beta-binomial com κ por momentos e teto de força (200): `test_encolhimento_segue_a_heterogeneidade_dos_estratos`, `test_prior_do_estrato_puxa_para_o_estrato_e_a_forca_tem_teto` |
+| 7.1d | Anti-eco | **OK** | por observação (`test_a_mesma_observacao_conta_uma_vez`) e por origem — o próprio dado não volta (`test_o_prior_que_volta_ao_talhao_nao_tem_o_dado_dele`) |
+| 7.1e | Avaliar antes de distribuir | **OK** | deixa-um-talhão-de-fora: distribui com ganho (> 0) e recusa contra referência forte (`test_avaliacao_antes_de_distribuir`) |
+| 7.1f | Distribuir aos autorizados e verificar no dispositivo | **NÃO** | o prior é calculado e exposto (`GET /v1/fields/{id}/federado/prior`), não desce na missão; quem consome (fusão por planta da IA) é decisão do Pedro |
+| 7.1g | Bytes reais medidos | **OK** | carga de um talhão/dia 576 B JSON / 279 B gzip (1 estrato × 5 classes); 1 232 / 343 B com 3 estratos; prior de 5 classes 1 202 / 330 B (medido no corpo sintético) |
+| | **7.1 no todo** | **PARCIAL** | falta a descida e o consumo (7.1f) |
+
+### 7.2 — Coordenação drone → Rover
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| 7.2.1 | Mapeamento aéreo → regiões suspeitas | **OK** (canal suposto) | levantamento **importado** em GeoJSON (cobertura + regiões suspeitas): `POST /v1/fields/{id}/gemeo/levantamento-aereo` → IA `POST /fields/{id}/gemeo/levantamento` → LLR por planta no canal `drone` (dentro da região: ln(s/a); coberta e fora: ln((1−s)/(1−a)); fora da cobertura: nada) → muda as prioridades do gêmeo. `ia/tests/test_gemeo_levantamento.py` (2), `saas/tests/test_levantamento_aereo.py` (3). O canal do drone (0,45/0,06) é **suposição de projeto**, dita na resposta |
+| 7.2.2 | Priorização com histórico, incidência, incerteza, disponibilidade, bateria | **OK** | VOI ganhou ou empatou em 24/24 combinações (`saas/docs/ENXAME.md` §3); disponibilidade e bateria no alocador (`saas/tests/test_enxame.py`, 9) |
+| 7.2.2b | … e condições de acesso (inclinação, obstáculos) | **OK** | o plano robótico do 8.3 **e o plano do enxame que cria a missão** usam as mesmas restrições (`test_planejamento.py`: inclinação acima do limite tira o Rover, declive custa tempo, mata tira o trecho; `test_plano_do_enxame_usa_as_mesmas_restricoes`) |
+| 7.2.3 | Missão ao Rover mais adequado | **OK** | guloso valor/s com deslocamento: 35,7% do valor coberto com 1 Rover contra 6,2% da varredura (`scripts/mede_alocacao.py`); missão em RASCUNHO |
+| 7.2.4 | Revisão e decisão pelo agrônomo | **OK** | parecer + revisão (`test_cerebro_parecer.py`), fila de revisão do plano fitossanitário (`test_planejamento.py`) |
+| 7.2.5 | Execução controlada | **OK** | `saas/tests/test_principio_de_ouro.py` (16) |
+| 7.2.6 | Regra de segurança do voo de observação (desenhada, desligada) | **OK** (desligada, aguarda o Pedro) | `saas/valtexa/services/regra_voo_observacao.py`: vento, GNSS, energia, altura (premissa a confirmar na regulação), piloto em linha de visada, janela diurna, sem aplicação, geometria; `tests/test_regra_voo_observacao.py` (3): cada verificação segura, ninguém importa a regra e o Safety Engine continua bloqueando o voo |
+| | **7.2 no todo** | **OK** (com ressalva) | o voo não é comandado pela plataforma (decisão do Pedro); o canal do drone é suposição até a calibração com plantas rotuladas |
+
+### 7.3 — Alocação baseada em incerteza
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| 7.3a | `f(risco, incerteza, impacto, custo, disponibilidade)` | **OK** | VOI (`ia/app/gemeo/prioridade.py`) + alocador; números acima |
+| 7.3b | Calibrada contra missões excessivas em áreas pouco relevantes | **OK** | valor mínimo por minuto de robô, do produtor: `test_planejamento.py::test_valor_minimo_por_minuto_evita_missao_excessiva`. Sem o número do produtor, não corta (premissa dita) |
+| 7.3c | Calibrada contra regiões importantes esquecidas | **OK** | piso de vigilância (14 dias, não medido): `test_piso_de_vigilancia_nao_deixa_trecho_esquecido` — trecho de valor zero visto há 30 dias entra com a bateria que sobra |
+| | **7.3 no todo** | **OK** (com ressalva) | as calibrações valem no plano de apoio e no plano do enxame; os dois limiares (valor por minuto, 14 dias) são premissas não medidas e o benchmark dos dois modos de falha não foi rodado |
+
+### Orçamento de dados (Starlink de cada Rover)
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| D1 | Teto por Rover (dia e missão), no `rover.json` e pela plataforma (assinado na missão) | **OK** | `rover/tests/test_orcamento.py` (23), `saas/tests/test_orcamento_dados.py` (6) |
+| D2 | Contabilidade do que subiu (Rover × plataforma) | **OK** | os mesmos; vídeo ao vivo e pedido que cai no meio contados (verificação hostil da Parte 2) |
+| D3 | Corte por prioridade (comando, segurança, telemetria, eventos críticos nunca cortam) | **OK** | `test_orcamento.py`; prioridade 1 nunca retida |
+| D4 | Tempestade de eventos | **OK** | `test_orcamento.py` (histerese, `EVENT_STORM`) |
+| D5 | Deduplicação por planta (k melhores originais) | **OK** | `test_orcamento.py` |
+| D6 | Relatório de consumo no console | **OK** | cartão "Dados pela Starlink"; `web/src/lib/dados.test.ts` (5) |
+| D7 | Números simulados marcados | **OK** | `docs/ROVER_RUNTIME.md` §27: ~54 GB/dia gerados → ~2 GB/dia com o teto (SIMULADO) |
+| D8 | Orçamento como restrição do planejamento | **OK** | `test_planejamento.py::test_robotico_orcamento_de_dados_da_starlink` (resta 900 000 B de 1 MB com 10% de reserva; tarefas além disso ficam de fora, com motivo) |
+| | **Orçamento no todo** | **OK** (simulado) | consumo real da Starlink não medido em hardware |
+
+### 8.1 — Copiloto fitossanitário neuro-simbólico (`docs/CEREBRO.md`)
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| 8.1a | Repositório de conhecimento versionado e rastreável | **OK** | `test_cerebro_conhecimento.py` (22): versão imutável, hash, trechos com citação conferível |
+| 8.1b | Regulatório vencido/não verificado bloqueia uso operacional | **OK** | `test_cerebro_conhecimento.py`, `test_cerebro_parecer.py`; e a situação **de hoje** na leitura do parecer (`test_cerebro_hostil.py::test_fonte_que_venceu_depois_do_parecer_aparece_na_leitura`) |
+| 8.1c | RAG local, sem chamada externa | **OK** | BM25 em memória; provedor desligado por padrão (`test_provedor_desligado_por_padrao_nao_chama_nada`) |
+| 8.1d | Modelo de linguagem/visão com citação validada | **PARCIAL** | interface e validador prontos, testados com dublê (inclusive injeção pelo documento — `test_cerebro_hostil.py`); nenhum provedor real (decisão do Pedro) |
+| 8.1e | Fontes oficiais (bulas, MAPA, Embrapa, escalas) | **NÃO** | repositório nasce vazio de propósito: nada inventado; ingestão pronta (`python -m valtexa.cerebro.ingestao`) |
+| 8.1f | Histórico do talhão, gêmeo, visuais, clima e regras no dossiê | **OK** | `test_cerebro_parecer.py` (com a IA dublê: "a verificar com o modelo real") |
+| | **8.1 no todo** | **PARCIAL** | falta conteúdo real e provedor — decisões do Pedro |
+
+### 8.2 — Parecer
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| 8.2a | Hipótese principal e alternativas, qualidade da evidência, incerteza e horizonte do gêmeo | **OK** | `test_cerebro_parecer.py` (24) |
+| 8.2b | O que verificar antes de agir (diagnóstico, cultura, registro, alvo, dose, restrições, carência, ambiente) — nunca "ok" | **OK** | idem; `test_toda_afirmacao_e_toda_verificacao_tem_citacao` |
+| 8.2c | Não transforma probabilidade em certeza; não recomenda dose | **OK** | validador (certeza, recomendação operacional); texto livre que parece instrução é omitido (`test_cerebro_hostil.py`, 9) |
+| | **8.2 no todo** | **OK** | |
+
+### 8.3 — Planejamento (`docs/PLANEJAMENTO.md`)
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| 8.3a | Fila de casos para revisão (risco × incerteza × impacto) | **OK** | `test_planejamento.py::test_fila_risco_x_incerteza_x_impacto` |
+| 8.3b | Comparar o histórico de sintomas (lesões persistentes/novas) | **OK** | `test_historico_regioes_e_alternativas` |
+| 8.3c | Regiões prioritárias | **OK** | idem (do gêmeo) |
+| 8.3d | Alternativas de manejo | **OK** | idem (5 alternativas, sem produto nem dose) |
+| 8.3e | Rotação por modo de ação só com produto cadastrado com fonte e registro vigente | **OK** | `test_rotacao_so_com_produto_com_fonte_vigente` (vencida, não verificada, fictícia, sem fonte, sem modo: fora, com motivo) |
+| 8.3f | Rotas de menor custo, bateria, distribuição entre dispositivos | **OK** | `test_robotico_reaproveita_o_enxame_e_registra_premissas` |
+| 8.3g | Inclinação e obstáculos (módulos de terreno lidos, não editados) | **OK** | `test_robotico_inclinacao_*`, `test_robotico_obstaculo_*`; contrato `ia/tests/test_contrato_planejamento.py` (2) |
+| 8.3h | Orçamento de dados da Starlink como restrição | **OK** | `test_robotico_orcamento_de_dados_da_starlink` |
+| 8.3i | Insumos: demanda pelo histórico, cenários com intervalo, reposição; sem histórico, não estima | **OK** | `test_insumos_*` (bootstrap determinístico, p10 ≤ p50 ≤ p90) |
+| 8.3j | Premissas registradas e revisão humana | **OK** | origem de cada premissa; revisão por tipo com hash (`test_revisao_por_tipo_e_hash`) |
+| 8.3k | API + tela no console | **OK** | 7 rotas; `/talhoes/:id/planejamento`, `/planejamento/:id`, `/planejamento/insumos`; `planejamento.test.ts` (5). **Não vista no navegador** |
+| | **8.3 no todo** | **OK** | com a IA dublê |
+
+### 8.4 — Princípio de Ouro (`docs/SEGURANCA.md` §6)
+
+| # | Critério | Estado | Evidência |
+| --- | --- | --- | --- |
+| 8.4a | Nenhuma rota/serviço do agente escreve estado autorizado | **OK** | `test_principio_de_ouro.py`: varredura AST + todas as 24 rotas do copiloto, planejamento, enxame e federado com a foto do banco; fio de disparo para rota nova; mutação conferida |
+| 8.4b | Autorização só por humano com papel de agrônomo, reconferida | **OK** | `test_so_o_papel_de_agronomo_aprova_aplicacao`, `test_aprovar_exige_usuario_humano_agronomo`, `test_safety_engine_reconfere_o_papel_do_aprovador` |
+| 8.4c | Safety Engine determinístico como único caminho de liberação | **OK** | `test_autorizado_so_por_authorize_depois_do_safety_engine`, `test_fio_de_disparo_dos_campos_de_liberacao`, `test_safety_engine_e_deterministico`, `test_liberacao_bloqueada_*`, `test_missao_de_inspecao_*` |
+| | **8.4 no todo** | **OK** | |
 
 ## Outros testes que sustentam a tabela
 

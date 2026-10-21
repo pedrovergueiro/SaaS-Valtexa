@@ -1,7 +1,7 @@
 """Recepção do que o Rover Runtime sincroniza: registros e arquivos em chunks.
 
 Brief, seções 18, 38 e 52. O contrato completo, com os dois lados, está em
-``docs/SYNC.md`` (raiz do repositório). O que este módulo garante:
+``VALTEXA-ROVER/docs/SYNC.md``. O que este módulo garante:
 
 * **idempotência por ID e hash** — um registro é ``(robô, record_id)`` com o
   SHA-256 do JSON canônico do corpo (chaves ordenadas, separadores ``,`` e
@@ -26,7 +26,8 @@ O *staging* (:class:`ChunkStaging`) é uma interface. :class:`LocalChunkStaging`
 (disco, sob ``STORAGE_DIR/_uploads``) é a implementação de desenvolvimento e de
 um servidor único; com ``STORAGE_BACKEND=s3`` os chunks vão para o bucket
 (:class:`~valtexa.services.storage.S3ChunkStaging`), e qualquer réplica recebe
-qualquer chunk e monta o arquivo — ver ``docs/SYNC.md`` e ``docs/DEPLOY.md``.
+qualquer chunk e monta o arquivo — ver ``VALTEXA-ROVER/docs/SYNC.md`` e
+``docs/plataforma/DEPLOY.md``.
 """
 
 from __future__ import annotations

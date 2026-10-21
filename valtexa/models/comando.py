@@ -28,6 +28,8 @@ KINDS = (
     "reiniciar",  # reinicia o serviço (o systemd sobe de novo)
     "ensaio",  # roda um ensaio de validação numa thread (progresso → laudo)
     "ensaio_cancelar",  # para o ensaio em curso
+    "liberar_retidos",  # volta à fila o que o orçamento de dados reteve no disco
+    "orcamento",  # o consumo de dados do dia, pelo próprio robô
 )
 STATES = ("pendente", "entregue", "em_execucao", "concluido", "falhou", "expirado",
           "cancelado")

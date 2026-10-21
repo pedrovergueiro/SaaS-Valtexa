@@ -126,12 +126,8 @@ export function converteParametro(texto: string, padrao: unknown): unknown {
   return t
 }
 
-/**
- * O nome da fase na tela. A FASE ENLACE (Parte 13) tem o número 6 no banco, mas é a
- * comunicação da fazenda: aparece como "ENLACE", não como "6".
- */
-export const FASE_ENLACE = 6
-export const rotuloFase = (fase: number): string => (fase === FASE_ENLACE ? 'ENLACE' : String(fase))
+/** O nome da fase na tela (a FASE ENLACE, nº 6, saiu com a base da fazenda em 20/10/2026). */
+export const rotuloFase = (fase: number): string => String(fase)
 
 /** Limite que afrouxa o portão (o servidor recusaria): a tela avisa antes. */
 export function afrouxa(valor: unknown, padrao: unknown, sentido?: 'max' | 'min'): boolean {

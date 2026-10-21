@@ -316,7 +316,7 @@ def comandos_recentes(session: Session, device: Device, limite: int = 30) -> lis
 
 def painel(session: Session, device: Device, snapshot: dict) -> dict:
     """Tudo de um rover numa resposta: estado, peças, IA, missão, comandos, telemetria."""
-    from valtexa.services import estacao_base, model_registry
+    from valtexa.services import model_registry
 
     agora = _agora()
     desde = agora - timedelta(hours=2)
@@ -358,7 +358,6 @@ def painel(session: Session, device: Device, snapshot: dict) -> dict:
         "recent_results": resultados,
         "telemetry": serie,
         "parts": PECAS,
-        "caminho": estacao_base.caminho(session, device, agora),
     }
 
 

@@ -234,6 +234,16 @@ class Settings(BaseSettings):
         description="Base do valtexa-disease-backend. Ver o repositório VALTEXA-B.",
     )
     inference_timeout_seconds: float = Field(default=30.0, gt=0)
+
+    # --- cérebro agronômico (8.1, 8.2) -----------------------------------------
+    cerebro_provedor: str = Field(
+        default="desligado",
+        description=(
+            "Provedor de linguagem/visão do parecer (valtexa.cerebro.provedor). 'desligado' "
+            "(padrão): parecer só do compositor determinístico, nenhuma chamada externa. A "
+            "chave de um provedor vem do ambiente dele, nunca daqui."
+        ),
+    )
     inference_service_token: str | None = Field(
         default=None,
         description=(

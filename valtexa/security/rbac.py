@@ -59,12 +59,29 @@ DATASET_MANAGE = "dataset:manage"
 
 AUDIT_READ = "audit:read"
 
+PARECER_GENERATE = "parecer:generate"
+"""Pedir ao cérebro agronômico um parecer de um caso. Ler é ``diagnosis:read``; revisar é
+``diagnosis:review`` (o agrônomo). Nenhum dos três autoriza aplicação nem cria missão."""
+
+KNOWLEDGE_MANAGE = "knowledge:manage"
+"""Ingerir e verificar fonte de conhecimento **do cliente** (histórico da propriedade, bula
+que o agrônomo conferiu). As fontes da plataforma são ``platform:knowledge:manage``."""
+
+PLANEJAMENTO_GENERATE = "planejamento:generate"
+"""Pedir ao cérebro um plano de apoio (fitossanitário, robótico, de insumos). Ler é
+``decision:read``. Revisar depende do tipo: fitossanitário ``diagnosis:review`` (agrônomo),
+robótico ``mission:create``, insumos ``product:manage``. Nenhum dos três cria missão, aprova
+prescrição ou aplicação, nem muda limiar de modelo."""
+
 SUPPORT_TICKET = "support:ticket"
 """Abrir chamado, comentar, fechar e reabrir (Parte 6, seção 49). Ler os chamados do
 cliente é ``tenant:read``: todo mundo do cliente acompanha."""
 
 ALL_CAPABILITIES = frozenset(
     {
+        PARECER_GENERATE,
+        PLANEJAMENTO_GENERATE,
+        KNOWLEDGE_MANAGE,
         SUPPORT_TICKET,
         TENANT_READ,
         TENANT_MANAGE,
@@ -123,6 +140,9 @@ ROLE_CAPABILITIES: dict[Role, frozenset[str]] = {
         TANK_LOAD,
         AUDIT_READ,
         SUPPORT_TICKET,
+        PARECER_GENERATE,
+        KNOWLEDGE_MANAGE,
+        PLANEJAMENTO_GENERATE,
     },
     Role.ADMIN: _READ_ONLY
     | {
@@ -137,6 +157,9 @@ ROLE_CAPABILITIES: dict[Role, frozenset[str]] = {
         TANK_LOAD,
         AUDIT_READ,
         SUPPORT_TICKET,
+        PARECER_GENERATE,
+        KNOWLEDGE_MANAGE,
+        PLANEJAMENTO_GENERATE,
     },
     Role.AGRONOMIST: _READ_ONLY
     | {
@@ -147,11 +170,15 @@ ROLE_CAPABILITIES: dict[Role, frozenset[str]] = {
         MISSION_ABORT,
         PRODUCT_MANAGE,
         SUPPORT_TICKET,
+        PARECER_GENERATE,
+        KNOWLEDGE_MANAGE,
+        PLANEJAMENTO_GENERATE,
     },
     # O operador conduz a frota e pode sempre abortar — parar nunca depende de
     # permissão especial. Criar e aprovar aplicação, não.
     Role.OPERATOR: _READ_ONLY
-    | {MISSION_CREATE, MISSION_DISPATCH, MISSION_ABORT, TANK_LOAD, SUPPORT_TICKET},
+    | {MISSION_CREATE, MISSION_DISPATCH, MISSION_ABORT, TANK_LOAD, SUPPORT_TICKET,
+       PLANEJAMENTO_GENERATE},
     Role.TECHNICIAN: _READ_ONLY
     | {DEVICE_PROVISION, DEVICE_MANAGE, MISSION_ABORT, SUPPORT_TICKET},
     Role.AUDITOR: _READ_ONLY | {AUDIT_READ},
@@ -244,8 +271,12 @@ PLATFORM_OBSERVABILITY_READ = "platform:observability:read"
 PLATFORM_ALERT_MANAGE = "platform:alert:manage"
 """Reconhecer alerta e mudar as regras padrão (limite, janela, ligada/desligada)."""
 
+PLATFORM_KNOWLEDGE_MANAGE = "platform:knowledge:manage"
+"""Ingerir e verificar as fontes da plataforma (bula, registro MAPA, Embrapa, escala, artigo)
+que todo cliente lê. Quem ingere declara origem, versão, licença e verificação."""
 PLATFORM_ONLY_CAPABILITIES = frozenset(
     {
+        PLATFORM_KNOWLEDGE_MANAGE,
         PLATFORM_OBSERVABILITY_READ,
         PLATFORM_ALERT_MANAGE,
         PLATFORM_TICKET_READ,
@@ -311,6 +342,7 @@ PLATFORM_ROLE_CAPABILITIES: dict[PlatformRole, frozenset[str]] = {
             DATASET_READ,
             DATASET_MANAGE,
             PLATFORM_TICKET_READ,
+            PLATFORM_KNOWLEDGE_MANAGE,
         }
     ),
     PlatformRole.OPERACOES: frozenset(

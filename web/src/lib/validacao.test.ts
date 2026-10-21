@@ -54,9 +54,9 @@ describe('ensaios', () => {
   })
 })
 
-describe('fase ENLACE', () => {
-  it('mostra ENLACE no lugar do número 6', () => {
-    expect(rotuloFase(6)).toBe('ENLACE')
+describe('rótulo da fase', () => {
+  it('mostra o número (a FASE ENLACE saiu com a base da fazenda)', () => {
+    expect(rotuloFase(0)).toBe('0')
     expect(rotuloFase(1)).toBe('1')
   })
 })

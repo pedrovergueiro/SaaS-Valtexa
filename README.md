@@ -115,7 +115,7 @@ origem `drone_owned` é recusada com **422**.
 | Camada | Onde | Estado |
 |---|---|---|
 | Modelo de domínio (83 tabelas) | `valtexa/models/` | completo |
-| Migrações | `migrations/` (Alembic, 0001–0031) | aplicadas no start |
+| Migrações | `migrations/` (Alembic, 0001–0035) | aplicadas no start |
 | Autenticação, assinatura, RBAC | `valtexa/security/` | completo |
 | Motor de decisão, safety engine, gêmeo digital e cópia 3D | `valtexa/services/` | completo |
 | Coletas: upload em pedaços, fila, dataset | `valtexa/services/collections.py` | completo (ver *Coletas*) |
@@ -124,11 +124,11 @@ origem `drone_owned` é recusada com **422**.
 | Worker: eventos, expiração, conectividade, retenção | `valtexa/worker.py` | completo |
 | Console — o SaaS visual | `web/` | completo (ver *Console*) |
 | Frota simulada (rover, drone, dock) | `simulator/` | completa |
-| Frota: model registry, OTA assinada, sincronização do rover, enlace e estação-base | `valtexa/services/` | completo do lado da nuvem (ver *Frota e edge*) |
+| Frota: model registry, OTA assinada, sincronização do rover, orçamento de dados da Starlink | `valtexa/services/` | completo do lado da nuvem (ver *Frota e edge*) |
 | Observabilidade, notificações, chamados de suporte, planos e consentimento | `valtexa/observability/`, `valtexa/services/` | completo |
 | Produção: compose, Caddy, Prometheus, Grafana | `deploy/` | pronto, nunca implantado de verdade |
 | Hardware do rover (chassi, desenhos, DXF) | `hardware/` | documentação de projeto |
-| Testes (66 arquivos, ~850 funções de teste; rodam em SQLite e em Postgres) | `tests/` | completos |
+| Testes (73 arquivos, ~950 funções e ~1.090 casos com a parametrização; rodam em SQLite e em Postgres) | `tests/` | completos |
 | Firmware | — | **não construído** (ver `docs/*_INTEGRATION.md`) |
 | Drone próprio, voo autônomo, pulverização aérea | — | **fase futura**, sem código (ver *Coletas*) |
 
@@ -181,16 +181,16 @@ O que a nuvem já oferece para um rover que ainda não existe em campo:
 - **Model Registry** — só roda no robô o modelo publicado, com hash conferido;
 - **OTA assinada** — publicação, alvo, acompanhamento, A/B e *rollback* (`docs/plataforma/OTA.md`);
 - **Sincronização do rover** — chunks, retomada, prioridade e idempotência por
-  `(dispositivo, sequência)` (`docs/plataforma/SYNC.md`);
-- **Enlace e estação-base** — protocolo de enlace à prova de falha, malha com
-  repetidoras e levantamento de cobertura (`docs/plataforma/COMUNICACAO_FAZENDA.md`);
+  `(dispositivo, sequência)` (`VALTEXA-ROVER/docs/SYNC.md`). Cada Rover fala direto pela
+  própria Starlink; a base da fazenda e o rádio foram **arquivados** em 20/10/2026
+  (`archive/legacy/radio-fazenda/`);
 - **Observabilidade** — métricas, regras e painéis em `deploy/observabilidade/`
   (`docs/plataforma/OBSERVABILIDADE.md`);
 - **Produção** — compose com API, worker, IA, Postgres, Redis, MinIO, Prometheus e
   Caddy em `deploy/producao/`; segredos fracos ou repetidos são recusados
   (`docs/plataforma/DEPLOY.md`, `docs/plataforma/SEGURANCA.md`).
 
-O andamento, com números, está em `docs/plataforma/PROGRESSO.md`.
+O estado atual está em `docs/ESTADO_ATUAL.md`; o diário das rodadas, em `docs/historico/PROGRESSO.md`.
 
 ### Três repositórios, um produto
 
@@ -346,11 +346,14 @@ então todo handler é idempotente. → `docs/EVENTS.md`
 
 | Arquivo | Para quem |
 |---|---|
-| `docs/ARCHITECTURE.md` | quem vai mexer no sistema |
+| `docs/README.md` | **índice**: o que é atual e o que é histórico |
+| `docs/ARCHITECTURE.md` | **a arquitetura oficial** do sistema inteiro (IA, plataforma, Rover) |
+| `docs/COMPONENTS.md`, `docs/DECISIONS.md` | cada componente e seu estado; cada decisão e o motivo |
+| `docs/ESTADO_ATUAL.md`, `docs/CLEANUP_REPORT.md` | o que está medido e o que é simulação; o que a consolidação de 20/10/2026 mudou |
 | `docs/DEVICE_PROTOCOL.md` | **quem vai escrever firmware** |
-| `docs/ROVER_INTEGRATION.md` | firmware do rover, rota a rota |
+| `docs/ROVER_INTEGRATION.md` | o rover **simulado** (Scout), rota a rota; o Runtime real está em `VALTEXA-ROVER/docs/` |
 | `docs/DRONE_INTEGRATION.md` | firmware do drone, incluindo fail-safe |
-| `docs/DOCK_INTEGRATION.md` | firmware da base |
+| `docs/DOCK_INTEGRATION.md` | firmware da dock (base autônoma do drone) |
 | `docs/AUTHENTICATION.md` | segurança: chaves, rotação, revogação |
 | `docs/API.md` | quem vai construir o frontend |
 | `docs/TELEMETRY.md` | o que medir e com que frequência |
@@ -363,7 +366,8 @@ então todo handler é idempotente. → `docs/EVENTS.md`
 | `docs/SIMULATOR.md` | como rodar e o que observar |
 | `docs/DEPLOYMENT.md` | produção, migrações, escala |
 | `docs/COLLECTIONS.md` | coletas aéreas e formação do dataset |
-| `docs/plataforma/` | rodada de plataforma: arquitetura, auditoria, OTA, sincronização, enlace, observabilidade, segurança, deploy, ensaios |
+| `docs/plataforma/` | OTA, observabilidade, segurança, deploy, ensaios, cérebro, planejamento, federado, dNATY |
+| `docs/historico/` | auditorias, verificações, progresso, rodadas, briefs, aceite (referência histórica) |
 
 ---
 

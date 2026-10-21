@@ -178,8 +178,13 @@ class Device(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     health_reported_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), doc="Quando o robô mediu a saúde guardada em ``health``."
     )
-    # Rádio da fazenda (valtexa.services.chave_de_enlace): a pública X25519 do enlace
-    # assinada pela identidade do robô. A base busca daqui, conferindo a assinatura.
+    orcamento_dados: Mapped[dict | None] = mapped_column(
+        doc="Teto de dados pela Starlink do robô: {bytes_dia, bytes_missao}. Vai na missão "
+            "assinada e vale por cima do rover.json. Ver services/orcamento_dados.py."
+    )
+    # LEGADO (rádio da fazenda, arquivado em 20/10/2026): a pública X25519 do enlace que a
+    # base buscava. Ninguém escreve mais aqui; a coluna fica porque a migração 0030 já foi
+    # aplicada. Ver archive/legacy/radio-fazenda/.
     enlace_chave: Mapped[dict | None] = mapped_column(
         doc="{nome, enlace_pub, assinatura, ed25519_pub} publicado pelo próprio robô."
     )

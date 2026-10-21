@@ -7,8 +7,6 @@ import { useQuery } from '@tanstack/react-query'
 import { api, apiUpload, authHeaders, buildUrl, type Query } from '@/api/client'
 import { useApiMutation } from '@/api/queries'
 import type { components } from '@/api/schema'
-import type { MapaCobertura } from '@/lib/cobertura'
-import type { Caminho, EnlaceRadio } from '@/lib/enlace'
 import type { DefinicaoEnsaio, EnsaioResultado, Portao } from '@/lib/validacao'
 
 type S = components['schemas']
@@ -279,55 +277,7 @@ export type RoverPanel = {
     rtk_fix: string
   }[]
   parts: string[]
-  caminho: Caminho
 }
-
-/** Base da fazenda (``/v1/platform/bases``): o retrato que ela manda. */
-export type FarmBase = {
-  id: string
-  name: string
-  serial_number: string
-  tenant_id: string
-  farm_id: string | null
-  last_seen_at: string | null
-  contato_ha_s: number | null
-  reportado_em: string | null
-  internet: { ok: boolean; quedas: number | null; ultima_falha: string | null } | null
-  uplink: Record<string, number> | null
-  custodia: number | null
-  disk_percent: number | null
-  rovers: { serial: string; vivo: boolean; melhor: string | null; em_travessia: boolean; enlaces: EnlaceRadio[] }[]
-  repetidoras: { nome: string; vivo: boolean; bateria_pct: number | null }[]
-  rovers_vivos: number
-  /** Talhões que a base atende e se cada um já tem levantamento de cobertura. */
-  talhoes?: TalhaoDaBase[]
-}
-
-export type TalhaoDaBase = {
-  id: string
-  name: string
-  cobertura_em: string | null
-  contagem: Record<'bom' | 'marginal' | 'morto', number> | null
-  zonas_mortas: number
-}
-
-export const usePlatformBases = () =>
-  useQuery({
-    queryKey: ['platform', 'bases'],
-    queryFn: () => api<FarmBase[]>('/v1/platform/bases'),
-    refetchInterval: 5_000,
-  })
-
-/** O mapa de cobertura do rádio de um talhão (o último levantamento que a base mandou). */
-export const useCoberturaDoTalhao = (fieldId: string | null) =>
-  useQuery({
-    queryKey: ['platform', 'cobertura', fieldId],
-    enabled: !!fieldId,
-    queryFn: () =>
-      api<{ field_id: string; name: string; mapa: MapaCobertura | null; cobertura_em: string | null }>(
-        `/v1/platform/fields/${encodeURIComponent(fieldId!)}/cobertura`,
-      ),
-  })
 
 export type PinnableModel = {
   model_key: string

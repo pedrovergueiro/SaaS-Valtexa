@@ -34,6 +34,7 @@ from valtexa.models import (
 )
 from valtexa.schemas import (
     AbortRequest,
+    MapaAplicacaoIn,
     MissionApproval,
     MissionCreate,
     MissionOut,
@@ -46,6 +47,7 @@ from valtexa.schemas import (
 )
 from valtexa.security import rbac
 from valtexa.services import (
+    aplicacao_localizada,
     audit,
     geo,
     missao_resultado,
@@ -207,6 +209,15 @@ def approve(
             status.HTTP_409_CONFLICT, f"Missão já encerrada em {mission.state.value!r}."
         )
 
+    plano = dict(mission.plan or {})
+    mapa = plano.get("mapa_aplicacao")
+    if mapa is not None:
+        # A aprovação fica presa ao mapa que o agrônomo viu: trocar o mapa a apaga.
+        if not aplicacao_localizada.integro(mapa):
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                "Mapa de aplicação alterado ou incompleto: gere de novo.")
+        plano["mapa_aplicacao_aprovado"] = mapa["sha256"]
+        mission.plan = plano
     mission.approved_by = principal.user_id
     mission.approved_at = datetime.now(UTC)
     audit.record(
@@ -223,8 +234,72 @@ def approve(
             "product_id": mission.product_id,
             "rate_l_ha": mission.authorized_rate_l_ha,
             "role": principal.role.value,
+            "mapa_aplicacao_sha256": mapa["sha256"] if mapa is not None else None,
         },
     )
+    session.commit()
+    return _mission_out(session, mission)
+
+
+@router.post(
+    "/missions/{mission_id}/mapa-aplicacao",
+    response_model=MissionOut,
+    summary="Anexa o mapa de aplicação localizada (taxa por trecho, PWM por bico)",
+)
+def anexar_mapa_de_aplicacao(
+    mission_id: str,
+    pedido: MapaAplicacaoIn,
+    principal: Principal = Depends(require(rbac.MISSION_CREATE)),
+    session: Session = Depends(get_session),
+) -> MissionOut:
+    """Pede à IA o mapa sobre o risco previsto, com a bula do produto da missão, e o guarda no
+    plano. Só em missão de pulverização **em rascunho**; um mapa novo **apaga a aprovação**
+    (o agrônomo aprova o mapa que vê) — o Safety Engine confere cada trecho antes de liberar."""
+    from valtexa.models import Product
+    from valtexa.services import plant_map
+
+    mission = get_scoped(session, Mission, mission_id, principal)
+    if mission.kind is not MissionKind.SPRAY or mission.state is not MissionState.DRAFT:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "Mapa de aplicação só em missão de pulverização em rascunho.")
+    produto = session.get(Product, mission.product_id) if mission.product_id else None
+    if produto is None or produto.tenant_id != mission.tenant_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Defina o produto da missão antes.")
+    faltam = [nome for nome, valor in (
+        ("registro no MAPA", produto.registration_number), ("dose mínima", produto.min_rate_l_ha),
+        ("dose padrão", produto.default_rate_l_ha), ("dose máxima", produto.max_rate_l_ha),
+        ("carência", produto.preharvest_interval_days)) if valor is None or valor == ""]
+    if faltam:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "O cadastro do produto não tem: " + ", ".join(faltam) + ".")
+    corpo = {**pedido.model_dump(exclude_none=True), "produto": {
+        "nome": produto.name, "registro_mapa": produto.registration_number,
+        "culturas": list(produto.allowed_crops or []),
+        "alvos": list(produto.authorized_targets or []),
+        "dose_min_l_ha": produto.min_rate_l_ha, "dose_l_ha": produto.default_rate_l_ha,
+        "dose_max_l_ha": produto.max_rate_l_ha,
+        "carencia_dias": produto.preharvest_interval_days,
+        **({"vento_max_ms": produto.max_wind_ms} if produto.max_wind_ms else {})}}
+    try:
+        mapa = plant_map.aplicacao_localizada_gemeo(mission.field_id, corpo)
+    except plant_map.PlantMapRefusedError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except plant_map.PlantMapUnavailableError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    if mapa is None or not aplicacao_localizada.integro(mapa):
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "A IA não devolveu um mapa íntegro.")
+    plano = {k: v for k, v in (mission.plan or {}).items() if k != "mapa_aplicacao_aprovado"}
+    plano["mapa_aplicacao"] = mapa
+    mission.plan = plano
+    mission.approved_by = None
+    mission.approved_at = None
+    audit.record(
+        session, tenant_id=principal.tenant_id, action="mission.application_map_attached",
+        subject_type=SubjectType.MISSION, subject_id=mission.id, actor_type=ActorType.USER,
+        actor_id=principal.user_id, actor_label=principal.user.email,
+        payload={"sha256": mapa["sha256"], "trechos": len(mapa["zonas"]),
+                 "litros": (mapa.get("totais") or {}).get("litros"),
+                 "bloqueios": mapa.get("bloqueios")})
     session.commit()
     return _mission_out(session, mission)
 

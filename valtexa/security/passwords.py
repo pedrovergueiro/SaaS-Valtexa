@@ -27,10 +27,6 @@ KEY_BYTES = 32
 MAXMEM = 64 * 1024 * 1024
 
 
-class InvalidHashError(ValueError):
-    """O texto guardado não é um hash scrypt reconhecível."""
-
-
 def hash_password(password: str) -> str:
     """Deriva o hash de uma senha nova."""
     if not password:

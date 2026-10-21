@@ -22,7 +22,8 @@ def test_fase0_inteira_com_veredito_do_servidor(client, session_factory, tmp_pat
         print(f"{'OK' if passo.ok else 'FALHA'} | {passo.nome} | {passo.prova}")
     assert all(p.ok for p in res.passos)
     linhas = {x["rotulo"]: x for x in res.dados["linhas"]}
-    assert len(linhas) == 9
+    assert len(linhas) == 10  # 9 + o relógio, que entrou na FASE 0 em 20/10/2026
+    assert linhas["relógio (chrony com GNSS)"]["status"] == "aprovado"
     assert linhas["bateria e energia"]["status"] == "nao_avaliado"
     assert all(x["simulado"] and not x["divergente"] for x in linhas.values())
     # O GNSS foi medido contra o ponto conhecido, com perda e retomada: vale para o portão.

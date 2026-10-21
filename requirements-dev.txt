@@ -5,9 +5,8 @@ ruff>=0.6
 # (tests/test_coordenacao.py). O teste também usa um redis-server de verdade se houver.
 moto[s3,server]>=5.0
 fakeredis[lua]>=2.20
-# O pacote do Rover (rover/), para o teste de integração robô ↔ SaaS
-# (tests/test_rover_integracao.py). Ele não entra na imagem da plataforma.
+# O pacote do Rover (pasta irmã VALTEXA-ROVER), para o teste de integração robô ↔ SaaS
+# (tests/test_rover_integracao.py) e o contrato (tests/test_contrato_sistemas.py). Ele não
+# entra na imagem da plataforma. (A base da fazenda, VALTEXA-BASE, foi arquivada em
+# 20/10/2026 e saiu daqui.)
 -e ../VALTEXA-ROVER[dev]
-# A base da fazenda (base/), para o ponta a ponta Rover ⇄ rádio emulado ⇄ base ⇄ plataforma
-# (tests/test_base_fazenda.py). Também não entra na imagem da plataforma.
--e ../VALTEXA-BASE[dev]

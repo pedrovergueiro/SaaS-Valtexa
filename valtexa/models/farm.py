@@ -92,9 +92,9 @@ class Field(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     planted_on: Mapped[date | None] = mapped_column(Date)
     cobertura: Mapped[dict | None] = mapped_column(
         doc=(
-            "Mapa de cobertura do rádio da fazenda (levantamento da base): grade com a "
-            "classe de cada célula, zonas mortas e repetidoras sugeridas. Vai assinado na "
-            "missão para o Rover antecipar a travessia. Ver services/cobertura_talhao.py."
+            "LEGADO (rádio da fazenda, arquivado em 20/10/2026): o mapa de cobertura do "
+            "rádio que a base mandava. Ninguém escreve nem lê mais; a coluna fica porque a "
+            "migração 0031 já foi aplicada. Ver archive/legacy/radio-fazenda/."
         )
     )
     cobertura_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

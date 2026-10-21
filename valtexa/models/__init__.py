@@ -15,6 +15,12 @@ from valtexa.models.base import (
     new_id,
     utcnow,
 )
+from valtexa.models.cerebro import (
+    DocumentoConhecimento,
+    Parecer,
+    RevisaoParecer,
+    TrechoConhecimento,
+)
 from valtexa.models.collection import Collection, CollectionFile, ProcessingJob
 from valtexa.models.comando import DeviceCommand
 from valtexa.models.commercial import DataConsent, Plan, Subscription, UsageCounter
@@ -67,6 +73,7 @@ from valtexa.models.enums import (
     TankStatus,
     VerificationConclusion,
 )
+from valtexa.models.enxame import PlanoDoEnxame
 from valtexa.models.farm import Farm, Field, Zone
 from valtexa.models.fleet import (
     PROTOCOL_VERSION,
@@ -98,6 +105,7 @@ from valtexa.models.perception import (
     Observation,
     SafetyEvaluation,
 )
+from valtexa.models.planejamento import PlanoDeApoio, RevisaoPlanoDeApoio
 from valtexa.models.platform_ import AuditEntry, LoginAttempt, OutboxEvent, UsedNonce
 from valtexa.models.scan import RowScan
 from valtexa.models.support import Incident, SupportTicket, TicketComment, TicketEvent
@@ -144,6 +152,7 @@ __all__ = [
     "DeviceStatus",
     "Diagnosis",
     "DiagnosisStatus",
+    "DocumentoConhecimento",
     "EdgeRecord",
     "EdgeUpload",
     "EnergyState",
@@ -173,7 +182,10 @@ __all__ = [
     "OtaDeployment",
     "OtaPackage",
     "OutboxEvent",
+    "Parecer",
     "Plan",
+    "PlanoDeApoio",
+    "PlanoDoEnxame",
     "PlantLabel",
     "PlatformRole",
     "ProcessingJob",
@@ -182,6 +194,8 @@ __all__ = [
     "ProductStatus",
     "ProvisioningToken",
     "ReleaseScope",
+    "RevisaoParecer",
+    "RevisaoPlanoDeApoio",
     "Role",
     "RowScan",
     "RtkFix",
@@ -203,6 +217,7 @@ __all__ = [
     "TicketComment",
     "TicketEvent",
     "Timestamped",
+    "TrechoConhecimento",
     "UUIDPrimaryKey",
     "UsageCounter",
     "UsedNonce",

@@ -406,7 +406,7 @@ modelo vem com `model_key` nulo e `reason`.
 ### Sincronização do Rover Runtime (Parte 4)
 
 Resultados da Edge AI, eventos e arquivos em chunks, idempotentes por ID e hash, com
-retomada de upload — contrato completo em [`docs/SYNC.md`](../../docs/SYNC.md) (raiz):
+retomada de upload — contrato completo em `VALTEXA-ROVER/docs/SYNC.md`:
 
 | Rota | Para quê |
 |---|---|
