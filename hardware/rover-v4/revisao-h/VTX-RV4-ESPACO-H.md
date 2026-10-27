@@ -117,11 +117,39 @@ Varredura da grade inteira, nas duas orientações. É a pergunta certa — dife
 | Compressor 12 V | 210×110×120 | FAIXA | **CABE** | X -107…103 · Y -162…-52 (livre 127 mm) |
 | Reservatório 2 L | 300×110×110 | FAIXA | **CABE** | X -147…153 · Y -162…-52 (livre 127 mm) |
 
+Cuidado ao ler a tabela acima: ela olha **um componente por vez** e aceita qualquer lugar livre do compartimento. Vários componentes recebem a mesma posição, e a posição pode ficar fora da zona reservada para eles. A conferência que importa para o leiaute é a seguinte.
+
+
+
+## Cada componente cabe na zona reservada para ele, junto com os vizinhos?
+
+Planta do componente contra a planta da zona (nas duas orientações), altura contra o teto da zona e, por zona, a área somada contra a área disponível. Acrescentada em 15/10/2026.
+
+| Zona | Componente | L×W×H | origem | veredito | motivo |
+|---|---|---|---|---|---|
+| Bateria | Bateria LiFePO4 estimada | 460×350×130 | ESTIMATIVA | **NÃO CABE** | altura 130 > teto 87 mm |
+| Bateria | *soma da zona* | 1610 cm² |  | **CABE** | área da zona 1813 cm² |
+| Bandeja lateral esquerda | Jetson Orin NX + carrier | 180×110×45 | ESTIMATIVA | **NÃO CABE** | planta 180×110 > zona 380×54 |
+| Bandeja lateral esquerda | *soma da zona* | 198 cm² |  | **CABE** | área da zona 205 cm² |
+| Bandeja lateral direita | Driver dos motores (4 canais) | 200×120×55 | ESTIMATIVA | **NÃO CABE** | planta 200×120 > zona 380×54 |
+| Bandeja lateral direita | BMS | 140×90×35 | ESTIMATIVA | **NÃO CABE** | planta 140×90 > zona 380×54 |
+| Bandeja lateral direita | *soma da zona* | 366 cm² |  | **NÃO CABE** | área da zona 205 cm² |
+| Bandeja dianteira esquerda | Conversor DC/DC 12 V | 110×50×40 | ESTIMATIVA | **CABE** | — |
+| Bandeja dianteira esquerda | *soma da zona* | 55 cm² |  | **CABE** | área da zona 63 cm² |
+| Bandeja traseira esquerda | Roteador / modem | 110×50×35 | ESTIMATIVA | **CABE** | — |
+| Bandeja traseira esquerda | *soma da zona* | 55 cm² |  | **CABE** | área da zona 63 cm² |
+| Grupo pneumático | Compressor 12 V | 210×110×120 | FAIXA | **NÃO CABE** | altura 120 > teto 37 mm |
+| Grupo pneumático | Reservatório 2 L | 300×110×110 | FAIXA | **NÃO CABE** | planta 300×110 > zona 220×190; altura 110 > teto 37 mm |
+| Grupo pneumático | *soma da zona* | 561 cm² |  | **NÃO CABE** | área da zona 418 cm² |
+
+**4 de 6 zonas não comportam o que o projeto põe nelas.** Com as dimensões estimadas, o leiaute interno das bandejas e do grupo pneumático precisa ser refeito quando chegarem as fichas técnicas (P-05, P-13).
+
+
 
 ## O que isto responde e o que continua aberto
 
-**Responde**: o volume interno real, a altura livre ponto a ponto, e se os componentes
-estimados cabem onde o projeto os quer.
+**Responde**: o volume interno real, a altura livre ponto a ponto, se cada componente estimado
+cabe em algum lugar do compartimento e se cabe na zona que o projeto reservou para ele.
 
 **Continua aberto**: as dimensões dos componentes. Toda linha da tabela acima é
 ESTIMATIVA ou FAIXA de catálogo — nenhuma é ficha técnica de peça escolhida. Enquanto for

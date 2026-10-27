@@ -275,13 +275,38 @@ O número real, medido, é o da seção seguinte.
             linhas.append([nome, f'{cl:.0f}×{cw:.0f}×{ch:.0f}', origem, '**NÃO CABE**',
                            'nenhuma área contígua no compartimento'])
     p.append(_tab(['Componente', 'L×W×H', 'origem do dado', 'veredito', 'posição'], linhas))
+    p.append('\nCuidado ao ler a tabela acima: ela olha **um componente por vez** e aceita qualquer lugar livre do '
+             'compartimento. Vários componentes recebem a mesma posição, e a posição pode ficar fora da zona '
+             'reservada para eles. A conferência que importa para o leiaute é a seguinte.\n')
+
+    p.append('\n\n## Cada componente cabe na zona reservada para ele, junto com os vizinhos?\n')
+    p.append('Planta do componente contra a planta da zona (nas duas orientações), altura contra o teto da zona '
+             'e, por zona, a área somada contra a área disponível. Acrescentada em 15/10/2026.\n')
+    lz = []
+    for z in ES.cabe_na_zona_designada():
+        for c in z['componentes']:
+            motivo = []
+            if not c['planta_ok']:
+                motivo.append(f'planta {c["l"]:.0f}×{c["w"]:.0f} > zona {z["planta_zona"][0]:.0f}×{z["planta_zona"][1]:.0f}')
+            if not c['altura_ok']:
+                motivo.append(f'altura {c["h"]:.0f} > teto {z["teto"]:.0f} mm')
+            lz.append([z['zona'], c['componente'], f'{c["l"]:.0f}×{c["w"]:.0f}×{c["h"]:.0f}', c['origem'],
+                       '**CABE**' if c['cabe'] else '**NÃO CABE**', '; '.join(motivo) or '—'])
+        lz.append([z['zona'], '*soma da zona*', f'{z["area_componentes_cm2"]:.0f} cm²', '',
+                   '**CABE**' if z['area_ok'] else '**NÃO CABE**',
+                   f'área da zona {z["area_zona_cm2"]:.0f} cm²'])
+    p.append(_tab(['Zona', 'Componente', 'L×W×H', 'origem', 'veredito', 'motivo'], lz))
+    nao = [z['zona'] for z in ES.cabe_na_zona_designada() if not z['cabe']]
+    p.append(f'\n**{len(nao)} de {len(ES.cabe_na_zona_designada())} zonas não comportam o que o projeto põe nelas.** '
+             'Com as dimensões estimadas, o leiaute interno das bandejas e do grupo pneumático precisa ser refeito '
+             'quando chegarem as fichas técnicas (P-05, P-13).\n')
 
     p.append("""
 
 ## O que isto responde e o que continua aberto
 
-**Responde**: o volume interno real, a altura livre ponto a ponto, e se os componentes
-estimados cabem onde o projeto os quer.
+**Responde**: o volume interno real, a altura livre ponto a ponto, se cada componente estimado
+cabe em algum lugar do compartimento e se cabe na zona que o projeto reservou para ele.
 
 **Continua aberto**: as dimensões dos componentes. Toda linha da tabela acima é
 ESTIMATIVA ou FAIXA de catálogo — nenhuma é ficha técnica de peça escolhida. Enquanto for
@@ -619,16 +644,24 @@ lavoura.
 | Térmicas a {MD.W_TERMICA:.1f} W (FAIXA) | 0 W | {e2['w_termica']:.1f} W | {e['w_termica']:.1f} W |
 | Terminal satelital (provisão) | {e0['w_satelite']:.0f} W | {e2['w_satelite']:.0f} W | {e['w_satelite']:.0f} W |
 | **Total com {(1 - e['rendimento_poe']) * 100:.0f} % de perda de PoE** | **{e0['total_W']:.0f} W** | **{e2['total_W']:.0f} W** | **{e['total_W']:.0f} W** |
-| Conversor de {e['capacidade_dcdc_W']:.0f} W | cabe, folga {e0['folga_W']:.0f} W | cabe, folga {e2['folga_W']:.0f} W | cabe, folga {e['folga_W']:.0f} W |
-| Portas Ethernet (OAK-D + LiDAR + térmicas por Ethernet) | {n['portas_necessarias']} | {n2['portas_necessarias']} | {n4['portas_necessarias']} |
+| Conversor de {e['capacidade_dcdc_W']:.0f} W, só os sensores | cabe, folga {e0['folga_W']:.0f} W | cabe, folga {e2['folga_W']:.0f} W | cabe, folga {e['folga_W']:.0f} W |
+| + Jetson (até {e['w_jetson_max']:.0f} W) + compressor ({e['w_compressor']:.0f} W ao ligar) | **{e0['pico_barramento_12v_W']:.0f} W** | **{e2['pico_barramento_12v_W']:.0f} W** | **{e['pico_barramento_12v_W']:.0f} W** |
+| Conversor de {e['capacidade_dcdc_W']:.0f} W, no pico do barramento | {'cabe' if e0['cabe_no_pico'] else '**não cabe**'}, {e0['folga_pico_W']:.0f} W | {'cabe' if e2['cabe_no_pico'] else '**não cabe**'}, {e2['folga_pico_W']:.0f} W | {'cabe' if e['cabe_no_pico'] else '**não cabe**'}, {e['folga_pico_W']:.0f} W |
+| Portas Ethernet (OAK-D + LiDAR + Jetson + satélite + térmicas por Ethernet) | {n['portas_necessarias']} | {n2['portas_necessarias']} | {n4['portas_necessarias']} |
 | Cabe em switch de {n['portas_do_switch']} portas? | **não** | **não** | **não** |
 | Cabe em switch de {n['portas_com_12']} portas? | {'sim' if n['cabe_em_12'] else 'não'} | {'sim' if n2['cabe_em_12'] else 'não'} | **{'sim' if n4['cabe_em_12'] else 'não — exige 16 portas'}** |
 | Banda agregada | {n['banda_total_Mbps']:.0f} Mbit/s | {n['banda_total_Mbps']:.0f} Mbit/s | {n['banda_total_Mbps']:.0f} Mbit/s |
 
-**A 9ª câmera não dói na energia — dói na rede.** São 10 portas com o LiDAR, e o switch PoE
-de 8 não atende. Trocar por um de 12 portas PoE+ é **item novo de BOM**, não ajuste de
-desenho (P-31). O de 12 portas cobre até **2 térmicas por Ethernet**; as 4 posições
-cheias, por Ethernet, exigem 16 portas. Se a térmica escolhida for USB, ela entra pela Jetson e
+**A 9ª câmera dói na rede, e o barramento de 12 V dói no pico.** São {n['portas_necessarias']} portas com o LiDAR, a
+ligação à Jetson e o terminal satelital, e o switch PoE de 8 não atende. Trocar por um de 12 portas PoE+ é **item
+novo de BOM**, não ajuste de desenho (P-31). O de 12 portas não sobra para nenhuma térmica por Ethernet; com
+térmicas Ethernet, 16 portas.
+
+Na energia, os sensores sozinhos cabem no conversor de {e['capacidade_dcdc_W']:.0f} W, mas ele também alimenta a Jetson e o
+compressor da suspensão (CABOS-H, ligação 5). Com o compressor ligado o pico passa do conversor: conversor maior,
+um segundo conversor só para a suspensão, ou o compressor travado durante a captura (P-17). Correção de
+15/10/2026: até então esta seção conferia só os sensores contra o conversor e contava 10 portas, sem a ligação
+à Jetson e sem o terminal satelital. Se a térmica escolhida for USB, ela entra pela Jetson e
 não ocupa porta — o modelo ainda não existe (P-30). A banda é {n['ocupacao_uplink'] * 100:.0f} % de um uplink de 1 Gbit/s
 com as OAK-D; as térmicas somam pouco a ela.
 
@@ -887,12 +920,13 @@ def centro_massa_md() -> str:
                     [[s['rotulo'], f"{s['z']:.0f} ({s['dz']:+.1f})", f"{s['y']:+.1f}",
                       f"{s['lat']:.1f}° ({s['dlat']:+.2f})", 'sim' if s['dentro'] else '**NÃO**'] for s in sens])
 
-    tab_div = _tab(['', 'suspensao.py (Rev F ajustada)', 'Este inventário (V4, estado projeto)'], [
-        ['Massa', f"{m_su['massa']:.1f} kg", f"{pr['kg']:.1f} kg"],
-        ['Altura do CG', f"{m_su['zcg']:.1f} mm", f"{pr['z']:.1f} mm"],
-        ['Tombamento lateral', f"{r_su['tombamento_deg']:.2f}°",
+    tab_div = _tab(['', 'suspensao.py até 15/10/2026 (CG da Rev F ajustada)',
+                    'suspensao.py agora', 'Este inventário (V4, estado projeto)'], [
+        ['Massa da estabilidade', f"{m_su['massa']:.1f} kg", f"{r_su['massa']:.1f} kg", f"{pr['kg']:.1f} kg"],
+        ['Altura do CG', f"{m_su['zcg']:.1f} mm", f"{r_su['zcg']:.1f} mm", f"{pr['z']:.1f} mm"],
+        ['Tombamento lateral', '39,92°', f"{r_su['tombamento_deg']:.2f}° (sem a assimetria em Y)",
          f"{pr['lateral']['tomba_deg']:.2f}°"],
-        ['Envelope (fórmula 6.1)', f"{r_su['envelope_deg']:.2f}°", f"{pr['envelope_deg']:.2f}°"]])
+        ['Envelope (fórmula 6.1)', '20,89°', f"{r_su['envelope_deg']:.2f}°", f"{pr['envelope_deg']:.2f}°"]])
 
     z_min_txt = (f'{zlim_min:.0f} mm' if zlim_min else 'nenhuma altura')
     z_min_frase = (f'**abaixo de {zlim_min:.0f} mm**' if zlim_min else '**nenhuma altura serve**')
@@ -922,24 +956,21 @@ metade da folga lateral.
 * **Aceleração lateral que levanta as rodas: {pr['a_lat']['a_g']:.2f} g** ({pr['a_lat']['a_ms2']:.1f} m/s²). A {v_op} m/s, curva de 1 m de
   raio pede {v_op ** 2:.2f} m/s²: fator de segurança {pr['a_lat']['a_ms2'] / v_op ** 2:.1f}.
 * **O que o mastro cheio custa:** da entrega ao projeto (térmicas e antena) o CG sobe {pr['z'] - en['z']:.0f} mm e o envelope cai
-  {en['envelope_deg'] - pr['envelope_deg']:.1f}°. A diferença para o CG que `suspensao.py` usa ({m_su['zcg']:.0f} mm) é maior — ver a divergência abaixo.
+  {en['envelope_deg'] - pr['envelope_deg']:.1f}°. Até 15/10/2026 `suspensao.py` usava um CG ainda mais baixo ({m_su['zcg']:.0f} mm) — ver abaixo.
 
-## Há uma divergência no pacote — leia antes de usar o envelope de 20,9°
+## A divergência com `suspensao.py` foi resolvida em 15/10/2026
 
-`suspensao.py` calcula a rolagem e o envelope a partir de **{m_su['massa']:.1f} kg com CG a {m_su['zcg']:.1f} mm**. Este inventário,
-somado de baixo para cima, dá **{pr['kg']:.1f} kg com CG a {pr['z']:.1f} mm**:
+Até 15/10/2026, `suspensao.py` calculava a rolagem e o envelope a partir da massa e do CG da **Rev F do V3**
+({SU.MASSA_REV_F} kg, {SU.ZCG_REV_F} mm), trocando o grupo S pelo W — sem o mastro do V4. Dava 39,92° de tombamento e
+20,89° de envelope, otimistas. Agora `suspensao.roll()` usa este inventário (`suspensao.cg_v4()`), e os foles continuam
+dimensionados na massa alta de `suspensao.massa()` ({m_su['massa']:.1f} kg), que é o lado seguro para a pressão:
 
 {tab_div}
 
-A causa está no código: `suspensao.massa()` parte da massa e do CG da **Rev F do V3** ({SU.MASSA_REV_F} kg, {SU.ZCG_REV_F} mm), troca o grupo S
-pelo W e soma o grupo pneumático. Ele **não incorpora o mastro do V4**: haste Ø32×3, nove interfaces VMS-60, as OAK-D e as
-térmicas. Os dois números não podem ser verdadeiros ao mesmo tempo. O de `suspensao.py` é **conservador para a pressão
-dos foles** (mais massa) e **otimista para o tombamento** (CG mais baixo).
-
-O envelope de 20,9° e o tombamento de 39,9° aparecem no documento técnico, no registro de alterações, em `VTX-RV4-SUSPENSAO-H` e na
-folha 07. **Não foram alterados** — mudar o número de referência da suspensão altera o argumento da arquitetura
-e merece decisão do engenheiro. A conclusão que depende só de curso e bitola (a rolagem é limitada pelo curso, 5,39°)
-não muda; a que depende do CG (o envelope) muda.
+A conclusão da arquitetura não mudou — a suspensão pneumática em bitola 530 continua mais estável que o balancim rígido
+em 470 **no mesmo CG** —, mas a margem sobre os {CM.ENVELOPE_BASELINE}° da baseline ficou em décimos de grau. O documento
+`VTX-RV4-SUSPENSAO-H` e o registro de alterações foram corrigidos; **a folha 07 do caderno e o documento técnico do pacote
+ainda trazem os números antigos** até a próxima emissão do caderno.
 
 ## Como foi calculado
 

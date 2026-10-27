@@ -33,29 +33,26 @@ metade da folga lateral.
 * **Aceleração lateral que levanta as rodas: 0,68 g** (6,6 m/s²). A 1,4 m/s, curva de 1 m de
   raio pede 1,96 m/s²: fator de segurança 3,4.
 * **O que o mastro cheio custa:** da entrega ao projeto (térmicas e antena) o CG sobe 17 mm e o envelope cai
-  1,4°. A diferença para o CG que `suspensao.py` usa (286 mm) é maior — ver a divergência abaixo.
+  1,4°. Até 15/10/2026 `suspensao.py` usava um CG ainda mais baixo (286 mm) — ver abaixo.
 
-## Há uma divergência no pacote — leia antes de usar o envelope de 20,9°
+## A divergência com `suspensao.py` foi resolvida em 15/10/2026
 
-`suspensao.py` calcula a rolagem e o envelope a partir de **126,5 kg com CG a 285,9 mm**. Este inventário,
-somado de baixo para cima, dá **121,1 kg com CG a 336,2 mm**:
+Até 15/10/2026, `suspensao.py` calculava a rolagem e o envelope a partir da massa e do CG da **Rev F do V3**
+(110,07 kg, 294,1 mm), trocando o grupo S pelo W — sem o mastro do V4. Dava 39,92° de tombamento e
+20,89° de envelope, otimistas. Agora `suspensao.roll()` usa este inventário (`suspensao.cg_v4()`), e os foles continuam
+dimensionados na massa alta de `suspensao.massa()` (126,5 kg), que é o lado seguro para a pressão:
 
-|  | suspensao.py (Rev F ajustada) | Este inventário (V4, estado projeto) |
-|---|---|---|
-| Massa | 126,5 kg | 121,1 kg |
-| Altura do CG | 285,9 mm | 336,2 mm |
-| Tombamento lateral | 39,92° | 34,06° |
-| Envelope (fórmula 6.1) | 20,89° | 16,31° |
+|  | suspensao.py até 15/10/2026 (CG da Rev F ajustada) | suspensao.py agora | Este inventário (V4, estado projeto) |
+|---|---|---|---|
+| Massa da estabilidade | 126,5 kg | 121,1 kg | 121,1 kg |
+| Altura do CG | 285,9 mm | 336,2 mm | 336,2 mm |
+| Tombamento lateral | 39,92° | 34,89° (sem a assimetria em Y) | 34,06° |
+| Envelope (fórmula 6.1) | 20,89° | 16,31° | 16,31° |
 
-A causa está no código: `suspensao.massa()` parte da massa e do CG da **Rev F do V3** (110,07 kg, 294,1 mm), troca o grupo S
-pelo W e soma o grupo pneumático. Ele **não incorpora o mastro do V4**: haste Ø32×3, nove interfaces VMS-60, as OAK-D e as
-térmicas. Os dois números não podem ser verdadeiros ao mesmo tempo. O de `suspensao.py` é **conservador para a pressão
-dos foles** (mais massa) e **otimista para o tombamento** (CG mais baixo).
-
-O envelope de 20,9° e o tombamento de 39,9° aparecem no documento técnico, no registro de alterações, em `VTX-RV4-SUSPENSAO-H` e na
-folha 07. **Não foram alterados** — mudar o número de referência da suspensão altera o argumento da arquitetura
-e merece decisão do engenheiro. A conclusão que depende só de curso e bitola (a rolagem é limitada pelo curso, 5,39°)
-não muda; a que depende do CG (o envelope) muda.
+A conclusão da arquitetura não mudou — a suspensão pneumática em bitola 530 continua mais estável que o balancim rígido
+em 470 **no mesmo CG** —, mas a margem sobre os 16,2° da baseline ficou em décimos de grau. O documento
+`VTX-RV4-SUSPENSAO-H` e o registro de alterações foram corrigidos; **a folha 07 do caderno e o documento técnico do pacote
+ainda trazem os números antigos** até a próxima emissão do caderno.
 
 ## Como foi calculado
 
@@ -79,8 +76,8 @@ centro dos batentes B-01) e um **bloco restante** de 14,48 kg cuja massa é conh
 
 **Conferência:** o inventário sem os acréscimos do V4 dá **108,43 kg e Z 314,3 mm**, igual ao consolidado do caderno
 (108,43 kg, 314,3 mm) — reproduz. A função de tombamento foi conferida contra
-`suspensao.roll()`: com as mesmas entradas dá o mesmo resultado (39,92°, rolagem 5,39°, envelope
-20,89°).
+`suspensao.roll()`: com as mesmas entradas dá o mesmo resultado (34,89°, rolagem 5,39°, envelope
+16,31°).
 
 ## Inventário — estado "projeto"
 
