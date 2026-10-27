@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Droplets,
   FlaskConical,
+  GraduationCap,
   HeartPulse,
   Images,
   LayoutDashboard,
@@ -66,6 +67,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     group: 'Diagnóstico',
     items: [
       { to: '/revisao', label: 'Fila do agrônomo', icon: ScanSearch, badge: 'review' },
+      { to: '/ensino', label: 'O que a IA aprendeu', icon: GraduationCap, capability: 'diagnosis:review' },
       { to: '/talhoes', label: 'Talhões', icon: Sprout },
       { to: '/coletas', label: 'Coletas', icon: Images },
       { to: '/lavoura-3d', label: 'Lavoura 3D', icon: Box },

@@ -148,6 +148,7 @@ function CongelarCorte({ conjunto, onClose }: { conjunto: DatasetOut; onClose: (
   const congelar = useFreezeDatasetVersion(conjunto.id)
   const [versao, setVersao] = useState('')
   const [notas, setNotas] = useState('')
+  const [politica, setPolitica] = useState<'um' | 'consenso' | 'confiabilidade'>('consenso')
 
   return (
     <Modal
@@ -162,11 +163,11 @@ function CongelarCorte({ conjunto, onClose }: { conjunto: DatasetOut; onClose: (
           <Button
             disabled={!versao || congelar.isPending}
             onClick={async () => {
-              await congelar.mutateAsync({ version: versao, notes: notas || undefined })
+              await congelar.mutateAsync({ version: versao, notes: notas || undefined, politica })
               onClose()
             }}
           >
-            Congelar {conjunto.samples} amostras
+            Congelar corte
           </Button>
         </>
       }
@@ -185,6 +186,16 @@ function CongelarCorte({ conjunto, onClose }: { conjunto: DatasetOut; onClose: (
             onChange={(evento) => setVersao(evento.target.value)}
             placeholder="v1"
           />
+        </FormField>
+        <FormField
+          label="O que basta para uma amostra entrar"
+          hint="Amostra em disputa (alguém discordou) nunca entra. A que fica fora continua candidata para o próximo corte."
+        >
+          <select className="input" value={politica} onChange={(e) => setPolitica(e.target.value as typeof politica)}>
+            <option value="consenso">Consenso: confirmada por uma segunda opinião</option>
+            <option value="confiabilidade">Consenso, ou de agrônomo que concorda com os colegas (80% em 10 pares)</option>
+            <option value="um">Um agrônomo basta</option>
+          </select>
         </FormField>
         <FormField label="Notas">
           <textarea

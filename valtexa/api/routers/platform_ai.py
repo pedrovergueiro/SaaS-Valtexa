@@ -55,7 +55,7 @@ from valtexa.schemas import (
     ModelVersionUpdate,
 )
 from valtexa.security import rbac
-from valtexa.services import dnaty, model_registry
+from valtexa.services import calibracao_campo, dnaty, model_registry
 
 router = APIRouter(tags=["plataforma: IA e frota"])
 
@@ -87,6 +87,7 @@ def model_version_out(linha: ModelVersion) -> ModelVersionOut:
         optimized_artifact_uri=linha.optimized_artifact_uri,
         optimized_artifact_sha256=linha.optimized_artifact_sha256,
         optimized_size_bytes=linha.optimized_size_bytes,
+        extras_manifest_sha256=linha.extras_manifest_sha256,
         dnaty_version=linha.dnaty_version,
         variant=linha.variant,
         recommended=linha.recommended,
@@ -468,8 +469,8 @@ SEM_DADO = {
     "incidentes": "Não há registro de incidente de IA na plataforma ainda.",
     "fps": "O robô ainda não informa FPS da IA embarcada (vem com o Rover Runtime, Parte 4).",
     "performance_em_producao": (
-        "Precisão em produção exige o rótulo do agrônomo confrontado com a IA; a fila "
-        "existe, a métrica agregada ainda não."
+        "Nenhum diagnóstico confirmado pelo agrônomo na janela: sem rótulo humano não há "
+        "acerto nem cobertura em produção para medir."
     ),
 }
 
@@ -558,6 +559,10 @@ def ai_health(
         if etiqueta in descontinuadas:
             desatualizadas.add(etiqueta)
 
+    calibracao = calibracao_campo.medir(session, desde=desde)
+    sem_dado = dict(SEM_DADO)
+    if calibracao:
+        sem_dado.pop("performance_em_producao")
     return AiHealthOut(
         window_days=days,
         active_models=[model_version_out(m) for m in ativos],
@@ -568,5 +573,6 @@ def ai_health(
         rovers_outside_registry=contagem["fora_do_registry"],
         rovers_without_data=contagem["sem_dado"],
         outdated_in_use=sorted(desatualizadas),
-        no_data=dict(SEM_DADO),
+        no_data=sem_dado,
+        field_calibration=calibracao,
     )

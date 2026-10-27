@@ -415,6 +415,18 @@ def vitima(
     session.commit()
     assert session.get(PlanoDeApoio, plano_apoio.id) is not None
     ids["plano_apoio_id"] = plano_apoio.id
+    # Ensino: uma regra do agrônomo da vítima; o atacante tenta medir e desligar.
+    from valtexa.models import RegraAgronomo
+
+    regra = RegraAgronomo(tenant_id=demo["tenant_id"], autor_rotulo="Agrônomo da vítima",
+                          cultura="coffee", doenca="Rust", texto="regra da vítima",
+                          condicao={"variavel": "mes", "meses": [7]}, efeito="aumenta")
+    session.add(regra)
+    session.commit()
+    ids["regra_id"] = regra.id
+    # Amostra do dataset: sem amostra no cliente de demonstração, um id que não existe.
+    ids.setdefault("amostra_id", "amostra-inexistente")
+    ids.setdefault("sample_id", "amostra-inexistente")
     ids["kind"] = "regra-inexistente"
     # Sem recurso desse tipo no cliente de demonstração, um identificador que não
     # existe: a rota precisa responder 404 de qualquer jeito.
@@ -422,6 +434,7 @@ def vitima(
     ids.setdefault("job_id", "trabalho-inexistente")
     ids["plant_id"] = "planta-da-vitima"
     ids["dataset_id"] = "dataset-qualquer"
+    ids["version_id"] = "corte-qualquer"
     ids["plan_id"] = "plano-qualquer"
     ids["model_version_id"] = "versao-de-modelo-qualquer"
     ids["release_id"] = "liberacao-qualquer"

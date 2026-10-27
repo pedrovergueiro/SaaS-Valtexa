@@ -183,6 +183,9 @@ class DatasetVersion(UUIDPrimaryKey, Timestamped, Base):
     )
     sample_ids: Mapped[list] = mapped_column(default=list, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
+    criterio: Mapped[dict] = mapped_column(
+        default=dict, nullable=False,
+        doc="Quem entrou e por quê: a política (um, consenso, confiabilidade) e o que ficou fora.")
     frozen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     frozen_by: Mapped[str | None] = mapped_column(
         String(32), ForeignKey("user.id", ondelete="SET NULL")
@@ -252,6 +255,11 @@ class ModelVersion(UUIDPrimaryKey, Timestamped, Base):
     optimized_artifact_uri: Mapped[str | None] = mapped_column(String(512))
     optimized_artifact_sha256: Mapped[str | None] = mapped_column(String(64))
     optimized_size_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    extras_manifest_sha256: Mapped[str | None] = mapped_column(
+        String(64),
+        doc="SHA-256 do manifesto dos arquivos que viajam ao lado do ONNX (perfil, cabeça, "
+        "conformal...). O robô confere cada arquivo por ele; nulo = só o ONNX é conferido.",
+    )
     dnaty_version: Mapped[str | None] = mapped_column(
         String(32), doc="Versão do dNATY que gerou o artefato otimizado (licença BSL 1.1)."
     )

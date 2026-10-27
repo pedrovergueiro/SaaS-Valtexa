@@ -1302,6 +1302,50 @@ class DiagnosisOut(ApiModel):
         default_factory=list,
         description="Com order=valor: por que o item está onde está, ex.: 'classe rara: Cordana'.",
     )
+    parecer: ParecerResumoOut | None = Field(
+        default=None,
+        description="Na fila: o parecer mais recente desta observação, quando já foi pedido. "
+        "Apoio à decisão — não autoriza nada.",
+    )
+
+
+class ParecerResumoOut(ApiModel):
+    """O parecer mais recente do caso, para o agrônomo ler ao lado da imagem na fila."""
+
+    id: str
+    estado: str = Field(description="aguardando_revisao, revisado...")
+    modo: str = Field(description="deterministico ou provedor (texto validado).")
+    gerado_em: datetime
+    hipotese_principal: str | None
+    alternativas: list[str] = Field(default_factory=list)
+    abertura: str | None = Field(
+        default=None, description="A primeira afirmação do parecer, com as citações dela."
+    )
+    fontes: int
+    pendencias: int = Field(
+        description="Verificações sem fonte, bloqueadas ou sem dado: o que o parecer não fecha."
+    )
+
+
+class LesaoIn(ApiModel):
+    """Uma lesão marcada na foto: a caixa, normalizada pela largura e altura da imagem."""
+
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    w: float = Field(gt=0, le=1)
+    h: float = Field(gt=0, le=1)
+
+
+class ExplicacaoIn(ApiModel):
+    """O porquê do agrônomo: o que ele viu e onde, nas palavras dele."""
+
+    sintomas: list[Annotated[str, StringConstraints(min_length=1, max_length=120)]] = Field(
+        default_factory=list, max_length=12,
+        description="Sugestões em GET /ensino/vocabulario, ou o que ele escrever.")
+    estrato: Literal["terco_inferior", "terco_medio", "terco_superior", "indeterminado"] | None = (
+        None)
+    face: Literal["adaxial", "abaxial", "ambas", "indeterminada"] | None = None
+    porque: str | None = Field(default=None, max_length=1000)
 
 
 class DiagnosisReview(ApiModel):
@@ -1323,6 +1367,12 @@ class DiagnosisReview(ApiModel):
         ),
     )
     notes: str | None = None
+    explicacao: ExplicacaoIn | None = Field(
+        default=None, description="O porquê: sintomas, terço da planta, face da folha, texto.")
+    lesoes: list[LesaoIn] = Field(
+        default_factory=list, max_length=20,
+        description="Onde está a lesão: viram recortes de treino (a cabeça aprende a lesão, "
+        "não a foto inteira).")
 
 
 class DecisionOut(ApiModel):
@@ -2116,6 +2166,13 @@ class DatasetSampleOut(ApiModel):
 class DatasetVersionCreate(ApiModel):
     version: Annotated[str, StringConstraints(min_length=1, max_length=32)]
     notes: str | None = Field(default=None, max_length=2000)
+    politica: Literal["um", "consenso", "confiabilidade"] = Field(
+        default="um",
+        description="um: quem rotulou basta. consenso: só o que uma segunda opinião confirmou. "
+        "confiabilidade: confirmado, ou de agrônomo que concorda com os colegas. Amostra em "
+        "disputa nunca entra.")
+    confiabilidade_minima: float = Field(default=0.8, ge=0.5, le=1.0)
+    pares_minimos: int = Field(default=10, ge=1, le=10_000)
 
 
 class DatasetVersionOut(ApiModel):
@@ -2126,6 +2183,8 @@ class DatasetVersionOut(ApiModel):
     label_counts: dict[str, int]
     notes: str | None = None
     frozen_at: datetime | None = None
+    criterio: dict[str, Any] = Field(
+        default_factory=dict, description="A política do corte e o que ficou fora, por motivo.")
 
 
 class ModelVersionOut(ApiModel):
@@ -2156,6 +2215,7 @@ class ModelVersionOut(ApiModel):
     optimized_artifact_uri: str | None = None
     optimized_artifact_sha256: str | None = None
     optimized_size_bytes: int | None = None
+    extras_manifest_sha256: str | None = None
     dnaty_version: str | None = None
     variant: str = "padrão"
     recommended: bool = True
@@ -2206,6 +2266,10 @@ class ModelVersionCreate(ApiModel):
     optimized_artifact_uri: str | None = Field(default=None, max_length=512)
     optimized_artifact_sha256: str | None = Field(default=None, pattern=_SHA256)
     optimized_size_bytes: int | None = Field(default=None, ge=0)
+    extras_manifest_sha256: str | None = Field(
+        default=None, pattern=_SHA256,
+        description="Hash do manifesto impresso por `valtexa-rover preparar-modelo`.",
+    )
     dnaty_version: str | None = Field(default=None, max_length=32)
     variant: str = Field(default="padrão", max_length=32)
     recommended: bool = True
@@ -2237,6 +2301,10 @@ class ModelVersionUpdate(ApiModel):
     optimized_artifact_uri: str | None = Field(default=None, max_length=512)
     optimized_artifact_sha256: str | None = Field(default=None, pattern=_SHA256)
     optimized_size_bytes: int | None = Field(default=None, ge=0)
+    extras_manifest_sha256: str | None = Field(
+        default=None, pattern=_SHA256,
+        description="Hash do manifesto impresso por `valtexa-rover preparar-modelo`.",
+    )
     dnaty_version: str | None = Field(default=None, max_length=32)
     license: str | None = Field(default=None, max_length=255)
     caveat: str | None = None
@@ -2351,6 +2419,11 @@ class DesignatedModelOut(ApiModel):
         description="O robô confere este hash antes de carregar. Nulo = não carregue."
     )
     artifact_kind: str | None = Field(description="otimizado, original ou nulo.")
+    extras_manifest_sha256: str | None = Field(
+        default=None,
+        description="O robô confere por este manifesto cada arquivo ao lado do ONNX (perfil, "
+        "cabeça, conformal...). Nulo = versão registrada sem manifesto: só o ONNX é conferido.",
+    )
     dnaty_version: str | None
     target_hardware: str | None
     reason: str | None = Field(description="Por que não há modelo para o talhão, quando não há.")
@@ -2389,6 +2462,14 @@ class AiHealthOut(ApiModel):
     )
     no_data: dict[str, str] = Field(
         description="Indicador → por que não há dado (drift, incidentes, FPS...)."
+    )
+    field_calibration: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Por modelo e versão, contra o rótulo confirmado pelo agrônomo: acerto, cobertura "
+            "do conjunto conformal (contra a prometida), calibração por faixa de confiança e "
+            "o que ficou fora do catálogo. Só casos que foram à fila: piores que a média."
+        ),
     )
 
 

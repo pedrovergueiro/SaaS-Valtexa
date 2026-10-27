@@ -8,6 +8,8 @@
 | [`COMPONENTS.md`](COMPONENTS.md) | Cada componente: onde está, o que faz, estado (ativo, experimental, legado, arquivado) |
 | [`DECISIONS.md`](DECISIONS.md) | Decisões e o motivo de cada uma; decisões pendentes |
 | [`ESTADO_ATUAL.md`](ESTADO_ATUAL.md) | O que está medido, o que é simulação, o que falta provar |
+| [`ROADMAP_IA.md`](ROADMAP_IA.md) | O plano de evolução da IA (níveis 1 a 5) item a item: feito, medido, o que falta |
+| [`ENSINO.md`](ENSINO.md) | O agrônomo ensinando a IA: a lição (o quê, por quê, onde), do treino ao parecer |
 | [`CLEANUP_REPORT.md`](CLEANUP_REPORT.md) | O que a consolidação de 20/10/2026 removeu, arquivou e mudou |
 
 ## Por assunto (documentos atuais)

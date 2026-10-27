@@ -115,6 +115,8 @@ export const SECOES: Record<string, string> = {
   historico: 'Histórico',
   risco: 'Risco (gêmeo digital)',
   clima: 'Clima',
+  licoes: 'O que o agrônomo ensinou',
+  regras_agronomo: 'Regras dos agrônomos',
   fontes: 'Fontes',
   regras: 'Regras determinísticas',
   texto: 'Texto',

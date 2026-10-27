@@ -54,11 +54,17 @@ export default function ParecerDetail() {
   const [decisao, setDecisao] = useState<Revisao['decisao']>('concorda')
   const [comentario, setComentario] = useState('')
   const [diagnostico, setDiagnostico] = useState('')
+  const [registrar, setRegistrar] = useState(false)
   const revisar = useApiMutation(
     () =>
       api(`/v1/pareceres/${id}/revisao`, {
         method: 'POST',
-        body: { decisao, comentario: comentario || null, diagnostico_revisor: diagnostico || null },
+        body: {
+          decisao,
+          comentario: comentario || null,
+          diagnostico_revisor: diagnostico || null,
+          registrar_diagnostico: decisao === 'discorda' && !!diagnostico && registrar,
+        },
       }),
     [chave, [...chave, 'auditoria']],
   )
@@ -221,9 +227,21 @@ export default function ParecerDetail() {
                   <FormField label="Comentário" hint={decisao === 'discorda' ? 'Obrigatório ao discordar.' : undefined}>
                     <textarea className="input min-h-20" value={comentario} onChange={(e) => setComentario(e.target.value)} maxLength={4000} />
                   </FormField>
-                  <FormField label="Diagnóstico do revisor (opcional)">
+                  <FormField
+                    label="Diagnóstico do revisor (opcional)"
+                    hint={decisao === 'discorda' ? 'Discordando com um diagnóstico, isto vira uma lição: aparece nos próximos pareceres com o seu nome.' : undefined}
+                  >
                     <input className="input" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} maxLength={80} />
                   </FormField>
+                  {decisao === 'discorda' && diagnostico && p.caso_tipo === 'observacao' && (
+                    <label className="flex items-start gap-2 text-[13px]">
+                      <input type="checkbox" checked={registrar} onChange={(e) => setRegistrar(e.target.checked)} className="mt-0.5" />
+                      <span>
+                        Registrar este diagnóstico na foto, como na fila (vira exemplo de treino e refaz a recomendação). Use o
+                        nome da classe, ex.: Cercospora_Leaf_Spot.
+                      </span>
+                    </label>
+                  )}
                   <Button type="submit" variant="primary" loading={revisar.isPending}>
                     Registrar revisão
                   </Button>

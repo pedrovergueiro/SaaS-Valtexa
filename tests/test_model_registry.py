@@ -384,6 +384,7 @@ class TestRoboSoRecebeOQueEstaNoRegistry:
         # O catálogo inicial não tem hash: o robô recebe nulo e não carrega nada.
         assert item["artifact_sha256"] is None
         assert item["artifact_kind"] is None
+        assert item["extras_manifest_sha256"] is None
 
     def test_versao_nova_so_chega_ao_robo_em_producao(
         self,
@@ -419,6 +420,44 @@ class TestRoboSoRecebeOQueEstaNoRegistry:
         assert item["artifact_sha256"] == HASH_B
         assert item["dnaty_version"] == "2.2.1"
         assert item["artifact_uri"].endswith("dnaty.onnx")
+
+    def test_manifesto_dos_extras_chega_ao_robo_e_trava_na_aprovacao(
+        self,
+        client: TestClient,
+        rover: DeviceSession,
+        ia: dict,
+        chefe: dict,
+    ) -> None:
+        manifesto = "c" * 64
+        vid = _versao(
+            client,
+            ia,
+            metrics={"f1": 0.9},
+            original_artifact_uri="s3://modelos/coffee-foliar/2.0.0/original.onnx",
+            original_artifact_sha256=HASH_A,
+            extras_manifest_sha256=manifesto,
+        )["id"]
+        for headers, estado in ((ia, "validacao"), (chefe, "aprovado")):
+            assert _mover(client, headers, vid, estado).status_code == 200
+        # Trocar o manifesto depois da aprovação seria aprovar um perfil e publicar outro.
+        troca = client.patch(
+            f"/v1/platform/models/{vid}", json={"extras_manifest_sha256": "d" * 64}, headers=ia
+        )
+        assert troca.status_code == 409, troca.text
+        for estado in ("staging", "producao"):
+            assert _mover(client, ia, vid, estado).status_code == 200
+        item = rover.request("GET", "/v1/device/models").json()[0]
+        assert (item["version"], item["artifact_sha256"]) == ("2.0.0", HASH_A)
+        assert item["extras_manifest_sha256"] == manifesto
+
+    def test_manifesto_invalido_e_recusado(self, client: TestClient, ia: dict) -> None:
+        resposta = client.post(
+            "/v1/platform/models",
+            json={"model_key": "coffee-foliar", "version": "9.0.0", "platform": "ground",
+                  "crops": ["café"], "extras_manifest_sha256": "nao-e-hash"},
+            headers=ia,
+        )
+        assert resposta.status_code == 422
 
     def test_robo_de_outro_cliente_nao_ve_talhao_alheio(
         self, client: TestClient, equipe, demo: dict, session_factory

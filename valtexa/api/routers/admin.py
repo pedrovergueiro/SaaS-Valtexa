@@ -29,7 +29,9 @@ import logging
 from datetime import UTC, datetime
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -101,6 +103,7 @@ from valtexa.services import (
     jobs,
     planner,
     plans,
+    storage,
 )
 from valtexa.services.hal import Capabilities
 
@@ -784,7 +787,9 @@ def freeze_dataset_version(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Dataset não encontrado.")
     try:
         corte = dataset.freeze_version(
-            session, conjunto, payload.version, notes=payload.notes, actor=principal.user
+            session, conjunto, payload.version, notes=payload.notes, actor=principal.user,
+            politica=payload.politica, confiabilidade_minima=payload.confiabilidade_minima,
+            pares_minimos=payload.pares_minimos,
         )
     except dataset.DatasetError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
@@ -797,7 +802,83 @@ def freeze_dataset_version(
         label_counts=corte.label_counts,
         notes=corte.notes,
         frozen_at=corte.frozen_at,
+        criterio=corte.criterio or {},
     )
+
+
+class OpiniaoIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rotulo: str = PydanticField(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
+    comentario: str | None = PydanticField(default=None, max_length=2000)
+
+
+@router.get("/datasets/{dataset_id}/segunda-opiniao",
+            summary="Amostras de todos os clientes à espera de segunda opinião (equipe)")
+def dataset_pendentes_de_opiniao(
+    dataset_id: str,
+    limite: int = Query(default=50, ge=1, le=200),
+    principal: PlatformCaller = Depends(require_platform(rbac.DATASET_MANAGE)),
+    session: Session = Depends(get_session),
+) -> list[dict]:
+    from valtexa.services import ensino
+
+    return ensino.pendentes_de_opiniao(session, revisor_id=principal.user.id,
+                                       dataset_id=dataset_id, limite=limite)
+
+
+@router.post("/datasets/{dataset_id}/segunda-opiniao/{sample_id}", status_code=201,
+             summary="O agrônomo da equipe dá a segunda opinião sobre uma amostra")
+def dataset_opinar(
+    dataset_id: str,
+    sample_id: str,
+    pedido: OpiniaoIn,
+    principal: PlatformCaller = Depends(require_platform(rbac.DATASET_MANAGE)),
+    session: Session = Depends(get_session),
+) -> dict:
+    from valtexa.services import ensino
+
+    amostra = session.get(DatasetSample, sample_id)
+    if amostra is None or amostra.dataset_id != dataset_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Amostra não encontrada.")
+    try:
+        op = ensino.opinar(session, amostra=amostra, revisor=principal.user, origem="plataforma",
+                           rotulo=pedido.rotulo, comentario=pedido.comentario)
+    except ensino.OpiniaoInvalidaError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    session.commit()
+    return {"id": op.id, "concorda": op.concorda, "rotulo": op.rotulo}
+
+
+@router.get(
+    "/datasets/{dataset_id}/versions/{version_id}/export",
+    summary="O corte congelado num zip para o treino (imagens, lesões e o porquê)",
+    response_class=Response,
+)
+def export_dataset_version(
+    dataset_id: str,
+    version_id: str,
+    principal: PlatformCaller = Depends(require_platform(rbac.DATASET_MANAGE)),
+    session: Session = Depends(get_session),
+) -> Response:
+    """Só o corte congelado (o consentimento foi conferido ao congelar). Na IA:
+    ``python -m training.import_licoes --zip <arquivo>``. Fica na auditoria: os dados saem da
+    plataforma."""
+    from valtexa.services import ensino
+
+    versao = session.get(DatasetVersion, version_id)
+    if versao is None or versao.dataset_id != dataset_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Corte não encontrado.")
+    corpo = ensino.exportar_corte(session, versao, storage.store.read)
+    audit.record(session, action="dataset.version_exported",
+                 subject_type=SubjectType.DATASET_VERSION, subject_id=versao.id,
+                 actor_type=ActorType.USER, actor_id=principal.user.id,
+                 actor_label=principal.user.email,
+                 payload={"version": versao.version, "samples": versao.sample_count,
+                          "bytes": len(corpo)})
+    session.commit()
+    return Response(corpo, media_type="application/zip", headers={
+        "Content-Disposition": f'attachment; filename="corte-{versao.version}.zip"'})
 
 
 @router.get(
@@ -824,6 +905,7 @@ def list_dataset_versions(
             label_counts=linha.label_counts,
             notes=linha.notes,
             frozen_at=linha.frozen_at,
+            criterio=linha.criterio or {},
         )
         for linha in linhas
     ]

@@ -78,6 +78,15 @@ def _situacao(codigo: str | None) -> str:
 
 LIVRE_OMITIDO = "(texto livre omitido: parecia instrução)"
 _LIVRE_PROIBIDO = re.compile(r"[\[\]\n\r\t<>{}]")
+_TEM_NUMERO = re.compile(r"\d")
+VEREDITOS_DE_REGRA = {
+    "sustentada": "sustentada pelo histórico do cliente",
+    "contrariada": "contrariada pelo histórico do cliente",
+    "nao_mostrada": "o histórico do cliente não mostrou diferença",
+    "poucos_dados": "ainda sem casos suficientes para medir",
+    "nao_medida": "ainda não medida",
+}
+"""O mesmo que :data:`valtexa.services.ensino.VEREDITOS` (o compositor não importa serviço)."""
 
 
 def livre(valor: Any, limite: int = 120) -> str:
@@ -245,6 +254,38 @@ def compor(dossie: dict[str, Any], fontes: list[dict[str, Any]]) -> dict[str, An
         t.diz("fontes", f"Fonte consultada: {livre(f['titulo'])}, versão {livre(f['versao'])} "
                         f"({f['tipo']}, {livre(f['origem'], 300)}{secao}){aviso}.", f["id"])
 
+    # O que o agrônomo ensinou -----------------------------------------------------------------
+    for li in _por_tipo(dossie, "licoes"):
+        for x in li["dados"]["licoes"]:
+            viu = "; ".join(s for s in (livre(s, 120) for s in x.get("sintomas") or [])
+                            if s != LIVRE_OMITIDO)
+            onde = ", ".join(v for v in (x.get("estrato"), x.get("face")) if v)
+            porque = x.get("porque") or ""
+            # Número no texto dele é afirmação dele, não evidência: fica no dossiê.
+            porque = "" if _TEM_NUMERO.search(porque) else livre(porque, 400)
+            partes = [p for p in (f"viu {viu}" if viu else "", f"onde: {onde}" if onde else "",
+                                  porque if porque and porque != LIVRE_OMITIDO else "") if p]
+            if not partes:
+                continue
+            local = "neste talhão" if x.get("do_talhao") else "em outro talhão do cliente"
+            t.diz("licoes", f"{livre(x['autor'])} ensinou em {x['data']} ({local}), para "
+                            f"{_nome(x['classe'], hip)}: " + "; ".join(partes) + ".", li["id"])
+
+    # Regras dos agrônomos, com a medida -------------------------------------------------------
+    for ra in _por_tipo(dossie, "regras_agronomo"):
+        for x in ra["dados"]["regras"]:
+            regra = x.get("regra") or ""
+            regra = LIVRE_OMITIDO if _TEM_NUMERO.search(regra) else livre(regra, 300)
+            com, sem = x.get("com_condicao"), x.get("sem_condicao")
+            contagem = (f" ({com['com_doenca']} de {com['casos']} casos com a condição; "
+                        f"{sem['com_doenca']} de {sem['casos']} sem)"
+                        if com and sem and x["veredito"] != "poucos_dados" else "")
+            t.diz("regras_agronomo",
+                  f"Regra de {livre(x['autor'])}: {regra} — condição: {x['condicao']}, "
+                  f"{'aumenta' if x['efeito'] == 'aumenta' else 'diminui'} "
+                  f"{_nome(x['doenca'], hip)}. Medida: {VEREDITOS_DE_REGRA[x['veredito']]}"
+                  f"{contagem}.", ra["id"])
+
     # Regras --------------------------------------------------------------------------------
     for r in _por_tipo(dossie, "regras"):
         for a in r["dados"]["aplicadas"]:
@@ -321,7 +362,9 @@ def texto(composto: dict[str, Any]) -> str:
     """O parecer em texto corrido, seção a seção, com as citações entre colchetes."""
     titulos = {"caso": "Caso", "hipoteses": "Hipóteses", "evidencia": "Evidência",
                "limitacoes": "Limitações", "historico": "Histórico", "risco": "Risco (gêmeo)",
-               "clima": "Clima", "fontes": "Fontes", "regras": "Regras determinísticas"}
+               "clima": "Clima", "licoes": "O que o agrônomo ensinou",
+               "regras_agronomo": "Regras dos agrônomos", "fontes": "Fontes",
+               "regras": "Regras determinísticas"}
     linhas: list[str] = []
     atual = None
     for a in composto["afirmacoes"]:

@@ -1,13 +1,19 @@
-import { ChevronLeft, ChevronRight, Keyboard, ScanSearch, Trash2 } from 'lucide-react'
+import { BookOpenText, ChevronLeft, ChevronRight, Keyboard, ScanSearch, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 
-import { useFields, useReviewDiagnosis, useReviewQueue, type ReviewOrder } from '@/api/queries'
+import { api } from '@/api/client'
+
+import { keys, useApiMutation, useFields, useReviewDiagnosis, useReviewQueue, type ReviewOrder } from '@/api/queries'
 import type { DiagnosisOut } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { AiSignalsPanel, primarySignals } from '@/components/AiSignals'
 import { AuthImage } from '@/components/AuthImage'
+import { MarcadorDeLesoes } from '@/components/MarcadorDeLesoes'
 import { Badge, Button, Card, CardHeader, Empty, ErrorBox, FormField, Meter, PageHeader, Spinner, Tabs } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { corpoDaExplicacao, ESTRATOS, EXPLICACAO_VAZIA, FACES, type Caixa, type Explicacao } from '@/lib/ensino'
 import { fmt } from '@/lib/format'
 import { agreement, disease, KNOWN_LABELS } from '@/lib/labels'
 
@@ -140,6 +146,7 @@ export default function Review() {
             total={items.length}
             fieldName={fieldName.get(current.field_id)}
             canReview={can('diagnosis:review')}
+            canAskParecer={can('parecer:generate')}
             onPrevious={() => setIndex((value) => Math.max(0, value - 1))}
             onNext={() => setIndex((value) => Math.min(items.length - 1, value + 1))}
           />
@@ -155,6 +162,7 @@ function ReviewItem({
   total,
   fieldName,
   canReview,
+  canAskParecer,
   onPrevious,
   onNext,
 }: {
@@ -163,12 +171,15 @@ function ReviewItem({
   total: number
   fieldName?: string
   canReview: boolean
+  canAskParecer: boolean
   onPrevious: () => void
   onNext: () => void
 }) {
   const review = useReviewDiagnosis()
   const [label, setLabel] = useState(item.label ?? '')
   const [notes, setNotes] = useState('')
+  const [caixas, setCaixas] = useState<Caixa[]>([])
+  const [explicacao, setExplicacao] = useState<Explicacao>(EXPLICACAO_VAZIA)
   const valid = /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(label)
   const novel = (item.novelty_score ?? 0) > NOVELTY_THRESHOLD
   const machine = (item.detections ?? []).filter((detection) => detection.source !== 'human')
@@ -176,7 +187,15 @@ function ReviewItem({
   const reasons = item.priority_reasons ?? []
 
   const submit = (confirmed: boolean, forcedLabel?: string) =>
-    review.mutate({ id: item.id, label: forcedLabel ?? label, confirmed, notes })
+    review.mutate({
+      id: item.id,
+      label: forcedLabel ?? label,
+      confirmed,
+      notes,
+      // Foto sem condição não ensina doença: nem porquê nem lesão vão junto.
+      explicacao: confirmed ? corpoDaExplicacao(explicacao) : null,
+      lesoes: confirmed ? caixas : [],
+    })
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -192,7 +211,17 @@ function ReviewItem({
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
       <Card className="overflow-hidden">
-        <AuthImage path={`/v1/observations/${item.observation_id}/image`} alt="Folha em revisão" className="aspect-[4/3] w-full" />
+        {canReview ? (
+          <MarcadorDeLesoes path={`/v1/observations/${item.observation_id}/image`} caixas={caixas} onChange={setCaixas} />
+        ) : (
+          <AuthImage path={`/v1/observations/${item.observation_id}/image`} alt="Folha em revisão" className="aspect-[4/3] w-full" />
+        )}
+        {canReview && (
+          <div className="border-t border-line-soft px-4 py-2 text-[12px] text-muted">
+            Arraste sobre a foto para marcar cada lesão ({caixas.length} marcada{caixas.length === 1 ? '' : 's'}). Cada uma vira
+            um recorte de treino: a IA aprende a lesão, não a folha em volta.
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2 px-4 py-3">
           <div className="text-[12px] text-muted">
             {fieldName ?? '—'} · {fmt.dateTime(item.created_at)}
@@ -275,6 +304,8 @@ function ReviewItem({
           )}
         </Card>
 
+        <ParecerCard item={item} canAsk={canAskParecer} />
+
         {canReview ? (
           <Card className="p-5">
             <div className="flex flex-col gap-3">
@@ -299,6 +330,7 @@ function ReviewItem({
                   Classe nova — entra no dataset próprio
                 </Badge>
               )}
+              <PorQue rotulo={label} valor={explicacao} onChange={setExplicacao} />
               <FormField label="Observações">
                 <textarea className="input min-h-16" value={notes} onChange={(event) => setNotes(event.target.value)} />
               </FormField>
@@ -320,6 +352,151 @@ function ReviewItem({
           <Card className="p-5 text-[13px] text-ink-2">Só o agrônomo registra diagnóstico. Você pode acompanhar a fila.</Card>
         )}
       </div>
+    </div>
+  )
+}
+
+/** O parecer do cérebro agronômico ao lado da imagem: explica, não decide. */
+function ParecerCard({ item, canAsk }: { item: DiagnosisOut; canAsk: boolean }) {
+  const pedir = useApiMutation(
+    () =>
+      api(`/v1/fields/${item.field_id}/pareceres`, {
+        method: 'POST',
+        body: { caso: 'observacao', observation_id: item.observation_id },
+      }),
+    [keys.reviewQueue],
+  )
+  const p = item.parecer
+  return (
+    <Card>
+      <CardHeader
+        title="Parecer do cérebro agronômico"
+        subtitle="Evidências, hipóteses e fontes. Apoio à decisão: não autoriza aplicação nem cria missão."
+      />
+      <div className="flex flex-col gap-3 px-5 pb-5 text-[13px]">
+        {p ? (
+          <>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {p.hipotese_principal && <Badge tone="info">{disease(p.hipotese_principal)}</Badge>}
+              {(p.alternativas ?? []).map((classe) => (
+                <Badge key={classe} tone="neutral">
+                  ou {disease(classe)}
+                </Badge>
+              ))}
+              {p.pendencias > 0 && <Badge tone="warning">{p.pendencias} verificação(ões) em aberto</Badge>}
+            </div>
+            {p.abertura && <p className="text-ink-2">{p.abertura}</p>}
+            <div className="flex items-center justify-between text-[12px] text-muted">
+              <span>
+                {fmt.dateTime(p.gerado_em)} · {p.fontes} fonte(s) · {p.estado === 'aguardando_revisao' ? 'aguarda revisão' : p.estado}
+              </span>
+              <Link className="font-medium text-accent hover:underline" to={`/pareceres/${p.id}`}>
+                Ler o parecer
+              </Link>
+            </div>
+          </>
+        ) : canAsk ? (
+          <>
+            <p className="text-muted">Ainda sem parecer para esta imagem.</p>
+            <ErrorBox error={pedir.error} />
+            <Button
+              variant="secondary"
+              icon={<BookOpenText className="size-4" />}
+              loading={pedir.isPending}
+              onClick={() => pedir.mutate(undefined)}
+              className="self-start"
+            >
+              Pedir parecer
+            </Button>
+          </>
+        ) : (
+          <p className="text-muted">Ainda sem parecer para esta imagem.</p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+/** O porquê do agrônomo: o que ele viu e onde. Os sintomas são sugestão — ele escreve o que viu. */
+function PorQue({ rotulo, valor, onChange }: { rotulo: string; valor: Explicacao; onChange: (e: Explicacao) => void }) {
+  const vocab = useQuery({
+    queryKey: ['ensino', 'vocabulario', rotulo],
+    queryFn: () => api<{ sintomas: string[] }>('/v1/ensino/vocabulario', { query: { rotulo } }),
+    staleTime: 60 * 60 * 1000,
+  })
+  const [outro, setOutro] = useState('')
+  const alterna = (s: string) =>
+    onChange({ ...valor, sintomas: valor.sintomas.includes(s) ? valor.sintomas.filter((x) => x !== s) : [...valor.sintomas, s] })
+  const sugeridos = [...new Set([...(vocab.data?.sintomas ?? []), ...valor.sintomas])]
+  return (
+    <div className="flex flex-col gap-2 rounded-[10px] border border-line-soft p-3">
+      <div className="text-[13px] font-medium">Por quê? (ensina a IA)</div>
+      <div className="flex flex-wrap gap-1.5">
+        {sugeridos.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => alterna(s)}
+            className={cn(
+              'rounded-full border px-2.5 py-1 text-[12px]',
+              valor.sintomas.includes(s) ? 'border-accent bg-accent-soft text-ink' : 'border-line text-muted hover:bg-raised',
+            )}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          className="input flex-1"
+          placeholder="Outro sintoma que você viu"
+          value={outro}
+          maxLength={120}
+          onChange={(e) => setOutro(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && outro.trim()) {
+              e.preventDefault()
+              onChange({ ...valor, sintomas: [...valor.sintomas, outro.trim()] })
+              setOutro('')
+            }
+          }}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          className="input"
+          aria-label="Terço da planta"
+          value={valor.estrato ?? ''}
+          onChange={(e) => onChange({ ...valor, estrato: (e.target.value || null) as Explicacao['estrato'] })}
+        >
+          <option value="">Terço da planta…</option>
+          {ESTRATOS.map(([v, rotuloEstrato]) => (
+            <option key={v} value={v}>
+              {rotuloEstrato}
+            </option>
+          ))}
+        </select>
+        <select
+          className="input"
+          aria-label="Face da folha"
+          value={valor.face ?? ''}
+          onChange={(e) => onChange({ ...valor, face: (e.target.value || null) as Explicacao['face'] })}
+        >
+          <option value="">Face da folha…</option>
+          {FACES.map(([v, rotuloFace]) => (
+            <option key={v} value={v}>
+              {rotuloFace}
+            </option>
+          ))}
+        </select>
+      </div>
+      <textarea
+        className="input min-h-14"
+        placeholder="Explique como você sabe — vai aparecer nos próximos pareceres deste talhão, com o seu nome."
+        maxLength={1000}
+        value={valor.porque}
+        onChange={(e) => onChange({ ...valor, porque: e.target.value })}
+      />
     </div>
   )
 }

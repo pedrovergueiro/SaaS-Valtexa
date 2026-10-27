@@ -69,6 +69,9 @@ export default function FieldDetail() {
             <Link to={`/talhoes/${id}/historico`}>
               <Button>Linha do tempo</Button>
             </Link>
+            <Link to={`/talhoes/${id}/gemeo`}>
+              <Button>Previsão</Button>
+            </Link>
             <Link to={`/talhoes/${id}/pareceres`}>
               <Button>Pareceres</Button>
             </Link>

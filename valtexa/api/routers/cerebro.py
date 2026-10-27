@@ -23,11 +23,26 @@ from pydantic import Field as Campo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from valtexa.api.deps import PlatformCaller, Principal, get_scoped, require, require_platform
+from valtexa.api.deps import (
+    PlatformCaller,
+    Principal,
+    get_scoped,
+    require,
+    require_platform,
+    scoped,
+)
 from valtexa.cerebro import conhecimento, dossie, provedor, rag, servico
 from valtexa.config import settings
 from valtexa.db import get_session
-from valtexa.models import AuditEntry, Field, Observation, SubjectType, as_utc, utcnow
+from valtexa.models import (
+    AuditEntry,
+    Diagnosis,
+    Field,
+    Observation,
+    SubjectType,
+    as_utc,
+    utcnow,
+)
 from valtexa.models.cerebro import (
     DECISOES_REVISAO,
     TIPOS_DOCUMENTO,
@@ -37,6 +52,7 @@ from valtexa.models.cerebro import (
     TrechoConhecimento,
 )
 from valtexa.security import rbac
+from valtexa.services import ensino
 
 router = APIRouter(tags=["cérebro agronômico"])
 
@@ -105,6 +121,10 @@ class RevisaoIn(BaseModel):
     decisao: Literal[DECISOES_REVISAO]  # type: ignore[valid-type]
     comentario: str | None = Campo(default=None, max_length=4000)
     diagnostico_revisor: str | None = Campo(default=None, max_length=80)
+    registrar_diagnostico: bool = Campo(
+        default=False,
+        description="Discordando num caso de observação: registra o diagnóstico dele na "
+        "observação, como na fila (vira amostra de treino e refaz a decisão).")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -375,5 +395,44 @@ def revisa_parecer(
                         diagnostico_revisor=pedido.diagnostico_revisor, agora=utcnow())
     except servico.RevisaoInvalidaError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    if pedido.decisao == "discorda" and pedido.diagnostico_revisor:
+        _licao_da_discordancia(session, principal, p, pedido)
     session.commit()
     return servico.detalhe(p, _revisoes(session, p.id), servico.fontes_hoje(session, p, _hoje()))
+
+
+def _licao_da_discordancia(session: Session, principal: Principal, p: Parecer,
+                           pedido: RevisaoIn) -> None:
+    """A discordância do agrônomo é uma lição: o que ele acha que a planta tem e por quê.
+    Com ``registrar_diagnostico``, vale como o veredito da fila naquela observação."""
+    from pydantic import ValidationError
+
+    from valtexa.api.routers.perception import aplicar_revisao
+    from valtexa.schemas import DiagnosisReview
+
+    rotulo = pedido.diagnostico_revisor.strip()
+    explicacao = {"porque": pedido.comentario} if pedido.comentario else None
+    if pedido.registrar_diagnostico:
+        if p.caso_tipo != "observacao" or not p.observation_id:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                                "Registrar o diagnóstico só vale para parecer de observação.")
+        diag = session.scalars(scoped(
+            select(Diagnosis).where(Diagnosis.observation_id == p.observation_id)
+            .order_by(Diagnosis.created_at.desc()), Diagnosis, principal)).first()
+        if diag is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "A observação não tem diagnóstico.")
+        try:
+            veredito = DiagnosisReview(label=rotulo, confirmed=True, notes=pedido.comentario,
+                                       explicacao=explicacao)
+        except ValidationError as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                                "diagnostico_revisor precisa ser um nome de classe (letras, "
+                                "números e _), ex.: Rust, Mancha_branca.") from exc
+        aplicar_revisao(session, principal, diag, veredito, origem="parecer", parecer_id=p.id)
+        return
+    ensino.registrar(
+        session, tenant_id=principal.tenant_id, field_id=p.field_id, origem="parecer",
+        autor=principal.user, rotulo=rotulo,
+        rotulo_da_ia=(p.dossie or {}).get("hipoteses", {}).get("principal"),
+        explicacao=explicacao, observation_id=p.observation_id, parecer_id=p.id,
+        plant_ref=p.plant_ref)

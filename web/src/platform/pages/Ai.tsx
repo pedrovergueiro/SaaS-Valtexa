@@ -183,6 +183,7 @@ function ModelModal({ id, canManage, onClose }: { id: string; canManage: boolean
             {linha('Hardware-alvo', v.target_hardware)}
             {linha('Original', v.original_artifact_sha256 ? `${v.original_artifact_uri ?? ''} · ${v.original_artifact_sha256.slice(0, 12)}…` : null)}
             {linha('Otimizado', v.optimized_artifact_sha256 ? `${v.optimized_artifact_uri ?? ''} · ${v.optimized_artifact_sha256.slice(0, 12)}…` : null)}
+            {linha('Arquivos ao lado', v.extras_manifest_sha256 ? `manifesto · ${v.extras_manifest_sha256.slice(0, 12)}…` : 'sem manifesto: o robô só confere o ONNX')}
             {linha('dNATY', v.dnaty_version)}
             {linha('Licença dos dados', v.license)}
             {linha('Aprovada em', v.approved_at ? fmt.dateTime(v.approved_at) : null)}
@@ -437,6 +438,8 @@ function AiHealthPanel() {
             )}
           </Card>
 
+          <CalibracaoCampo blocos={(d.field_calibration ?? []) as unknown as BlocoCalibracao[]} dias={d.window_days} />
+
           <Card>
             <CardHeader title="Sem dado" subtitle="Indicadores da seção 34 que ainda não têm fonte. Não mostramos número para eles." />
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 px-5 pb-5 text-[13px]">
@@ -454,6 +457,89 @@ function AiHealthPanel() {
   )
 }
 
+
+type Proporcao = { k: number; n: number; taxa: number | null; ic95: [number, number] | null }
+type BlocoCalibracao = {
+  model_key: string | null
+  model_version: string | null
+  revisados: number
+  fora_do_catalogo: number
+  acerto: Proporcao
+  cobertura: Proporcao & { prometida: number | null; estado: string; tamanho_medio_do_conjunto: number | null }
+  calibracao: { ece: number | null; faixas: { de: number; ate: number; n: number; confianca_media: number | null; acerto: number | null }[] }
+  vies: string
+}
+
+const ESTADO_COBERTURA: Record<string, { rotulo: string; tom: 'good' | 'warning' | 'critical' | 'neutral' }> = {
+  dentro: { rotulo: 'dentro da promessa', tom: 'good' },
+  abaixo: { rotulo: 'abaixo da promessa', tom: 'critical' },
+  poucos_dados: { rotulo: 'poucos casos', tom: 'neutral' },
+  sem_promessa: { rotulo: 'sem cobertura prometida gravada', tom: 'neutral' },
+}
+
+const pct = (p: Proporcao) =>
+  p.taxa == null ? 'sem dado' : `${fmt.percent(p.taxa, 1)}${p.ic95 ? ` (${fmt.percent(p.ic95[0], 0)}–${fmt.percent(p.ic95[1], 0)})` : ''} · ${p.k}/${p.n}`
+
+/** A IA contra o rótulo confirmado pelo agrônomo: a garantia do conjunto vale no campo? */
+function CalibracaoCampo({ blocos, dias }: { blocos: BlocoCalibracao[]; dias: number }) {
+  return (
+    <Card className="overflow-hidden p-0">
+      <CardHeader
+        title={`IA contra o agrônomo (${dias} dias)`}
+        subtitle="Acerto, cobertura do conjunto conformal contra a prometida e calibração, nos casos confirmados na fila. Só casos difíceis vão à fila: os números são piores que a média da lavoura."
+      />
+      {blocos.length === 0 ? (
+        <Empty title="Nenhum caso confirmado na janela">Sem rótulo do agrônomo, não há o que medir.</Empty>
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <th className={th}>Modelo</th>
+              <th className={th}>Confirmados</th>
+              <th className={th}>Acerto</th>
+              <th className={th}>Cobertura do conjunto</th>
+              <th className={th}>Calibração (ECE)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {blocos.map((b) => {
+              const estado = ESTADO_COBERTURA[b.cobertura.estado] ?? { rotulo: b.cobertura.estado, tom: 'neutral' as const }
+              return (
+                <tr key={`${b.model_key}@${b.model_version}`}>
+                  <td className={td}>
+                    <span className="font-mono text-[13px]">{b.model_key ?? '—'}</span>{' '}
+                    <span className="num text-[12px] text-muted">{b.model_version ?? ''}</span>
+                  </td>
+                  <td className={`${td} num`}>
+                    {b.revisados}
+                    {b.fora_do_catalogo > 0 && <div className="text-[12px] text-muted">{b.fora_do_catalogo} fora do catálogo</div>}
+                  </td>
+                  <td className={`${td} num text-[12px]`}>{pct(b.acerto)}</td>
+                  <td className={`${td} text-[12px]`}>
+                    <div className="num">{pct(b.cobertura)}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <Badge tone={estado.tom}>{estado.rotulo}</Badge>
+                      {b.cobertura.prometida != null && <span className="text-muted">prometida {fmt.percent(b.cobertura.prometida, 0)}</span>}
+                    </div>
+                  </td>
+                  <td className={`${td} num text-[12px]`}>
+                    {b.calibracao.ece != null ? fmt.number(b.calibracao.ece, 3) : 'sem dado'}
+                    <div className="text-muted">
+                      {b.calibracao.faixas
+                        .filter((f) => f.n > 0)
+                        .map((f) => `${fmt.percent(f.de, 0)}–${fmt.percent(f.ate, 0)}: acerta ${fmt.percent(f.acerto ?? 0, 0)} (n ${f.n})`)
+                        .join(' · ')}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </Table>
+      )}
+    </Card>
+  )
+}
 
 /** Rodadas da etapa dNATY: original e otimizado medidos do mesmo jeito, e o veredito. */
 function Otimizacoes({ id, canRegister }: { id: string; canRegister: boolean }) {

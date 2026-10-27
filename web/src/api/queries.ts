@@ -17,6 +17,7 @@ import { api, type Query } from './client'
 import type * as T from './types'
 import type { MissionReport } from '@/lib/missionReport'
 import type { EdgeRecord } from '@/lib/edgeRecords'
+import type { Caixa, Explicacao } from '@/lib/ensino'
 import type { HistoryStep } from '@/lib/fieldHistory'
 import type { Lugar } from '@/lib/localizar'
 import type { Comparison, MapPlant, MissionMap } from '@/lib/mapLayers'
@@ -448,10 +449,24 @@ export function useCreateMission() {
 
 export function useReviewDiagnosis() {
   return useApiMutation(
-    ({ id, label, confirmed, notes }: { id: string; label: string; confirmed: boolean; notes?: string }) =>
+    ({
+      id,
+      label,
+      confirmed,
+      notes,
+      explicacao,
+      lesoes,
+    }: {
+      id: string
+      label: string
+      confirmed: boolean
+      notes?: string
+      explicacao?: Explicacao | null
+      lesoes?: Caixa[]
+    }) =>
       api<T.DiagnosisOut>(`/v1/diagnoses/${id}/review`, {
         method: 'POST',
-        body: { label, confirmed, notes: notes || null },
+        body: { label, confirmed, notes: notes || null, explicacao: explicacao ?? null, lesoes: lesoes ?? [] },
       }),
     [keys.reviewQueue, ['observations'], ['twin'], keys.dashboard, keys.alerts, ['decisions']],
   )
@@ -602,7 +617,7 @@ export function useRetryJob() {
 
 export function useFreezeDatasetVersion(datasetId: string) {
   return useApiMutation(
-    (body: { version: string; notes?: string }) =>
+    (body: { version: string; notes?: string; politica?: 'um' | 'consenso' | 'confiabilidade' }) =>
       api<T.DatasetVersionOut>(`/v1/admin/datasets/${datasetId}/versions`, {
         method: 'POST',
         body,

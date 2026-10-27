@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from valtexa.api.arquivos import resposta_de_arquivo
 from valtexa.api.deps import Principal, get_scoped, require, scoped
 from valtexa.api.routers.edge_arquivos import link_de_download
+from valtexa.cerebro import servico as parecer_servico
 from valtexa.db import get_session
 from valtexa.models import (
     ActorType,
@@ -30,6 +31,8 @@ from valtexa.models import (
     Observation,
     SubjectType,
 )
+from valtexa.models.base import as_utc
+from valtexa.models.cerebro import Parecer
 from valtexa.schemas import (
     DecisionOut,
     DetectionOut,
@@ -37,6 +40,7 @@ from valtexa.schemas import (
     DiagnosisReview,
     LinkDeArquivoOut,
     ObservationOut,
+    ParecerResumoOut,
 )
 from valtexa.security import rbac
 from valtexa.services import (
@@ -44,6 +48,7 @@ from valtexa.services import (
     collections,
     dataset,
     decision_engine,
+    ensino,
     events,
     review_priority,
     storage,
@@ -209,7 +214,9 @@ def review_queue(
         .where(Diagnosis.reviewed_at.is_(None))
     )
     if order == "valor":
-        return _review_by_value(session, principal, pending, min(limit, 200))
+        return _com_pareceres(
+            session, principal, _review_by_value(session, principal, pending, min(limit, 200))
+        )
     statement = scoped(
         pending.order_by(
             Diagnosis.novelty_score.desc().nullslast(), Diagnosis.created_at.desc()
@@ -217,7 +224,46 @@ def review_queue(
         Diagnosis,
         principal,
     )
-    return [_diagnosis_out(session, row) for row in session.scalars(statement)]
+    return _com_pareceres(
+        session, principal, [_diagnosis_out(session, row) for row in session.scalars(statement)]
+    )
+
+
+def _com_pareceres(
+    session: Session, principal: Principal, itens: list[DiagnosisOut]
+) -> list[DiagnosisOut]:
+    """Põe ao lado de cada item o parecer mais recente da observação (uma consulta só)."""
+    ids = {item.observation_id for item in itens}
+    if not ids:
+        return itens
+    mais_recente: dict[str, Parecer] = {}
+    consulta = scoped(
+        select(Parecer)
+        .where(Parecer.caso_tipo == "observacao", Parecer.observation_id.in_(ids))
+        .order_by(Parecer.created_at),
+        Parecer,
+        principal,
+    )
+    for p in session.scalars(consulta):
+        mais_recente[p.observation_id] = p  # o último da ordem é o mais recente
+    for item in itens:
+        p = mais_recente.get(item.observation_id)
+        if p is None:
+            continue
+        r = parecer_servico.resumo(p)
+        abertura = next((a.get("texto") for a in p.afirmacoes or [] if a.get("texto")), None)
+        item.parecer = ParecerResumoOut(
+            id=p.id,
+            estado=p.estado,
+            modo=p.modo,
+            gerado_em=as_utc(p.created_at),
+            hipotese_principal=r["hipotese_principal"],
+            alternativas=r["alternativas"],
+            abertura=abertura,
+            fontes=r["fontes"],
+            pendencias=r["pendencias"],
+        )
+    return itens
 
 
 REVIEW_VALUE_WINDOW = 1000
@@ -281,6 +327,16 @@ def review(
     confiança sobre algo que nunca viu.
     """
     diagnosis = get_scoped(session, Diagnosis, diagnosis_id, principal)
+    aplicar_revisao(session, principal, diagnosis, payload)
+    session.commit()
+    return _diagnosis_out(session, diagnosis)
+
+
+def aplicar_revisao(session: Session, principal: Principal, diagnosis: Diagnosis,
+                    payload: DiagnosisReview, *, origem: str = "fila",
+                    parecer_id: str | None = None) -> None:
+    """O veredito do agrônomo e tudo o que vem com ele, sem *commit*: amostra do dataset,
+    lição, coleta e a decisão refeita. A fila e a revisão do parecer passam por aqui."""
     previous = diagnosis.status
 
     diagnosis.reviewed_label = payload.label
@@ -336,6 +392,24 @@ def review(
     # porque ninguém revisa a mesma imagem duas vezes.
     dataset.record_review(session, diagnosis, principal.user)
 
+    # A lição: o rótulo, e o porquê e o onde quando ele disse. Imagem sem condição não ensina
+    # doença nenhuma.
+    if payload.confirmed:
+        observacao = session.get(Observation, diagnosis.observation_id)
+        try:
+            ensino.registrar(
+                session, tenant_id=principal.tenant_id, field_id=diagnosis.field_id,
+                origem=origem, parecer_id=parecer_id, autor=principal.user,
+                rotulo=payload.label,
+                rotulo_da_ia=diagnosis.label,
+                explicacao=payload.explicacao.model_dump() if payload.explicacao else None,
+                lesoes=[lesao.model_dump() for lesao in payload.lesoes],
+                observation_id=diagnosis.observation_id, diagnosis_id=diagnosis.id,
+                plant_ref=observacao.plant_ref if observacao else None)
+        except ensino.LicaoInvalidaError as exc:
+            session.rollback()
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+
     # Se a imagem veio de uma coleta, o veredito fecha aquele arquivo. É assim
     # que uma coleta aérea — que nenhum modelo sabe analisar — chega a
     # "analisada": por decisão de gente, registrada com nome.
@@ -345,8 +419,6 @@ def review(
     # continua no banco: apagar apagaria o porquê da recomendação antiga.
     decision = decision_engine.evaluate(session, diagnosis)
     session.add(decision)
-    session.commit()
-    return _diagnosis_out(session, diagnosis)
 
 
 @router.get("/decisions", response_model=list[DecisionOut], summary="Recomendações")

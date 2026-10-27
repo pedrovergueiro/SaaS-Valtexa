@@ -191,6 +191,23 @@ def levantamento_gemeo(field_id: str, pedido: dict) -> dict | None:
                     timeout=GEMEO_TIMEOUT_SECONDS)
 
 
+def avaliacao_gemeo(field_id: str, doenca: str) -> dict | None:
+    """As previsões do gêmeo contra as passadas que o ajuste não viu (``/gemeo/avaliacao``)."""
+    return _request("GET", f"/fields/{_seg(field_id)}/gemeo/avaliacao", {"doenca": doenca},
+                    timeout=GEMEO_TIMEOUT_SECONDS)
+
+
+def modos_gemeo(field_id: str) -> dict | None:
+    """Observação ou ativo, por doença (padrão: observação)."""
+    return _request("GET", f"/fields/{_seg(field_id)}/gemeo/modo")
+
+
+def mudar_modo_gemeo(field_id: str, pedido: dict) -> dict | None:
+    """Ativa o gêmeo (a IA recusa sem avaliação favorável) ou volta à observação."""
+    return _request("POST", f"/fields/{_seg(field_id)}/gemeo/modo", json_body=pedido,
+                    timeout=GEMEO_TIMEOUT_SECONDS)
+
+
 def aplicacao_localizada_gemeo(field_id: str, pedido: dict) -> dict | None:
     """O mapa de aplicação localizada (``/gemeo/aplicacao-localizada``): taxa por trecho e PWM
     por bico sobre o risco previsto. Proposta: a missão ainda precisa de aprovação e do Safety

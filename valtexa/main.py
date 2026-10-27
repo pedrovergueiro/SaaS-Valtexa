@@ -42,6 +42,7 @@ from valtexa.api.routers import (
     edge_arquivos,
     edge_sync,
     ensaios_api,
+    ensino,
     enxame,
     farms,
     federado,
@@ -245,6 +246,7 @@ for module in (
     cerebro,
     planejamento,
     federado,
+    ensino,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

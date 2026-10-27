@@ -226,6 +226,7 @@ def designated_models(
                     else "original" if versao.original_artifact_sha256
                     else None
                 ),
+                extras_manifest_sha256=versao.extras_manifest_sha256 if versao else None,
                 dnaty_version=versao.dnaty_version if otimizado and versao else None,
                 target_hardware=versao.target_hardware if versao else None,
                 reason=item.reason,

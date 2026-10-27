@@ -2104,6 +2104,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fields/{field_id}/gemeo/avaliacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * O gêmeo contra as passadas que o ajuste não viu (o que libera o modo ativo)
+         * @description Um passo à frente, contra a persistência e a prevalência. Enquanto o gêmeo não vencer
+         *     as duas, o mapa de aplicação feito por ele é registro, não proposta executável.
+         */
+        get: operations["field_gemeo_avaliacao_v1_fields__field_id__gemeo_avaliacao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/gemeo/modo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gêmeo em observação ou ativo, por doença */
+        get: operations["field_gemeo_modo_v1_fields__field_id__gemeo_modo_get"];
+        put?: never;
+        /**
+         * O agrônomo ativa o gêmeo (com avaliação favorável) ou volta à observação
+         * @description Ativar não aplica nada: o mapa ainda passa pela aprovação do agrônomo e pelo Safety
+         *     Engine. A IA recusa ativar (409) sem avaliação favorável; voltar à observação é sempre
+         *     permitido. Quem decidiu fica no registro da IA e na auditoria daqui.
+         */
+        post: operations["field_gemeo_mudar_modo_v1_fields__field_id__gemeo_modo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fields/{field_id}/gemeo/levantamento-aereo": {
         parameters: {
             query?: never;
@@ -3208,6 +3252,62 @@ export interface paths {
          *     versão de modelo resultante possa apontar de volta para cá.
          */
         post: operations["freeze_dataset_version_v1_admin_datasets__dataset_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/datasets/{dataset_id}/segunda-opiniao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Amostras de todos os clientes à espera de segunda opinião (equipe) */
+        get: operations["dataset_pendentes_de_opiniao_v1_admin_datasets__dataset_id__segunda_opiniao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/datasets/{dataset_id}/segunda-opiniao/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O agrônomo da equipe dá a segunda opinião sobre uma amostra */
+        post: operations["dataset_opinar_v1_admin_datasets__dataset_id__segunda_opiniao__sample_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/datasets/{dataset_id}/versions/{version_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * O corte congelado num zip para o treino (imagens, lesões e o porquê)
+         * @description Só o corte congelado (o consentimento foi conferido ao congelar). Na IA:
+         *     ``python -m training.import_licoes --zip <arquivo>``. Fica na auditoria: os dados saem da
+         *     plataforma.
+         */
+        get: operations["export_dataset_version_v1_admin_datasets__dataset_id__versions__version_id__export_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5333,6 +5433,153 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ensino/vocabulario": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sintomas sugeridos, terços e faces
+         * @description Sugestão, não lista fechada: o agrônomo escreve o que viu.
+         */
+        get: operations["vocabulario_v1_ensino_vocabulario_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ensino/painel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** O que a IA aprendeu com você */
+        get: operations["painel_v1_ensino_painel_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fields/{field_id}/licoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** As lições do talhão, das mais recentes */
+        get: operations["licoes_do_talhao_v1_fields__field_id__licoes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ensino/segunda-opiniao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lições de colegas à espera da sua opinião
+         * @description As em disputa primeiro. Só as do seu cliente, e nunca as suas.
+         */
+        get: operations["segunda_opiniao_v1_ensino_segunda_opiniao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ensino/segunda-opiniao/{amostra_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Você confirma ou corrige a lição de um colega */
+        post: operations["opinar_v1_ensino_segunda_opiniao__amostra_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ensino/regras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** As regras dos agrônomos do cliente, com a medida */
+        get: operations["regras_v1_ensino_regras_get"];
+        put?: never;
+        /** Escreve uma regra que a plataforma vai medir no histórico */
+        post: operations["cria_regra_v1_ensino_regras_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ensino/regras/{regra_id}/medir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mede a regra no histórico do cliente
+         * @description Com e sem a condição, a doença aparece mais? Teste de duas proporções nas observações
+         *     com diagnóstico de confiança. Sem casos suficientes, diz que não dá para medir.
+         */
+        post: operations["mede_regra_v1_ensino_regras__regra_id__medir_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ensino/regras/{regra_id}/ativa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Liga ou desliga a regra nos pareceres */
+        post: operations["ativa_regra_v1_ensino_regras__regra_id__ativa_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics": {
         parameters: {
             query?: never;
@@ -5494,6 +5741,13 @@ export interface components {
             no_data: {
                 [key: string]: string;
             };
+            /**
+             * Field Calibration
+             * @description Por modelo e versão, contra o rótulo confirmado pelo agrônomo: acerto, cobertura do conjunto conformal (contra a prometida), calibração por faixa de confiança e o que ficou fora do catálogo. Só casos que foram à fila: piores que a média.
+             */
+            field_calibration?: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * AiModelChoiceOut
@@ -6593,6 +6847,23 @@ export interface components {
             version: string;
             /** Notes */
             notes?: string | null;
+            /**
+             * Politica
+             * @description um: quem rotulou basta. consenso: só o que uma segunda opinião confirmou. confiabilidade: confirmado, ou de agrônomo que concorda com os colegas. Amostra em disputa nunca entra.
+             * @default um
+             * @enum {string}
+             */
+            politica: "um" | "consenso" | "confiabilidade";
+            /**
+             * Confiabilidade Minima
+             * @default 0.8
+             */
+            confiabilidade_minima: number;
+            /**
+             * Pares Minimos
+             * @default 10
+             */
+            pares_minimos: number;
         };
         /** DatasetVersionOut */
         DatasetVersionOut: {
@@ -6612,6 +6883,13 @@ export interface components {
             notes?: string | null;
             /** Frozen At */
             frozen_at?: string | null;
+            /**
+             * Criterio
+             * @description A política do corte e o que ficou fora, por motivo.
+             */
+            criterio?: {
+                [key: string]: unknown;
+            };
         };
         /** DecisionOut */
         DecisionOut: {
@@ -6686,6 +6964,11 @@ export interface components {
              * @description otimizado, original ou nulo.
              */
             artifact_kind: string | null;
+            /**
+             * Extras Manifest Sha256
+             * @description O robô confere por este manifesto cada arquivo ao lado do ONNX (perfil, cabeça, conformal...). Nulo = versão registrada sem manifesto: só o ONNX é conferido.
+             */
+            extras_manifest_sha256?: string | null;
             /** Dnaty Version */
             dnaty_version: string | null;
             /** Target Hardware */
@@ -7058,6 +7341,8 @@ export interface components {
              * @description Com order=valor: por que o item está onde está, ex.: 'classe rara: Cordana'.
              */
             priority_reasons?: string[];
+            /** @description Na fila: o parecer mais recente desta observação, quando já foi pedido. Apoio à decisão — não autoriza nada. */
+            parecer?: components["schemas"]["ParecerResumoOut"] | null;
         };
         /**
          * DiagnosisReview
@@ -7079,6 +7364,13 @@ export interface components {
             confirmed: boolean;
             /** Notes */
             notes?: string | null;
+            /** @description O porquê: sintomas, terço da planta, face da folha, texto. */
+            explicacao?: components["schemas"]["ExplicacaoIn"] | null;
+            /**
+             * Lesoes
+             * @description Onde está a lesão: viram recortes de treino (a cabeça aprende a lesão, não a foto inteira).
+             */
+            lesoes?: components["schemas"]["LesaoIn"][];
         };
         /**
          * DiagnosisStatus
@@ -7249,6 +7541,23 @@ export interface components {
             sync_id?: string | null;
             /** Events */
             events: components["schemas"]["DeviceEventIn"][];
+        };
+        /**
+         * ExplicacaoIn
+         * @description O porquê do agrônomo: o que ele viu e onde, nas palavras dele.
+         */
+        ExplicacaoIn: {
+            /**
+             * Sintomas
+             * @description Sugestões em GET /ensino/vocabulario, ou o que ele escrever.
+             */
+            sintomas?: string[];
+            /** Estrato */
+            estrato?: ("terco_inferior" | "terco_medio" | "terco_superior" | "indeterminado") | null;
+            /** Face */
+            face?: ("adaxial" | "abaxial" | "ambas" | "indeterminada") | null;
+            /** Porque */
+            porque?: string | null;
         };
         /** FarmCreate */
         FarmCreate: {
@@ -8027,6 +8336,20 @@ export interface components {
          */
         JobState: "queued" | "running" | "done" | "failed" | "cancelled";
         /**
+         * LesaoIn
+         * @description Uma lesão marcada na foto: a caixa, normalizada pela largura e altura da imagem.
+         */
+        LesaoIn: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** W */
+            w: number;
+            /** H */
+            h: number;
+        };
+        /**
          * LevantamentoAereoIn
          * @description Um levantamento aéreo processado (fora da plataforma), em GeoJSON.
          */
@@ -8611,6 +8934,11 @@ export interface components {
             optimized_artifact_sha256?: string | null;
             /** Optimized Size Bytes */
             optimized_size_bytes?: number | null;
+            /**
+             * Extras Manifest Sha256
+             * @description Hash do manifesto impresso por `valtexa-rover preparar-modelo`.
+             */
+            extras_manifest_sha256?: string | null;
             /** Dnaty Version */
             dnaty_version?: string | null;
             /**
@@ -8687,6 +9015,8 @@ export interface components {
             optimized_artifact_sha256?: string | null;
             /** Optimized Size Bytes */
             optimized_size_bytes?: number | null;
+            /** Extras Manifest Sha256 */
+            extras_manifest_sha256?: string | null;
             /** Dnaty Version */
             dnaty_version?: string | null;
             /**
@@ -8788,6 +9118,8 @@ export interface components {
             optimized_artifact_sha256?: string | null;
             /** Optimized Size Bytes */
             optimized_size_bytes?: number | null;
+            /** Extras Manifest Sha256 */
+            extras_manifest_sha256?: string | null;
             /** Dnaty Version */
             dnaty_version?: string | null;
             /**
@@ -8878,6 +9210,11 @@ export interface components {
             optimized_artifact_sha256?: string | null;
             /** Optimized Size Bytes */
             optimized_size_bytes?: number | null;
+            /**
+             * Extras Manifest Sha256
+             * @description Hash do manifesto impresso por `valtexa-rover preparar-modelo`.
+             */
+            extras_manifest_sha256?: string | null;
             /** Dnaty Version */
             dnaty_version?: string | null;
             /** License */
@@ -8897,6 +9234,18 @@ export interface components {
             model_key?: string | null;
             /** Version */
             version?: string | null;
+        };
+        /** ModoGemeoIn */
+        ModoGemeoIn: {
+            /** Doenca */
+            doenca: string;
+            /**
+             * Modo
+             * @enum {string}
+             */
+            modo: "observacao" | "ativo";
+            /** Motivo */
+            motivo: string;
         };
         /** NotificationChannelOut */
         NotificationChannelOut: {
@@ -9248,6 +9597,13 @@ export interface components {
             /** Warnings */
             warnings?: string[];
         };
+        /** OpiniaoIn */
+        OpiniaoIn: {
+            /** Rotulo */
+            rotulo: string;
+            /** Comentario */
+            comentario?: string | null;
+        };
         /**
          * OptimizationArtifactIn
          * @description Um lado do relatório: onde o artefato vive e o benchmark dele.
@@ -9406,6 +9762,45 @@ export interface components {
             plant_ref?: string | null;
             /** Observation Id */
             observation_id?: string | null;
+        };
+        /**
+         * ParecerResumoOut
+         * @description O parecer mais recente do caso, para o agrônomo ler ao lado da imagem na fila.
+         */
+        ParecerResumoOut: {
+            /** Id */
+            id: string;
+            /**
+             * Estado
+             * @description aguardando_revisao, revisado...
+             */
+            estado: string;
+            /**
+             * Modo
+             * @description deterministico ou provedor (texto validado).
+             */
+            modo: string;
+            /**
+             * Gerado Em
+             * Format: date-time
+             */
+            gerado_em: string;
+            /** Hipotese Principal */
+            hipotese_principal: string | null;
+            /** Alternativas */
+            alternativas?: string[];
+            /**
+             * Abertura
+             * @description A primeira afirmação do parecer, com as citações dela.
+             */
+            abertura?: string | null;
+            /** Fontes */
+            fontes: number;
+            /**
+             * Pendencias
+             * @description Verificações sem fonte, bloqueadas ou sem dado: o que o parecer não fecha.
+             */
+            pendencias: number;
         };
         /**
          * PasswordChange
@@ -9883,6 +10278,30 @@ export interface components {
             deliveries: {
                 [key: string]: number;
             };
+        };
+        /** RegraIn */
+        RegraIn: {
+            /** Cultura */
+            cultura: string;
+            /** Doenca */
+            doenca: string;
+            /**
+             * Texto
+             * @description A regra nas suas palavras: 'bicho-mineiro sobe na seca'.
+             */
+            texto: string;
+            /**
+             * Condicao
+             * @description {variavel: chuva_mm|molhamento_h|ur_media|t_media, janela_dias, operador: < ou >, valor} ou {variavel: mes, meses: [6, 7, 8]}.
+             */
+            condicao: {
+                [key: string]: unknown;
+            };
+            /**
+             * Efeito
+             * @enum {string}
+             */
+            efeito: "aumenta" | "diminui";
         };
         /**
          * ReleaseScope
@@ -11573,6 +11992,12 @@ export interface components {
             comentario?: string | null;
             /** Diagnostico Revisor */
             diagnostico_revisor?: string | null;
+            /**
+             * Registrar Diagnostico
+             * @description Discordando num caso de observação: registra o diagnóstico dele na observação, como na fila (vira amostra de treino e refaz a decisão).
+             * @default false
+             */
+            registrar_diagnostico: boolean;
         };
         /** RevisaoIn */
         valtexa__api__routers__planejamento__RevisaoIn: {
@@ -15235,6 +15660,120 @@ export interface operations {
             };
         };
     };
+    field_gemeo_avaliacao_v1_fields__field_id__gemeo_avaliacao_get: {
+        parameters: {
+            query: {
+                doenca: string;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_gemeo_modo_v1_fields__field_id__gemeo_modo_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    field_gemeo_mudar_modo_v1_fields__field_id__gemeo_modo_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModoGemeoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     field_gemeo_levantamento_v1_fields__field_id__gemeo_levantamento_aereo_post: {
         parameters: {
             query?: never;
@@ -17321,6 +17860,115 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DatasetVersionOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dataset_pendentes_de_opiniao_v1_admin_datasets__dataset_id__segunda_opiniao_get: {
+        parameters: {
+            query?: {
+                limite?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dataset_opinar_v1_admin_datasets__dataset_id__segunda_opiniao__sample_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dataset_id: string;
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpiniaoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_dataset_version_v1_admin_datasets__dataset_id__versions__version_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dataset_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -22247,6 +22895,339 @@ export interface operations {
             };
             path: {
                 field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vocabulario_v1_ensino_vocabulario_get: {
+        parameters: {
+            query?: {
+                rotulo?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    painel_v1_ensino_painel_get: {
+        parameters: {
+            query?: {
+                /** @description As minhas lições ou as do cliente todo. */
+                de?: "mim" | "todos";
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    licoes_do_talhao_v1_fields__field_id__licoes_get: {
+        parameters: {
+            query?: {
+                limite?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    segunda_opiniao_v1_ensino_segunda_opiniao_get: {
+        parameters: {
+            query?: {
+                limite?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    opinar_v1_ensino_segunda_opiniao__amostra_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                amostra_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpiniaoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regras_v1_ensino_regras_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cria_regra_v1_ensino_regras_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegraIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mede_regra_v1_ensino_regras__regra_id__medir_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                regra_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ativa_regra_v1_ensino_regras__regra_id__ativa_post: {
+        parameters: {
+            query: {
+                ativa: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-tenant-id"?: string | null;
+            };
+            path: {
+                regra_id: string;
             };
             cookie?: never;
         };

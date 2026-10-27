@@ -34,6 +34,7 @@ from valtexa.models.dataset import (
 )
 from valtexa.models.edge import EdgeRecord, EdgeUpload
 from valtexa.models.ensaio import EnsaioResultado
+from valtexa.models.ensino import LicaoAgronomo, OpiniaoAmostra, RegraAgronomo
 from valtexa.models.enums import (
     ActorType,
     Agreement,
@@ -163,6 +164,7 @@ __all__ = [
     "Incident",
     "JobKind",
     "JobState",
+    "LicaoAgronomo",
     "LoginAttempt",
     "Membership",
     "Mission",
@@ -179,6 +181,7 @@ __all__ = [
     "NotificationPreference",
     "Observation",
     "OfflineAction",
+    "OpiniaoAmostra",
     "OtaDeployment",
     "OtaPackage",
     "OutboxEvent",
@@ -193,6 +196,7 @@ __all__ = [
     "ProductBatch",
     "ProductStatus",
     "ProvisioningToken",
+    "RegraAgronomo",
     "ReleaseScope",
     "RevisaoParecer",
     "RevisaoPlanoDeApoio",

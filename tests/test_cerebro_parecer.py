@@ -20,7 +20,14 @@ from valtexa.api.routers import cerebro as rotas
 from valtexa.cerebro import dossie, parecer, provedor
 from valtexa.cerebro.validador import Validador
 from valtexa.main import app
-from valtexa.models import Detection, Diagnosis, Observation, PlatformRole, utcnow
+from valtexa.models import (
+    Detection,
+    Diagnosis,
+    DiagnosisStatus,
+    Observation,
+    PlatformRole,
+    utcnow,
+)
 from valtexa.models.cerebro import Parecer
 
 PLANTA = "L22-P0114"
@@ -527,3 +534,31 @@ def test_data_do_dossie_e_formato_dos_numeros() -> None:
     assert parecer.num(0.6193) == "0,62" and parecer.num(3) == "3" and parecer.num(2.0) == "2"
     assert parecer.num(21.34, 1) == "21,3"
     assert date.fromisoformat(utcnow().date().isoformat())
+
+
+# -- o parecer na fila do agrônomo ------------------------------------------------------------
+
+
+@pytest.mark.parametrize("ordem", ["novidade", "valor"])
+def test_fila_traz_o_parecer_mais_recente_da_observacao(client, agronomist_token, caso, ia,
+                                                         session, ordem) -> None:
+    diag = session.get(Diagnosis, caso["diagnosis_id"])
+    diag.status, diag.reviewed_at = DiagnosisStatus.NEEDS_REVIEW, None
+    session.commit()
+
+    def item() -> dict:
+        fila = client.get("/v1/review/queue", params={"order": ordem},
+                          headers=agronomist_token).json()
+        [achado] = [i for i in fila if i["id"] == caso["diagnosis_id"]]
+        return achado
+
+    assert item()["parecer"] is None  # ninguém pediu ainda
+    _gera(client, agronomist_token, caso, caso="observacao",
+          observation_id=caso["observation_id"])
+    segundo = _gera(client, agronomist_token, caso, caso="observacao",
+                    observation_id=caso["observation_id"])
+    resumo = item()["parecer"]
+    assert resumo["id"] == segundo["id"]  # o mais recente
+    assert resumo["estado"] == "aguardando_revisao" and resumo["modo"] == "deterministico"
+    assert resumo["hipotese_principal"] == segundo["hipotese_principal"]
+    assert resumo["abertura"] and resumo["pendencias"] == segundo["pendencias"]

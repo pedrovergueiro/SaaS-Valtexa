@@ -54,6 +54,8 @@ const MissionCompare = lazyPage(() => import('@/pages/MissionCompare'))
 const FieldHistory = lazyPage(() => import('@/pages/FieldHistory'))
 const Pareceres = lazyPage(() => import('@/pages/Pareceres'))
 const ParecerDetail = lazyPage(() => import('@/pages/ParecerDetail'))
+const GemeoTalhao = lazyPage(() => import('@/pages/GemeoTalhao'))
+const Ensino = lazyPage(() => import('@/pages/Ensino'))
 const Planejamento = lazyPage(() => import('@/pages/Planejamento'))
 const PlanejamentoInsumos = lazyPage(() => import('@/pages/PlanejamentoInsumos'))
 const PlanoDetail = lazyPage(() => import('@/pages/PlanoDetail'))
@@ -198,6 +200,8 @@ export const router = createBrowserRouter([
       { path: 'talhoes/:id', element: <FieldDetail /> },
       { path: 'talhoes/:id/historico', element: <FieldHistory /> },
       { path: 'talhoes/:id/pareceres', element: <Pareceres /> },
+      { path: 'talhoes/:id/gemeo', element: <GemeoTalhao /> },
+      { path: 'ensino', element: <Ensino /> },
       { path: 'pareceres/:id', element: <ParecerDetail /> },
       { path: 'talhoes/:id/planejamento', element: <Planejamento /> },
       { path: 'planejamento/insumos', element: <PlanejamentoInsumos /> },

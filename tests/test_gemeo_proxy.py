@@ -102,3 +102,36 @@ def test_request_preserva_status_e_timeout_longo(monkeypatch) -> None:
         assert exc.status_code == 409
     else:
         raise AssertionError("409 da inferência deveria virar recusa")
+
+
+def test_modo_do_gemeo_pelo_agronomo(client, agronomist_token, operator_token, demo, session,
+                                     monkeypatch) -> None:
+    from valtexa.models import AuditEntry
+
+    chamadas = []
+
+    def mudar(field_id, pedido):
+        chamadas.append(pedido)
+        if pedido["modo"] == "ativo" and pedido["doenca"] == "Rust":
+            raise plant_map.PlantMapRefusedError("ainda não venceu as referências", 409)
+        return {**pedido, "evidencia": None}
+
+    monkeypatch.setattr(plant_map, "mudar_modo_gemeo", mudar)
+    monkeypatch.setattr(plant_map, "avaliacao_gemeo",
+                        lambda f, d: {"doenca": d, "pode_ativar": False, "motivos": ["poucas"]})
+    url = f"/v1/fields/{demo['field_id']}/gemeo"
+
+    av = client.get(f"{url}/avaliacao", params={"doenca": "Rust"}, headers=agronomist_token)
+    assert av.status_code == 200 and av.json()["pode_ativar"] is False
+    pedido = {"doenca": "Rust", "modo": "ativo", "motivo": "venceu na safra"}
+    # A recusa da IA (sem avaliação favorável) chega com o status dela.
+    assert client.post(f"{url}/modo", json=pedido, headers=agronomist_token).status_code == 409
+    # Só o agrônomo muda o modo; quem decide vai junto, com o nome.
+    assert client.post(f"{url}/modo", json={**pedido, "modo": "observacao"},
+                       headers=operator_token).status_code == 403
+    r = client.post(f"{url}/modo", json={**pedido, "modo": "observacao"},
+                    headers=agronomist_token)
+    assert r.status_code == 200 and chamadas[-1]["responsavel"]
+    acoes = session.scalars(select(AuditEntry.action).where(
+        AuditEntry.action == "gemeo.modo")).all()
+    assert acoes == ["gemeo.modo"]

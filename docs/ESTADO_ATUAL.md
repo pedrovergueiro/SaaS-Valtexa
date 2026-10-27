@@ -1,6 +1,6 @@
 # Estado atual da ValTexa
 
-> Atualizado em 20/10/2026, depois da consolidação. Números **medidos** (fora da amostra, salvo
+> Atualizado em 26/10/2026 (consolidação de 20/10 + correções de 26/10). Números **medidos** (fora da amostra, salvo
 > indicação). Onde algo não foi testado em hardware ou em campo, está dito.
 > Arquitetura: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
@@ -41,7 +41,8 @@ fazenda e o rádio foram **arquivados** em 20/10/2026 (nunca rodaram em hardware
 - Mosaico de café fora da amostra: plantas priorizadas 160/240 com 5% de incidência,
   240/240 com 10% e 20%; quadros sadios que viram evento 11,4%.
 - Percepção ativa, RGB-D, geometria da folha, qualidade/conformal/novidade por recorte,
-  orçamento de dados da Starlink, vídeo ao vivo, OTA com hash e procedência.
+  orçamento de dados da Starlink, vídeo ao vivo, OTA com hash e procedência; cada arquivo ao lado do modelo
+  (perfil, cabeça, conformal...) conferido por um manifesto ancorado no registry.
 - Adapters do Rover V3 (OAK-D, ZED-F9P, Xsens, navegação por arquivo) **nunca rodaram no
   hardware**; o protocolo com a navegação/MCU não está definido do lado da navegação.
 
@@ -71,8 +72,11 @@ Produção: `deploy/` pronto, **nunca implantado de verdade**.
 3. **Licença**: a cabeça do café foi treinada com o dNATY, de licença **não comercial**.
 4. A prevalência por EM do talhão não é confiável (marcada); a incidência por planta é a oficial.
 5. Google Maps sem faturamento; imagem Esri só em demonstração local.
-6. Depois de promover uma cabeça nova, o conformal precisa ser recalibrado.
-7. Boa parte do trabalho das rodadas 4 e 5 e toda a consolidação **não estão commitadas**.
+6. Depois de promover uma cabeça nova, o conformal **sai sozinho** (fica guardado com a cabeça
+   anterior) e a API e o Rover respondem sem conjunto conformal até rodar o `fit_conformal`
+   (precisa de GPU). Conformal calibrado com outra cabeça é ignorado nos dois lados.
+7. O trabalho até 21/10 está commitado e publicado. As correções de 26/10 (manifesto dos
+   arquivos do modelo, marca da cabeça no conformal) estão **locais**, sem commit.
 
 ## Próximos passos reais
 
@@ -82,4 +86,4 @@ Produção: `deploy/` pronto, **nunca implantado de verdade**.
    recalibrar a regra de borda e a fusão com dados reais; medir a Starlink sob o dossel.
 3. Resolver a licença da cabeça do café (dNATY) antes de uso comercial.
 4. Definir o protocolo com a navegação/MCU e a regra de voo de observação do drone.
-5. Commitar o trabalho local (rodadas 4–5 e consolidação) em cada repositório.
+5. Commitar as correções de 26/10 (IA, plataforma e Rover).

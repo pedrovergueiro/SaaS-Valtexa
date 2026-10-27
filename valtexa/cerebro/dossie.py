@@ -465,6 +465,35 @@ def _clima(m: _Montagem, ia: FonteDaIA, field_id: str, data_caso: date) -> None:
 # ---------------------------------------------------------------------------------------------
 
 
+def _ensinado(m: _Montagem, session: Session, tenant_id: str, field_id: str,
+              hip: dict[str, Any]) -> None:
+    """O que o agrônomo já ensinou sobre a hipótese e as alternativas (:mod:`services.ensino`),
+    deste talhão primeiro. Só entra quando há: sem lição, o parecer não fala disso."""
+    from valtexa.services import ensino
+
+    rotulos = {hip["principal"], *(a["classe"] for a in hip.get("alternativas") or [])} - {None}
+    regras = ensino.regras_para_o_parecer(session, tenant_id, rotulos)
+    if regras:
+        m.item("regras_agronomo", "Regras dos agrônomos do cliente",
+               origem={"sistema": "plataforma", "tabela": "regra_agronomo"},
+               dados={"regras": regras},
+               limitacoes=["a regra vale o que a medida no histórico do cliente disser: "
+                           "sustentada não é causa, e 'poucos dados' não é a favor nem contra"])
+    licoes = ensino.para_o_parecer(session, tenant_id, field_id, rotulos)
+    if not licoes:
+        return
+    m.item("licoes", "O que o agrônomo ensinou",
+           origem={"sistema": "plataforma", "tabela": "licao_agronomo",
+                   "ids": [x["id"] for x in licoes]},
+           dados={"licoes": [{"autor": x["autor"], "data": x["quando"][:10],
+                              "classe": x["rotulo"], "sintomas": x["sintomas"],
+                              "estrato": x["estrato"], "face": x["face"],
+                              "porque": x["porque"], "do_talhao": x["field_id"] == field_id}
+                             for x in licoes]},
+           limitacoes=["é o que o agrônomo viu em outros casos: ajuda a olhar, não confirma "
+                       "este"])
+
+
 def _regras(m: _Montagem, session: Session, diags: list[Diagnosis]) -> None:
     aplicadas: list[dict[str, Any]] = []
     for it in m.itens:
@@ -589,6 +618,7 @@ def montar(session: Session, tenant_id: str, campo: Field, caso: Caso, ia: Fonte
     if hip["principal"] and not hip["principal_e_sadia"]:
         _gemeo(m, ia, caso.field_id, plant_ref, hip["principal"])
     _clima(m, ia, caso.field_id, data_caso)
+    _ensinado(m, session, tenant_id, caso.field_id, hipoteses(m.itens))
     _regras(m, session, diags)
     dossie = {
         "versao": VERSAO, "gerado_em": agora.isoformat(),

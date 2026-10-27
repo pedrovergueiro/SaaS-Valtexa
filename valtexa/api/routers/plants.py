@@ -301,6 +301,63 @@ def levantamento_do_geojson(geojson: dict[str, Any]) -> tuple[list[list[float]],
     return cobertura[0], anomalias
 
 
+class ModoGemeoIn(BaseModel):
+    doenca: str = PydField(pattern=DOENCA)
+    modo: Literal["observacao", "ativo"]
+    motivo: str = PydField(min_length=3, max_length=500)
+
+
+@router.get(
+    "/fields/{field_id}/gemeo/avaliacao",
+    summary="O gêmeo contra as passadas que o ajuste não viu (o que libera o modo ativo)",
+)
+def field_gemeo_avaliacao(
+    field_id: str,
+    doenca: str = Query(pattern=DOENCA),
+    principal: Principal = Depends(require(rbac.DECISION_READ)),
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    """Um passo à frente, contra a persistência e a prevalência. Enquanto o gêmeo não vencer
+    as duas, o mapa de aplicação feito por ele é registro, não proposta executável."""
+    get_scoped(session, Field, field_id, principal)
+    return _gemeo(plant_map.avaliacao_gemeo, field_id, doenca, sem_talhao=SEM_PASSADA)
+
+
+@router.get("/fields/{field_id}/gemeo/modo", summary="Gêmeo em observação ou ativo, por doença")
+def field_gemeo_modo(
+    field_id: str,
+    principal: Principal = Depends(require(rbac.DECISION_READ)),
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    get_scoped(session, Field, field_id, principal)
+    return _gemeo(plant_map.modos_gemeo, field_id, sem_talhao=SEM_PASSADA)
+
+
+@router.post("/fields/{field_id}/gemeo/modo",
+             summary="O agrônomo ativa o gêmeo (com avaliação favorável) ou volta à observação")
+def field_gemeo_mudar_modo(
+    field_id: str,
+    pedido: ModoGemeoIn,
+    principal: Principal = Depends(require(rbac.DIAGNOSIS_REVIEW)),
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    """Ativar não aplica nada: o mapa ainda passa pela aprovação do agrônomo e pelo Safety
+    Engine. A IA recusa ativar (409) sem avaliação favorável; voltar à observação é sempre
+    permitido. Quem decidiu fica no registro da IA e na auditoria daqui."""
+    get_scoped(session, Field, field_id, principal)
+    responsavel = principal.user.full_name or principal.user.email
+    corpo = _gemeo(plant_map.mudar_modo_gemeo, field_id, {
+        "doenca": pedido.doenca, "modo": pedido.modo, "responsavel": responsavel,
+        "motivo": pedido.motivo}, sem_talhao=SEM_PASSADA)
+    audit.record(session, tenant_id=principal.tenant_id, action="gemeo.modo",
+                 subject_type=SubjectType.FIELD, subject_id=field_id,
+                 actor_type=ActorType.USER, actor_id=principal.user_id,
+                 payload={"doenca": pedido.doenca, "modo": pedido.modo,
+                          "motivo": pedido.motivo, "evidencia": corpo.get("evidencia")})
+    session.commit()
+    return corpo
+
+
 @router.post(
     "/fields/{field_id}/gemeo/levantamento-aereo",
     summary="Importa um levantamento aéreo: as regiões suspeitas entram no gêmeo (canal drone)",

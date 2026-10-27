@@ -46,7 +46,8 @@ BLOQUEIO_DECLARADO = re.compile(r"(bloquead|vencid|nao verificad|ficticia|fictic
                                 r"operacional|sem validade)")
 
 
-LIVRES = frozenset({"talhao", "plant_ref", "diagnostico_revisor", "comentario", "nome"})
+LIVRES = frozenset({"talhao", "plant_ref", "diagnostico_revisor", "comentario", "nome",
+                    "porque", "sintomas", "autor", "regra"})
 """Chaves de texto livre do dossiê (o que alguém digitou ou o Rover mandou). O texto delas
 vale como identificador, mas **um número dentro delas não é evidência**: um talhão chamado
 "0,99" não sustenta "probabilidade 0,99"."""

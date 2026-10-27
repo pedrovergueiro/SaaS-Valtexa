@@ -169,6 +169,10 @@ class Analysis:
     prediction_set: tuple[str, ...] | None = None
     """Conjunto conformal: as classes que não dá para descartar."""
 
+    set_coverage: float | None = None
+    """A cobertura que a calibração promete para o conjunto (ex.: 0,9). Gravada para medir,
+    com o rótulo do agrônomo, se a promessa vale no campo (``services.calibracao_campo``)."""
+
     frame: dict | None = None
     """Resumo do quadro do rover (``/predict/rover-frame``), quando foi um."""
 
@@ -182,6 +186,8 @@ class Analysis:
             out["scene"] = self.scene
         if self.prediction_set is not None:
             out["prediction_set"] = list(self.prediction_set)
+        if self.set_coverage is not None:
+            out["set_coverage"] = self.set_coverage
         if self.frame is not None:
             out["frame"] = self.frame
         return out
@@ -379,6 +385,7 @@ class HttpModelAnalyzer:
             in_scope=framing.get("in_scope"),
             scene=framing.get("scene"),
             prediction_set=None if prediction_set is None else tuple(prediction_set),
+            set_coverage=body.get("set_coverage"),
         )
 
 

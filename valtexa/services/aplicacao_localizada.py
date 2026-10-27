@@ -10,7 +10,8 @@ o mapa com o ``sha256`` do que se executa (trechos, produto, equipamento, data).
   o mapa depois apaga a aprovação (rota ``POST /missions/{id}/mapa-aplicacao``);
 * :func:`conferencias` são as checagens determinísticas que o Safety Engine roda em cada
   trecho: dentro da faixa da bula do produto cadastrado, no máximo a dose autorizada da
-  missão, PWM dentro dos limites da máquina, o mesmo produto da missão.
+  missão, PWM dentro dos limites da máquina, o mesmo produto da missão — e o gêmeo que fez o
+  mapa **ativo** no talhão (em observação, o mapa é registro para comparar, não proposta).
 
 Nada aqui libera: quem decide é o :mod:`valtexa.services.safety_engine`.
 """
@@ -21,7 +22,9 @@ import hashlib
 import json
 from typing import Any
 
-CAMPOS_DO_HASH = ("zonas", "produto", "equipamento", "data_aplicacao")
+CAMPOS_DO_HASH = ("zonas", "produto", "equipamento", "data_aplicacao", "modo_gemeo")
+"""Os mesmos da IA (``ia/app/aplicacao_localizada.CAMPOS_DO_HASH``): o modo do gêmeo entra
+para que um mapa feito em observação não vire executável trocando um campo."""
 
 
 def sha256_do_mapa(mapa: dict[str, Any]) -> str:
@@ -43,7 +46,12 @@ def conferencias(mapa: dict[str, Any], *, aprovado: str | None, taxa_autorizada:
         return [("map_integrity", False, "Mapa de aplicação alterado ou incompleto: o hash não "
                  "confere com o conteúdo.")]
     sha = mapa["sha256"]
+    ativo = mapa.get("modo_gemeo") == "ativo"
     saida = [("map_integrity", True, f"Mapa íntegro ({sha[:12]}…)."),
+             ("map_twin_active", ativo,
+              "O gêmeo que fez o mapa está ativo no talhão." if ativo else
+              "Mapa feito com o gêmeo em observação no talhão: é registro para comparar, não "
+              "proposta executável (ative o gêmeo na IA depois da avaliação)."),
              ("map_approved", aprovado == sha,
               "O agrônomo aprovou este mapa." if aprovado == sha else
               "A aprovação não é deste mapa (mudou depois de aprovado, ou não foi aprovado).")]

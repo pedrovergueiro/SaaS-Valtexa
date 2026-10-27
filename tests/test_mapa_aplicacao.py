@@ -18,7 +18,7 @@ from valtexa.models import Mission, MissionState, Product
 from valtexa.services import aplicacao_localizada, plant_map
 
 
-def _mapa(taxas=(0.0, 80.0, 100.0), ciclo=0.5, registro=None) -> dict:
+def _mapa(taxas=(0.0, 80.0, 100.0), ciclo=0.5, registro=None, modo="ativo") -> dict:
     zonas = [{"row_id": "G1", "x_inicio_m": 5.0 * i, "x_fim_m": 5.0 * (i + 1),
               "taxa_l_ha": t, "bico": {"ciclo": ciclo if t else 0.0, "viavel": True,
                                        "estado": "ok" if t else "fechado"}}
@@ -26,7 +26,7 @@ def _mapa(taxas=(0.0, 80.0, 100.0), ciclo=0.5, registro=None) -> dict:
     mapa = {"estado": "proposta", "zonas": zonas, "data_aplicacao": "2026-10-20",
             "produto": {"nome": "X", "registro_mapa": registro},
             "equipamento": {"nome": "seções", "ciclo_min": 0.2, "ciclo_max": 1.0},
-            "totais": {"litros": 3.0}, "bloqueios": []}
+            "totais": {"litros": 3.0}, "bloqueios": [], "modo_gemeo": modo}
     mapa["sha256"] = aplicacao_localizada.sha256_do_mapa(mapa)
     return mapa
 
@@ -71,8 +71,9 @@ def test_mapa_aprovado_e_conferido(client, session, session_factory, demo, frota
     assert client.post(f"/v1/missions/{mid}/approve", json={"confirm": True},
                        headers=agronomo).status_code == 200
     c = _checks(session, mid)
-    assert all(c[k] for k in ("map_integrity", "map_approved", "map_rates_label",
-                              "map_rates_authorized", "map_pwm", "map_product")), c
+    assert all(c[k] for k in ("map_integrity", "map_twin_active", "map_approved",
+                              "map_rates_label", "map_rates_authorized", "map_pwm",
+                              "map_product")), c
     session.expire_all()
     assert session.get(Mission, mid).state is MissionState.DRAFT  # aprovar não libera
 
@@ -100,13 +101,14 @@ def test_trechos_fora_da_bula_ou_do_autorizado(client, session, session_factory,
     mid = pulverizacao_em_rascunho
     gestor = _usuario(session_factory, client, Role.OPERATOR)
     reg = produto_com_bula.registration_number
-    for taxas, ciclo, registro, falha in (
-            ((0.0, 30.0), 0.5, reg, "map_rates_label"),          # abaixo da mínima de bula
-            ((120.0,), 0.5, reg, "map_rates_authorized"),        # acima dos 100 autorizados
-            ((80.0,), 0.1, reg, "map_pwm"),                      # ciclo abaixo do mínimo
-            ((80.0,), 0.5, "outro-produto", "map_product")):
+    for taxas, ciclo, registro, modo, falha in (
+            ((0.0, 30.0), 0.5, reg, "ativo", "map_rates_label"),      # abaixo da mínima de bula
+            ((120.0,), 0.5, reg, "ativo", "map_rates_authorized"),    # acima dos 100 autorizados
+            ((80.0,), 0.1, reg, "ativo", "map_pwm"),                  # ciclo abaixo do mínimo
+            ((80.0,), 0.5, "outro-produto", "ativo", "map_product"),
+            ((80.0,), 0.5, reg, "observacao", "map_twin_active")):    # gêmeo em observação
         assert _pede(client, mid, gestor, monkeypatch,
-                     _mapa(taxas, ciclo, registro))[0].status_code == 200
+                     _mapa(taxas, ciclo, registro, modo))[0].status_code == 200
         assert _checks(session, mid)[falha] is False, falha
 
 

@@ -45,7 +45,7 @@ from valtexa.models import (
     SubjectType,
     User,
 )
-from valtexa.services import audit, consent, events
+from valtexa.services import audit, consent, ensino, events
 
 logger = logging.getLogger(__name__)
 
@@ -187,8 +187,15 @@ def freeze_version(
     *,
     notes: str | None = None,
     actor: User | None = None,
+    politica: str = "um",
+    confiabilidade_minima: float = 0.8,
+    pares_minimos: int = 10,
 ) -> DatasetVersion:
     """Congela as amostras candidatas num corte reproduzível.
+
+    ``politica`` (:data:`valtexa.services.ensino.POLITICAS`): o que basta para uma amostra
+    entrar — um agrônomo, o consenso de dois, ou um agrônomo confiável. Amostra em disputa nunca
+    entra; a que fica fora continua candidata para o próximo corte.
 
     Guarda a lista de identificadores, não um filtro por data: amostras podem
     ser excluídas depois, e um corte definido por consulta mudaria de conteúdo
@@ -216,8 +223,14 @@ def freeze_version(
         session, {amostra.tenant_id for amostra in candidatas}
     )
     amostras = [amostra for amostra in candidatas if amostra.tenant_id in autorizados]
+    try:
+        amostras, criterio = ensino.escolher_para_o_corte(
+            session, amostras, politica, confiabilidade_minima, pares_minimos)
+    except ValueError as exc:
+        raise DatasetError(str(exc)) from exc
     if not amostras:
-        raise DatasetError(f"{conjunto.key!r} não tem amostra para congelar.")
+        raise DatasetError(f"{conjunto.key!r} não tem amostra para congelar com a política "
+                           f"{politica!r} (fora: {criterio['fora'] or 'nada'}).")
 
     corte = DatasetVersion(
         dataset_id=conjunto.id,
@@ -226,6 +239,7 @@ def freeze_version(
         label_counts=dict(Counter(amostra.label for amostra in amostras)),
         sample_ids=[amostra.id for amostra in amostras],
         notes=notes,
+        criterio=criterio,
         frozen_at=datetime.now(UTC),
         frozen_by=actor.id if actor else None,
     )
@@ -247,6 +261,7 @@ def freeze_version(
             "dataset": conjunto.key,
             "samples": corte.sample_count,
             "labels": corte.label_counts,
+            "criterio": criterio,
         },
     )
     events.publish(
