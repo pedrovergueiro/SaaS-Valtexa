@@ -9,7 +9,7 @@ import modelo as M
 from modelo import (quadro, base_mastro, mastro, suportes_camera, retencao_bateria, bandejas, estop,
                     chapa_fundo, gaiola, carenagens, bateria_ref, conjunto, ITENS, GRUPOS, consolidado,
                     TABELA_51, YQ, XQ, Z_QUADRO, Z_DECK, Z_G2, Z_TAMPA, Y_MASTRO, Z_REF_M, D_ESTOP,
-                    CAMERAS_Z, Z_TOTAL, X_ESTOP, MALHA_MONTAGEM, BATERIA, E_CHAPA,
+                    CAMERAS_Z, Z_TOTAL, X_ESTOP, MALHA_MONTAGEM, BATERIA, MODULO_BAT, X_MODULO, E_CHAPA,
                     suporte_gnss, gnss_ref, berco_imu, visao_raiz, suporte_led,
                     interfaces_sensores, lidar_ref, rodas, X_GNSS, Z_GNSS, D_ANTENA, H_ANTENA,
                     X_IMU, Z_IMU, JANELA_RAIZ, Y_LED, Z_LED, D_LED, Z_BASE_LIDAR, X_LIDAR)
@@ -381,42 +381,41 @@ def f20():
     desenha(F.s, vs, ctx + pecas + bateria_ref())
     for (x, y) in MALHA_MONTAGEM:
         cruz_centro(F.s, *vs.P((x, y, Z_QUADRO)), 2.2)
-    cota_vista_h(F.s, vs, (-BATERIA[0] / 2, 0, 0), (BATERIA[0] / 2, 0, 0), 158)
-    cota_vista_h(F.s, vs, (-225, 0, 0), (225, 0, 0), 166, txt='450 (entre batentes)')
-    cota_vista_v(F.s, vs, (0, -BATERIA[1] / 2, 0), (0, BATERIA[1] / 2, 0), 38)
-    cota_vista_v(F.s, vs, (0, -165, 0), (0, 165, 0), 30, txt='330')
-    chamada(F.s, *vs.P((170, 240, Z_QUADRO)), 262, 40, 'malha de montagem M6 (16 pontos)', lado=1)
-    chamada(F.s, *vs.P((40, 185 + 16, Z_QUADRO + 40)), 262, 58, 'rasgo 26 × 6 para a cinta F-23', lado=1)
-    chamada(F.s, *vs.P((245 + 16, 60, Z_QUADRO + 40)), 262, 80, ['B-01 batente (4×)',
-                                                                 'cantoneira 40×40×4 × 150'], lado=1)
-    chamada(F.s, *vs.P((BATERIA[0] / 2, -140, Z_QUADRO)), 262, 104, 'caixa da bateria (referência)', lado=1)
-    rotulo(F.s, 150, 182, 'ZONA DA BATERIA — VISTA SUPERIOR', '1:5', 'caixa em linha fantasma')
+    xm0, xm1 = X_MODULO - MODULO_BAT[0] / 2, X_MODULO + MODULO_BAT[0] / 2
+    cota_vista_h(F.s, vs, (xm0, 0, 0), (xm1, 0, 0), 158)
+    cota_vista_h(F.s, vs, (-xm0, 0, 0), (xm0, 0, 0), 166, txt=f'{num(2 * xm0)} (entre módulos)')
+    cota_vista_v(F.s, vs, (0, -MODULO_BAT[1] / 2, 0), (0, MODULO_BAT[1] / 2, 0), 38)
+    chamada(F.s, *vs.P((170, 240, Z_QUADRO)), 262, 40, 'malha de montagem M6', lado=1)
+    chamada(F.s, *vs.P((xm1 + 20, 40, Z_QUADRO + 4)), 262, 58, 'rasgo 26 × 6 para a cinta F-23', lado=1)
+    chamada(F.s, *vs.P((xm1 + 4, 60, Z_QUADRO + 40)), 262, 80, ['B-01 batente (4×, 2 por módulo)',
+                                                                'cantoneira 40×40×4 × 150'], lado=1)
+    chamada(F.s, *vs.P((xm1, -140, Z_QUADRO)), 262, 104, 'módulo de bateria (referência, 2×)', lado=1)
+    rotulo(F.s, 150, 182, 'ZONA DA BATERIA — VISTA SUPERIOR', '1:5', 'módulos em linha fantasma')
 
     va = Vista('frontal', 5, 330, 200)
-    desenha_corte(F.s, va, ctx + pecas + bateria_ref(), 'x', 250.0)
+    desenha_corte(F.s, va, ctx + pecas + bateria_ref(), 'x', X_MODULO)
     F.s.ln(*va.P((0, -200, Z_QUADRO + BATERIA[2] + 6)), *va.P((0, 200, Z_QUADRO + BATERIA[2] + 6)), 'raio')
-    chamada(F.s, *va.P((0, 120, Z_QUADRO + BATERIA[2] + 6)), 372, 112, ['F-23 cinta 25 mm', 'sobre a caixa'],
+    chamada(F.s, *va.P((0, 120, Z_QUADRO + BATERIA[2] + 6)), 372, 112, ['F-23 cinta 25 mm', 'sobre o módulo'],
             lado=1)
-    cota_vista_v(F.s, va, (0, YQ, Z_QUADRO), (0, YQ, Z_QUADRO + 40), 284, txt='40')
-    rotulo(F.s, 330, 166, 'CORTE NA LINHA DOS BATENTES', '1:5', 'plano X 250')
+    cota_vista_v(F.s, va, (0, YQ, Z_QUADRO), (0, YQ, Z_QUADRO + BATERIA[2]), 284, txt=num(BATERIA[2]))
+    rotulo(F.s, 330, 166, 'CORTE PELO CENTRO DO MÓDULO', '1:5', f'plano X {num(X_MODULO)}')
 
     F.bloco(26, 196, 198, f'''
 <h3>Retenção da bateria</h3>
 <ol class="notas">
-<li>A caixa apoia na chapa de fundo (Z {num(Z_QUADRO)}) e é travada lateralmente por 4 batentes B-01
-aparafusados na malha de montagem — F-22 M6 em porca-rebite instalada na própria chapa.</li>
-<li>Duas cintas F-23 passam pelos rasgos dos batentes e prendem a caixa por cima.</li>
+<li>Rev K: dois módulos de 8 células, um de cada lado dos trilhos G-02, apoiados na chapa de fundo
+(Z {num(Z_QUADRO)}). Cada um é travado por 2 batentes B-01 (faces interna e externa) na malha M6.</li>
+<li>Uma cinta F-23 por módulo passa pelos rasgos dos batentes e prende o módulo por cima.</li>
 <li>Carga de projeto da amarração: 36,5 kg × 3 g = <b>1.074 N</b> na vertical e 537 N na lateral
 {tag('CALC')}.</li>
-<li>Manutenção: soltando as 2 cintas, a caixa sai por cima com os módulos da gaiola removidos.</li>
+<li>Manutenção: soltando a cinta, cada módulo sai por cima sozinho — permite trocar um módulo no turno.</li>
 <li>Não furar a chapa de fundo fora da malha — abaixo dela fica a zona de visão da câmera de raiz.</li>
 </ol>''')
     F.bloco(236, 190, 172, f'''
-<h3>Caixa da bateria — pendência</h3>
-<p>Dimensões usadas aqui: <b>{num(BATERIA[0])} × {num(BATERIA[1])} × {num(BATERIA[2])} mm</b>
-{tag('ESTIMATIVA')}. A caixa real das 16 células EVE LF100LA ainda não tem desenho {tag('A VALIDAR')}.</p>
-<p>Quando existir, muda apenas a <b>posição dos batentes na malha</b>: chapa, quadro e esta folha continuam
-válidos.</p>''', h=42)
+<h3>Módulos da bateria — Rev K</h3>
+<p>Cada módulo: <b>{num(MODULO_BAT[0])} × {num(MODULO_BAT[1])} × {num(MODULO_BAT[2])} mm</b>, 8 células
+EVE LF105 de pé (2 × 4) {tag('ESTIMATIVA')}. Altura livre no local: 145 a 147 mm.</p>
+<p>A caixa real é do montador do pack {tag('A VALIDAR')}; ligação em série entre módulos por cabo.</p>''', h=42)
     return F
 
 
@@ -807,7 +806,7 @@ concentração nas soldas só saem no FEA.</p>''')
         ['5', 'Tração e frenagem', '35 N·m por roda', 'σ no braço W-01 e na chapa W-02'],
         ['6', 'Mastro cheio', f'galho de 80 N no topo, com 3 OAK-D + 2 térmicas + antena; terreno a 5,6 Hz',
          'σ na base · 1ª freq. ≥ 7,5 Hz (calculado: ver folha 36)'],
-        ['7', 'Bateria', '36,5 kg × 3 g na amarração', 'σ nos batentes e na chapa'],
+        ['7', 'Bateria', '2 módulos de 18,3 kg × 3 g na amarração', 'σ nos batentes e na chapa'],
         ['8', 'Içamento', '2 pontos, 1,5 × massa', 'σ e definição dos pontos'],
         ['9', 'Fadiga do aço (grupo W)', 'ciclos do terreno no braço, na chapa W-02, nas orelhas e no pino',
          'categoria de detalhe de solda de aço; alumínio não tem limite de fadiga, o aço tem'],

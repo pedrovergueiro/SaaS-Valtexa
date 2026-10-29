@@ -115,7 +115,7 @@ Referencial: origem no solo, no centro do polígono das quatro rodas. **X** para
 
 | item | nome | qt | X | Y | Z | encosta em | como prende |
 |---|---|---|---|---|---|---|---|
-| **B-01** | Batente da bateria | 4 | 225…265 | -75…75 | 250…290 | C-01 | M6×20 na malha da chapa de fundo · **10 N·m** |
+| **B-01** | Batente da bateria | 4 | 216…254 | -75…75 | 250…290 | C-01 | M6×20 na malha da chapa de fundo · **10 N·m** |
 
 ### Grupo E — Bandejas de eletrônica e E-STOP
 
@@ -303,4 +303,4 @@ deles na bancada custa a desmontagem:
    altura, e nenhum dos três se ajusta depois.
 2. **A bucha autolubrificante do pivô** Ø23/Ø20 (P-21). O alojamento está em Ø23 H7.
 3. **A bateria.** A altura máxima medida na zona central é
-   87 mm, e a caixa estimada tem 130. Ver `VTX-RV4-ESPACO-G`.
+   147 mm, e a caixa estimada tem 130. Ver `VTX-RV4-ESPACO-G`.

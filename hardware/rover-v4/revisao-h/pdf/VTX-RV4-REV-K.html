@@ -1,0 +1,57 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>VTX-RV4 · Rev K — bateria em 2 módulos e leiaute interno refeito (28/10/2026)</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; margin: 0; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #15402a;
+     border-bottom: 2.4pt solid #1f6b3a; padding-bottom: 2.5mm; }
+h2 { font-size: 13.5pt; margin: 9mm 0 3mm; color: #1f6b3a; page-break-after: avoid;
+     border-bottom: .6pt solid #cfd8d2; padding-bottom: 1.5mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #15402a; page-break-after: avoid; }
+p { margin: 0 0 2.8mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm;
+        font-size: 9pt; page-break-inside: avoid; }
+th { background: #1f6b3a; color: #fff; text-align: left; padding: 1.6mm 2mm;
+     font-weight: 600; font-size: 8.6pt; }
+td { border-bottom: .4pt solid #dde3df; padding: 1.5mm 2mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8f7; }
+code { font: 9pt 'Cascadia Mono', Consolas, monospace; background: #eef2ef;
+       padding: .3mm 1mm; border-radius: 1mm; }
+pre { background: #f4f6f5; border-left: 2.5pt solid #1f6b3a; padding: 2.5mm 3mm;
+      margin: 2mm 0 4mm; overflow-x: auto; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.45; }
+blockquote { border-left: 2.5pt solid #c9a227; background: #fdf9ec; margin: 2mm 0 4mm;
+             padding: 2mm 3mm; }
+blockquote p { margin: 0; }
+hr { border: 0; border-top: .6pt solid #cfd8d2; margin: 6mm 0; }
+strong { font-weight: 650; color: #0d2b1c; }
+.rodape { margin-top: 8mm; padding-top: 2.5mm; border-top: .6pt solid #cfd8d2;
+          font-size: 8pt; color: #6a7570; }
+</style></head><body><h1>VTX-RV4 · Rev K — bateria em 2 módulos e leiaute interno refeito (28/10/2026)</h1>
+<blockquote><p>EMITIDO PARA COTAÇÃO E VALIDAÇÃO — NÃO LIBERADO PARA FABRICAÇÃO</p></blockquote>
+<h2>Decisões dos sócios que a Rev K aplica</h2>
+<table><thead><tr><th>#</th><th>Decisão</th><th>Origem</th></tr></thead><tbody><tr><td>1</td><td>Motor-roda: <strong>ainda em pesquisa</strong> (A importado, B patinete, C servo nacional com redutor)</td><td>28/10/2026</td></tr><tr><td>2</td><td>Autonomia: <strong>8 h por carga a 2 m/s</strong> (57,6 km)</td><td>28/10/2026</td></tr><tr><td>3</td><td>Bateria: <strong>2 módulos de 8 células</strong>, um de cada lado dos trilhos G-02</td><td>28/10/2026</td></tr><tr><td>4</td><td>Chassi: <strong>aço (opção B)</strong>, por resistência e custo — passa a ser o padrão</td><td>28/10/2026</td></tr></tbody></table>
+<h2>O que mudou</h2>
+<table><thead><tr><th>Onde</th><th>Rev J</th><th>Rev K</th></tr></thead><tbody><tr><td><code>opcao.py</code></td><td>padrão alumínio (<code>VTX_OPCAO=AL</code>)</td><td><strong>padrão aço</strong> (<code>VTX_OPCAO=AC</code>); revisão K, 28/10/2026</td></tr><tr><td>Bateria (<code>modelo.py</code>, folha 20)</td><td>uma caixa estimada de 460 × 350 × 130 mm, que <strong>não cabia</strong> (127 mm livres sob os G-02)</td><td><strong>2 módulos de 154 × 410 × 140 mm</strong>, em \</td><td>X\</td><td>60…214, com 145–147 mm livres</td></tr><tr><td>Batentes B-01</td><td>4, em volta da caixa única</td><td>4, <strong>2 por módulo</strong> (faces interna e externa); malha M6 refeita</td></tr><tr><td>Cinta F-23</td><td>2, sobre a caixa única</td><td>2, <strong>uma por módulo</strong></td></tr><tr><td>Compressor</td><td>zona com 37 mm de teto (não cabia)</td><td><strong>baia traseira</strong>, X −490…−368, 144 mm livres</td></tr><tr><td>Reservatório 2 L</td><td>300 × 110 × 110 (não cabia)</td><td><strong>2 tubos Ø75 × 220 mm</strong> (~1 L cada) nas faixas dianteiras, X 241…317</td></tr><tr><td>Jetson</td><td>bandeja lateral de 54 mm (não cabia)</td><td><strong>de pé</strong> na faixa traseira, X −327…−252</td></tr><tr><td>Driver dos motores</td><td>bandeja lateral (não cabia)</td><td><strong>de pé</strong> na faixa traseira, ao lado da Jetson</td></tr><tr><td>BMS</td><td>bandeja lateral (não cabia)</td><td><strong>baia dianteira</strong>, X 368…490</td></tr><tr><td>Bandejas laterais E-01</td><td>Jetson, driver, BMS</td><td>livres: fusíveis, borneiras e cabos</td></tr><tr><td>Autonomia</td><td>não calculada</td><td><code>autonomia.py</code> (novo)</td></tr><tr><td>Folha 35</td><td>tabela de zonas da Rev H</td><td>notas da Rev K</td></tr><tr><td>Folha 43</td><td>registro da Rev J</td><td>+ seção 6, Rev K</td></tr></tbody></table>
+<h2>Resultado das verificações (opção B, aço)</h2>
+<table><thead><tr><th>Verificação</th><th>Rev J</th><th>Rev K</th></tr></thead><tbody><tr><td>Zonas que comportam o que o projeto põe nelas</td><td>2 de 6</td><td><strong>10 de 10</strong></td></tr><tr><td>Interferências entre peças</td><td>0</td><td>0</td></tr><tr><td>Defeitos de layout nas 43 folhas</td><td>0</td><td>0</td></tr><tr><td>Centro de massa lateral (Y)</td><td>−7 mm, bateria não bastava para equilibrar</td><td><strong>−0,3 mm</strong></td></tr><tr><td>Tombamento lateral em rampa</td><td>34,8°</td><td><strong>35,4°</strong></td></tr><tr><td>Envelope de estabilidade</td><td>16,8°</td><td>16,8°</td></tr><tr><td>Pressão de projeto dos foles</td><td>8,81 bar</td><td>8,81 bar — <strong>continua acima do teto de 8</strong></td></tr></tbody></table>
+<h2>Autonomia — 8 h a 2 m/s (<code>autonomia.py</code>)</h2>
+<p>Aço, 176,8 kg com carga útil; bateria de 5.376 Wh, 4.301 Wh usáveis (reserva de 20 %). Eletrônica: 278 W.</p>
+<table><thead><tr><th>Terreno</th><th>Tração</th><th>Total</th><th>Horas</th><th>Energia para 8 h</th></tr></thead><tbody><tr><td>Plano</td><td>231 W</td><td>509 W</td><td><strong>8,4 h</strong></td><td>5,1 kWh</td></tr><tr><td>Morro leve (5°)</td><td>317 W</td><td>595 W</td><td>7,2 h</td><td>5,9 kWh</td></tr><tr><td>Morro de café (10°)</td><td>515 W</td><td>793 W</td><td><strong>5,4 h</strong></td><td>7,9 kWh</td></tr></tbody></table>
+<p>Coeficiente de rolamento (0,05) e rendimento da tração (75 %) são estimativas até a escolha do motor. Decisão de 28/10 (caminho 1): manter a bateria e aceitar menos horas no morro, reduzir a velocidade ali ou trocar um módulo no turno — os módulos saem sozinhos, soltando uma cinta.</p>
+<h2>O que continua em aberto</h2>
+<ol>
+<li><strong>Foles na opção aço (8,81 bar &gt; 8 bar).</strong> Especificar fole de 10 bar ou de área efetiva ~19 % maior</li>
+</ol>
+<p>(volta a ~7,4 bar). Muda a cotação dos foles, não a geometria do chassi.</p>
+<ol>
+<li><strong>Motor-roda</strong> (decisão 1 em pesquisa): define torque, driver, massa e a interface W-02.</li>
+<li><strong>Conversor de 12 V</strong> de 360 W contra 387–401 W de pico: trocar por ≥ 500 W ou separar o compressor.</li>
+<li><strong>Switch de 16 portas PoE</strong> no lugar do de 8.</li>
+<li><strong>Fichas técnicas</strong> de Jetson com carrier, driver, BMS, conversor e módulos de bateria: as zonas da Rev K</li>
+</ol>
+<p>cabem com as dimensões estimadas; a ficha confirma.</p>
+<ol>
+<li><strong>Análise estrutural</strong> (8 casos da folha 25) e parecer do engenheiro.</li>
+</ol><div class="rodape">VALTEXA · Rover V4 · Revisão H · gerado de <code>VTX-RV4-REV-K.md</code> · EMITIDO PARA COTAÇÃO E VALIDAÇÃO</div></body></html>

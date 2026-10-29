@@ -62,17 +62,17 @@ O número real, medido, é o da seção seguinte.
 | Grandeza | Valor |
 |---|---|
 | Caixa bruta do compartimento (1046 × 596 × 150) | 93,51 L |
-| **Volume livre, descontada toda peça** | **76,58 L** |
+| **Volume livre, descontada toda peça** | **76,68 L** |
 | Maior altura livre contínua em qualquer ponto | 148 mm |
 
 ### Volume aproveitável por altura de componente
 
 | Componente de até | Volume aproveitável |
 |---|---|
-| 30 mm | 76,58 L |
-| 60 mm | 68,18 L |
-| 90 mm | 66,19 L |
-| 120 mm | 56,85 L |
+| 30 mm | 76,68 L |
+| 60 mm | 68,28 L |
+| 90 mm | 65,83 L |
+| 120 mm | 57,14 L |
 
 ### Área de piso por faixa de altura livre
 
@@ -82,10 +82,10 @@ O número real, medido, é o da seção seguinte.
 | 20 a 40 mm | 709 cm² |
 | 40 a 60 mm | 483 cm² |
 | 60 a 80 mm | 12 cm² |
-| 80 a 100 mm | 193 cm² |
-| 100 a 120 mm | 818 cm² |
-| 120 a 140 mm | 502 cm² |
-| 140 a 160 mm | 3407 cm² |
+| 80 a 100 mm | 239 cm² |
+| 100 a 120 mm | 758 cm² |
+| 120 a 140 mm | 455 cm² |
+| 140 a 160 mm | 3467 cm² |
 
 
 ## Teto de altura por zona — para a folha de compra
@@ -94,12 +94,17 @@ O número real, medido, é o da seção seguinte.
 
 | Zona | Altura máxima de componente | Área | Onde |
 |---|---|---|---|
-| Bateria | **87 mm** | 1813 cm² | Centro do compartimento, entre os batentes B-01 |
-| Bandeja lateral esquerda | **88 mm** | 205 cm² | Sobre a chapa, ao lado da bateria |
+| Bateria · módulo +X | **147 mm** | 631 cm² | Rev K: entre o G-02 e a G-03, batentes B-01 nas faces X |
+| Bateria · módulo −X | **147 mm** | 631 cm² | Idem, espelhado |
+| Bandeja lateral esquerda | **88 mm** | 205 cm² | Rev K: livre (fusíveis, borneiras, cabos) |
 | Bandeja lateral direita | **88 mm** | 205 cm² | Idem, espelhada |
+| Faixa traseira (computação) | **127 mm** | 375 cm² | Rev K: Jetson e driver de pé, ao longo de Y |
+| Baia dianteira | **89 mm** | 301 cm² | Rev K: BMS, sobre a E-02 dianteira direita |
+| Faixa dianteira esquerda | **87 mm** | 167 cm² | Rev K: tubo do reservatório (1 de 2) |
+| Faixa dianteira direita | **107 mm** | 167 cm² | Rev K: tubo do reservatório (2 de 2) |
 | Bandeja dianteira esquerda | **145 mm** | 63 cm² | Entre a janela de raiz e o colar do fole |
 | Bandeja traseira esquerda | **145 mm** | 63 cm² | Idem, traseira |
-| Grupo pneumático | **37 mm** | 418 cm² | Compressor, reservatório, secador e manifold |
+| Compressor (baia traseira) | **144 mm** | 301 cm² | Rev K: atrás, sobre a E-02 traseira direita |
 
 
 ## Cada componente cabe em algum lugar contíguo?
@@ -108,14 +113,16 @@ Varredura da grade inteira, nas duas orientações. É a pergunta certa — dife
 
 | Componente | L×W×H | origem do dado | veredito | posição |
 |---|---|---|---|---|
-| Bateria LiFePO4 estimada | 460×350×130 | ESTIMATIVA | **NÃO CABE** | nenhuma área contígua no compartimento |
-| Jetson Orin NX + carrier | 180×110×45 | ESTIMATIVA | **CABE** | X -91…89 · Y -266…-156 (livre 87 mm) |
-| Driver dos motores (4 canais) | 200×120×55 | ESTIMATIVA | **CABE** | X -99…101 · Y -266…-146 (livre 87 mm) |
-| BMS | 140×90×35 | ESTIMATIVA | **CABE** | X -43…47 · Y -266…-126 (livre 87 mm) |
+| Módulo de bateria 8 células (+X) | 154×410×140 | ESTIMATIVA | **CABE** | X -211…-57 · Y -266…144 (livre 145 mm) |
+| Módulo de bateria 8 células (−X) | 154×410×140 | ESTIMATIVA | **CABE** | X -211…-57 · Y -266…144 (livre 145 mm) |
+| Jetson Orin NX + carrier (de pé) | 180×45×110 | ESTIMATIVA | **CABE** | X -91…89 · Y -258…-213 (livre 125 mm) |
+| Driver dos motores (4 canais, de pé) | 200×55×120 | ESTIMATIVA | **CABE** | X -99…101 · Y -258…-203 (livre 125 mm) |
+| BMS | 140×90×35 | ESTIMATIVA | **CABE** | X -43…47 · Y -266…-126 (livre 88 mm) |
 | Conversor DC/DC 12 V | 110×50×40 | ESTIMATIVA | **CABE** | X -27…23 · Y -266…-156 (livre 88 mm) |
 | Roteador / modem | 110×50×35 | ESTIMATIVA | **CABE** | X -27…23 · Y -266…-156 (livre 88 mm) |
-| Compressor 12 V | 210×110×120 | FAIXA | **CABE** | X -107…103 · Y -162…-52 (livre 127 mm) |
-| Reservatório 2 L | 300×110×110 | FAIXA | **CABE** | X -147…153 · Y -162…-52 (livre 127 mm) |
+| Compressor 12 V | 210×110×120 | FAIXA | **CABE** | X -107…103 · Y -258…-148 (livre 125 mm) |
+| Reservatório: tubo Ø75 × 220 (≈1 L) | 220×75×75 | REQUISITO | **CABE** | X -35…40 · Y -266…-46 (livre 87 mm) |
+| Reservatório: tubo Ø75 × 220 (≈1 L) | 220×75×75 | REQUISITO | **CABE** | X -35…40 · Y -266…-46 (livre 87 mm) |
 
 Cuidado ao ler a tabela acima: ela olha **um componente por vez** e aceita qualquer lugar livre do compartimento. Vários componentes recebem a mesma posição, e a posição pode ficar fora da zona reservada para eles. A conferência que importa para o leiaute é a seguinte.
 
@@ -127,22 +134,27 @@ Planta do componente contra a planta da zona (nas duas orientações), altura co
 
 | Zona | Componente | L×W×H | origem | veredito | motivo |
 |---|---|---|---|---|---|
-| Bateria | Bateria LiFePO4 estimada | 460×350×130 | ESTIMATIVA | **NÃO CABE** | altura 130 > teto 87 mm |
-| Bateria | *soma da zona* | 1610 cm² |  | **CABE** | área da zona 1813 cm² |
-| Bandeja lateral esquerda | Jetson Orin NX + carrier | 180×110×45 | ESTIMATIVA | **NÃO CABE** | planta 180×110 > zona 380×54 |
-| Bandeja lateral esquerda | *soma da zona* | 198 cm² |  | **CABE** | área da zona 205 cm² |
-| Bandeja lateral direita | Driver dos motores (4 canais) | 200×120×55 | ESTIMATIVA | **NÃO CABE** | planta 200×120 > zona 380×54 |
-| Bandeja lateral direita | BMS | 140×90×35 | ESTIMATIVA | **NÃO CABE** | planta 140×90 > zona 380×54 |
-| Bandeja lateral direita | *soma da zona* | 366 cm² |  | **NÃO CABE** | área da zona 205 cm² |
+| Bateria · módulo +X | Módulo de bateria 8 células (+X) | 154×410×140 | ESTIMATIVA | **CABE** | — |
+| Bateria · módulo +X | *soma da zona* | 631 cm² |  | **CABE** | área da zona 631 cm² |
+| Bateria · módulo −X | Módulo de bateria 8 células (−X) | 154×410×140 | ESTIMATIVA | **CABE** | — |
+| Bateria · módulo −X | *soma da zona* | 631 cm² |  | **CABE** | área da zona 631 cm² |
+| Faixa traseira (computação) | Jetson Orin NX + carrier (de pé) | 180×45×110 | ESTIMATIVA | **CABE** | — |
+| Faixa traseira (computação) | Driver dos motores (4 canais, de pé) | 200×55×120 | ESTIMATIVA | **CABE** | — |
+| Faixa traseira (computação) | *soma da zona* | 191 cm² |  | **CABE** | área da zona 375 cm² |
+| Baia dianteira | BMS | 140×90×35 | ESTIMATIVA | **CABE** | — |
+| Baia dianteira | *soma da zona* | 126 cm² |  | **CABE** | área da zona 301 cm² |
+| Faixa dianteira esquerda | Reservatório: tubo Ø75 × 220 (≈1 L) | 220×75×75 | REQUISITO | **CABE** | — |
+| Faixa dianteira esquerda | *soma da zona* | 165 cm² |  | **CABE** | área da zona 167 cm² |
+| Faixa dianteira direita | Reservatório: tubo Ø75 × 220 (≈1 L) | 220×75×75 | REQUISITO | **CABE** | — |
+| Faixa dianteira direita | *soma da zona* | 165 cm² |  | **CABE** | área da zona 167 cm² |
 | Bandeja dianteira esquerda | Conversor DC/DC 12 V | 110×50×40 | ESTIMATIVA | **CABE** | — |
 | Bandeja dianteira esquerda | *soma da zona* | 55 cm² |  | **CABE** | área da zona 63 cm² |
 | Bandeja traseira esquerda | Roteador / modem | 110×50×35 | ESTIMATIVA | **CABE** | — |
 | Bandeja traseira esquerda | *soma da zona* | 55 cm² |  | **CABE** | área da zona 63 cm² |
-| Grupo pneumático | Compressor 12 V | 210×110×120 | FAIXA | **NÃO CABE** | altura 120 > teto 37 mm |
-| Grupo pneumático | Reservatório 2 L | 300×110×110 | FAIXA | **NÃO CABE** | planta 300×110 > zona 220×190; altura 110 > teto 37 mm |
-| Grupo pneumático | *soma da zona* | 561 cm² |  | **NÃO CABE** | área da zona 418 cm² |
+| Compressor (baia traseira) | Compressor 12 V | 210×110×120 | FAIXA | **CABE** | — |
+| Compressor (baia traseira) | *soma da zona* | 231 cm² |  | **CABE** | área da zona 301 cm² |
 
-**4 de 6 zonas não comportam o que o projeto põe nelas.** Com as dimensões estimadas, o leiaute interno das bandejas e do grupo pneumático precisa ser refeito quando chegarem as fichas técnicas (P-05, P-13).
+**0 de 9 zonas não comportam o que o projeto põe nelas.** Com as dimensões estimadas, o leiaute interno das bandejas e do grupo pneumático precisa ser refeito quando chegarem as fichas técnicas (P-05, P-13).
 
 
 

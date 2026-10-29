@@ -14,25 +14,28 @@ A Rev I existia só em PDF, editado sobre o caderno da Rev H. Esta fonte a repro
 15/10/2026 (`../revisao-h/VTX-RV4-CORRECOES-2026-10-15.md`). Os números calculados da Rev I
 (envelope 21,2°, CG 314 mm) partiam da Rev H e ficaram superados — por isso a letra muda.
 
-Escolha da opção: variável de ambiente ``VTX_OPCAO`` = ``AL`` (padrão) ou ``AC``.
+Rev K (28/10/2026): a opção B (aço) passou a ser a escolhida e é o padrão; a bateria vai em
+dois módulos de 8 células. Ver ``../revisao-h/VTX-RV4-REV-K.md``.
+
+Escolha da opção: variável de ambiente ``VTX_OPCAO`` = ``AC`` (padrão) ou ``AL``.
 
     set VTX_OPCAO=AC && python gerar.py      (Windows)
     VTX_OPCAO=AC python gerar.py             (bash)
 """
 import os
 
-OPCAO = os.environ.get('VTX_OPCAO', 'AL').strip().upper()
+OPCAO = os.environ.get('VTX_OPCAO', 'AC').strip().upper()   # Rev K: aço é o padrão (decisão de 28/10/2026)
 if OPCAO not in ('AL', 'AC'):
     raise ValueError(f'VTX_OPCAO deve ser AL ou AC, não {OPCAO!r}')
 ACO = OPCAO == 'AC'
 
-REV = 'J'
-DATA = '16/10/2026'
+REV = 'K'
+DATA = '28/10/2026'
 LETRA = 'B' if ACO else 'A'
 NOME = 'opção B — chassi em aço carbono' if ACO else 'opção A — chassi em alumínio'
 PASTA = 'opcao-B-aco-carbono' if ACO else 'opcao-A-aluminio'
 DOC = f'VTX-RV4-CG-{REV}-{OPCAO}'
-REV_DESC = f'Rev I na fonte + correções de 15/10 · opção {LETRA}, ' + ('aço carbono' if ACO else 'alumínio')
+REV_DESC = f'Bateria em 2 módulos, pneumática realocada · opção {LETRA}, ' + ('aço' if ACO else 'alumínio')
 
 # ------------------------------------------------------------ material por peça
 # Na opção B vão para aço: quadro, chapa de fundo e nervuras, gaiola (menos o coxim de

@@ -15,4 +15,4 @@ Vão livre (mínimo, ajustável a 180);150.0;150.0;modelo · VAO_LIVRE;confere
 Envelope medido das peças (X);;1050.0;modelo · envelope() sobre todas as peças;calculado
 Envelope medido das peças (Y);;600.0;modelo · envelope();calculado
 Envelope medido das peças (Z);;488.0;modelo · envelope();calculado
-Massa nominal recalculada;97.8;119.91;modelo · comparacao_baseline();DIVERGE (+22.11 kg) — pendência P-02
+Massa nominal recalculada;97.8;144.02;modelo · comparacao_baseline();DIVERGE (+46.22 kg) — pendência P-02

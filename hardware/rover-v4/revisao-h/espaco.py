@@ -164,24 +164,32 @@ def volume_interno() -> dict:
 # ESTIMATIVA — as fichas técnicas continuam pendentes (P-05/P-13), e é por isso que a
 # coluna "origem" existe.
 ZONAS = [
-    ('Bateria', (-245.0, 245.0), (-185.0, 185.0), 'Centro do compartimento, entre os batentes B-01'),
-    ('Bandeja lateral esquerda', (-190.0, 190.0), (210.0, 264.0), 'Sobre a chapa, ao lado da bateria'),
+    ('Bateria · módulo +X', (60.0, 214.0), (-205.0, 205.0), 'Rev K: entre o G-02 e a G-03, batentes B-01 nas faces X'),
+    ('Bateria · módulo −X', (-214.0, -60.0), (-205.0, 205.0), 'Idem, espelhado'),
+    ('Bandeja lateral esquerda', (-190.0, 190.0), (210.0, 264.0), 'Rev K: livre (fusíveis, borneiras, cabos)'),
     ('Bandeja lateral direita', (-190.0, 190.0), (-264.0, -210.0), 'Idem, espelhada'),
+    ('Faixa traseira (computação)', (-327.0, -252.0), (-250.0, 250.0), 'Rev K: Jetson e driver de pé, ao longo de Y'),
+    ('Baia dianteira', (368.0, 490.0), (-152.0, 95.0), 'Rev K: BMS, sobre a E-02 dianteira direita'),
+    ('Faixa dianteira esquerda', (241.0, 317.0), (30.0, 250.0), 'Rev K: tubo do reservatório (1 de 2)'),
+    ('Faixa dianteira direita', (241.0, 317.0), (-250.0, -30.0), 'Rev K: tubo do reservatório (2 de 2)'),
     ('Bandeja dianteira esquerda', (368.0, 490.0), (100.0, 152.0), 'Entre a janela de raiz e o colar do fole'),
     ('Bandeja traseira esquerda', (-490.0, -368.0), (100.0, 152.0), 'Idem, traseira'),
-    ('Grupo pneumático', (-340.0, -120.0), (-250.0, -60.0), 'Compressor, reservatório, secador e manifold'),
+    ('Compressor (baia traseira)', (-490.0, -368.0), (-152.0, 95.0), 'Rev K: atrás, sobre a E-02 traseira direita'),
 ]
 
 COMPONENTES = [
     # (nome, zona, L, W, H, origem)
-    ('Bateria LiFePO4 estimada', 'Bateria', 460.0, 350.0, 130.0, 'ESTIMATIVA'),
-    ('Jetson Orin NX + carrier', 'Bandeja lateral esquerda', 180.0, 110.0, 45.0, 'ESTIMATIVA'),
-    ('Driver dos motores (4 canais)', 'Bandeja lateral direita', 200.0, 120.0, 55.0, 'ESTIMATIVA'),
-    ('BMS', 'Bandeja lateral direita', 140.0, 90.0, 35.0, 'ESTIMATIVA'),
+    ('Módulo de bateria 8 células (+X)', 'Bateria · módulo +X', 154.0, 410.0, 140.0, 'ESTIMATIVA'),
+    ('Módulo de bateria 8 células (−X)', 'Bateria · módulo −X', 154.0, 410.0, 140.0, 'ESTIMATIVA'),
+    # Rev K: Jetson e driver montados DE PÉ (a face maior na vertical): L × espessura × altura.
+    ('Jetson Orin NX + carrier (de pé)', 'Faixa traseira (computação)', 180.0, 45.0, 110.0, 'ESTIMATIVA'),
+    ('Driver dos motores (4 canais, de pé)', 'Faixa traseira (computação)', 200.0, 55.0, 120.0, 'ESTIMATIVA'),
+    ('BMS', 'Baia dianteira', 140.0, 90.0, 35.0, 'ESTIMATIVA'),
     ('Conversor DC/DC 12 V', 'Bandeja dianteira esquerda', 110.0, 50.0, 40.0, 'ESTIMATIVA'),
     ('Roteador / modem', 'Bandeja traseira esquerda', 110.0, 50.0, 35.0, 'ESTIMATIVA'),
-    ('Compressor 12 V', 'Grupo pneumático', 210.0, 110.0, 120.0, 'FAIXA'),
-    ('Reservatório 2 L', 'Grupo pneumático', 300.0, 110.0, 110.0, 'FAIXA'),
+    ('Compressor 12 V', 'Compressor (baia traseira)', 210.0, 110.0, 120.0, 'FAIXA'),
+    ('Reservatório: tubo Ø75 × 220 (≈1 L)', 'Faixa dianteira esquerda', 220.0, 75.0, 75.0, 'REQUISITO'),
+    ('Reservatório: tubo Ø75 × 220 (≈1 L)', 'Faixa dianteira direita', 220.0, 75.0, 75.0, 'REQUISITO'),
 ]
 
 

@@ -81,8 +81,8 @@ ensaio V-12. Enquanto ele não rodar, as opções honestas são: (a) medir; (b) 
 marcha com o mastro cheio a ~1,0 m/s; (c) aceitar a amplificação.
 Não é decisão de desenho — é decisão sua, com o dado na mão. Pendência P-39.
 
-A suspensão pneumática (frequência de canto 1,95 Hz) atenua o terreno acima de
-√2 vezes isso, ou 2,8 Hz — a 5,6 Hz ela já filtra. A razão acima é
+A suspensão pneumática (frequência de canto 1,89 Hz) atenua o terreno acima de
+√2 vezes isso, ou 2,7 Hz — a 5,6 Hz ela já filtra. A razão acima é
 contra o **chão**; o que chega ao mastro é menos. Quanto menos, é o que o V-12 mede.
 
 ## A antena: quanto o mastro aguenta
@@ -150,7 +150,7 @@ Tensão na raiz 55,4 MPa, fator de segurança 4,34. O galho governa. Vento de 20
 | Fonte | Frequência |
 |---|---|
 | Terreno a 1,4 m/s, onda de 0,25 m | 5,60 Hz |
-| Suspensão pneumática (frequência de canto) | 1,95 Hz |
+| Suspensão pneumática (frequência de canto) | 1,89 Hz |
 | Rotação da roda | 2,23 Hz |
 
 ## Sensibilidade à massa da câmera
