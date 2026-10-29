@@ -31,7 +31,7 @@ F-46;Passa-cabo de borracha para furo Ø32;EPDM;1;Cabo do terminal satelital, no
 F-59;Passa-cabo de borracha para furo Ø20;EPDM;2;Saída lateral da luva M-01, um por mastro (o Ø32 do V3 não cabia: a luva é Ø42)
 F-60;Passa-cabo de borracha para furo Ø12;EPDM;6;Entrada de cabo no tubo M-10, 30 mm abaixo de cada posto de OAK-D
 F-22;Parafuso M6×20 ISO 7380 + porca-rebite M6;Inox A4;24;Batentes B-01 e bandejas E-01/E-02 na malha da chapa
-F-23;Cinta de poliéster 25 mm com catraca, LC ≥ 250 daN;Poliéster;2;Amarração da bateria
+F-23;Cinta de poliéster 25 mm com catraca, LC ≥ 250 daN;Poliéster;2;Amarração da bateria (1 por módulo)
 F-24;Parafuso M6×12 passante (travamento da haste);Inox A4-70;4;Haste na luva
 F-25;Parafuso M5×16 + porca;Inox A4;8;E-10 e E-11 na tampa traseira
 F-26;Parafuso M5×16 + porca-rebite M5;Inox A4;4;Suporte da antena GNSS na tampa

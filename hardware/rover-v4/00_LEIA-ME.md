@@ -1,7 +1,21 @@
 # ValTexa Rover **V4** — engenharia mecânica
 
-**Revisão atual: J** (16/10/2026), em duas opções de material · EMITIDO PARA COTAÇÃO E VALIDAÇÃO — **NÃO
+**Revisão atual: K** (28/10/2026) · padrão: **opção B, aço** · EMITIDO PARA COTAÇÃO E VALIDAÇÃO — **NÃO
 LIBERADO PARA FABRICAÇÃO**
+
+## Rev K — bateria em 2 módulos e leiaute interno refeito (28/10/2026)
+
+Aplica as decisões dos sócios de 28/10: chassi em **aço** (agora o padrão), autonomia de **8 h a 2 m/s** e a
+**bateria dividida em 2 módulos de 8 células**, um de cada lado dos trilhos G-02 — o pack inteiro não cabia
+(127 mm livres para ~140). Compressor, reservatório, Jetson, driver e BMS ganharam zonas onde cabem; as 10 zonas
+de `revisao-h/espaco.py` passam. Novo `revisao-h/autonomia.py`: 8,4 h no plano e 5,4 h em morro de 10°.
+Detalhes e pendências em **`revisao-h/VTX-RV4-REV-K.md`** e na folha 43.
+
+| Comando | Gera |
+|---|---|
+| `python gerar.py` (em `chassi-gaiola/`) | caderno da opção B, aço (padrão) em `saida/opcao-B-aco-carbono/` |
+| `VTX_OPCAO=AL python gerar.py` | caderno da opção A, alumínio |
+| `python autonomia.py` (em `revisao-h/`) | conta de autonomia para 8 h a 2 m/s |
 
 ## Rev J — a Rev I na fonte (16/10/2026)
 

@@ -44,8 +44,8 @@ sem que ninguém perceba — até o eixo não entrar.
 | **W-11** | Berço do fole | 4 | Al 6061-T6 | 4 | 1 | 3 | 0 | 16 |
 | **W-13** | Flange do colar | 4 | Aço A36 | 3 | 1 | 1 | 1 | 12 |
 | **W-12** | Tubo do colar de vedação | 4 | Aço A36 | 3 | 0 | 2 | 1 | 12 |
-| **Q-05** | Bucha de compressão | 16 | Al 6061-T6 | 2 | 0 | 1 | 1 | 32 |
-| **M-01** | Luva do mastro | 2 | Al 6061-T6 | 4 | 1 | 2 | 1 | 8 |
+| **Q-05** | Bucha de compressão | 16 | Aço SAE 1020 | 2 | 0 | 1 | 1 | 32 |
+| **M-01** | Luva do mastro | 2 | Aço SAE 1020 | 4 | 1 | 2 | 1 | 8 |
 | **T-01** | Braçadeira do mastro (metade) | 20 | Al 6061-T6 | 4 | 1 | 3 | 0 | 80 |
 | **T-02** | Prato de interface VMS-60 | 10 | Al 6061-T6 | 7 | 1 | 6 | 0 | 70 |
 | **T-03** | Adaptador de sensor VMS-60 | 9 | Al 6061-T6 | 3 | 1 | 2 | 0 | 27 |
@@ -202,7 +202,7 @@ sem que ninguém perceba — até o eixo não entrar.
 
 ### Q-05 — Bucha de compressão
 
-16 un · Al 6061-T6 · Barra Ø12, furo Ø8,5
+16 un · Aço SAE 1020 · Barra Ø12, furo Ø8,5
 
 | op | operação | ferramenta | cota / tolerância | acabamento |
 |---|---|---|---|---|
@@ -211,7 +211,7 @@ sem que ninguém perceba — até o eixo não entrar.
 
 ### M-01 — Luva do mastro
 
-2 un · Al 6061-T6 · Tubo Ø42×5 × 180
+2 un · Aço SAE 1020 · Tubo Ø42×5 × 180
 
 | op | operação | ferramenta | cota / tolerância | acabamento |
 |---|---|---|---|---|

@@ -115,7 +115,7 @@ TITULOS = OrderedDict([
     (40, ('Provisão de satélite e pendências do V4', 'O que cabe no deck e o que fica acima de Z 400')),
     (41, ('Módulo térmico removível e posto fixo', 'A OAK-D fica calibrada; a térmica sai com a mão e volta à mesma pose')),
     (42, ('Roteamento de cabos e interligação', 'Potência, dados e sinais: de onde a onde e por onde passam')),
-    (43, ('Registro de alterações — Rev J', 'O que a Rev I mudou da Rev H, as correções de 15/10 e o que pede atenção')),
+    (43, ('Registro de alterações — Rev J e K', 'Rev I na fonte, correções de 15/10 e a Rev K: bateria em 2 módulos')),
 ])
 
 
@@ -158,7 +158,7 @@ class Folha:
 
 TAGS = {'FONTE': 'fonte', 'BASE': 'base', 'CALC': 'calc', 'NOVO': 'novo', 'A VALIDAR': 'val',
         'REV G': 'novo',
-        'HIPÓTESE': 'hip', 'ESTIMATIVA': 'est', 'REV F': 'novo', 'REV I': 'novo', 'REV J': 'novo'}
+        'HIPÓTESE': 'hip', 'ESTIMATIVA': 'est', 'REV F': 'novo', 'REV I': 'novo', 'REV J': 'novo', 'REV K': 'novo'}
 
 
 def tag(t):

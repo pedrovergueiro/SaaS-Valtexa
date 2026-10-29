@@ -459,8 +459,7 @@ def furos_chapa():
 
 
 # Pontos de fixação para berço da bateria, bandejas de eletrônica e futuros suportes.
-MALHA_MONTAGEM = ([(sx * 245.0, s * 40.0) for sx in (1, -1) for s in (1, -1)]        # batentes X da bateria
-                  + [(sx * 40.0, s * 185.0) for sx in (1, -1) for s in (1, -1)]      # batentes Y da bateria
+MALHA_MONTAGEM = ([(sx * x, s * 40.0) for sx in (1, -1) for x in (36.0, 238.0) for s in (1, -1)]  # batentes dos módulos
                   + [(sx * 170.0, s * 240.0) for sx in (1, -1) for s in (1, -1)]     # bandejas laterais
                   + [(sx * 320.0, s * 220.0) for sx in (1, -1) for s in (1, -1)]
                   + [(sx * x, s * 25.0) for sx in (1, -1) for x in (278.0, 322.0) for s in (1, -1)]
@@ -1309,33 +1308,44 @@ def mastro_ref():
     return [cilindro('R-03', 'z', Z_REF_M[1], Z_TOTAL, 0.0, s * Y_MASTRO, D_BAINHA) for s in (1, -1)]
 
 
-# --- bateria: zona, batentes e amarração ---
-BATERIA = (460.0, 350.0, 130.0)   # caixa estimada (A VALIDAR): comprimento × largura × altura
-Z_BATERIA = (Z_QUADRO, Z_QUADRO + BATERIA[2])
+# --- bateria: dois módulos, batentes e amarração (Rev K) ---
+# Rev K: o pack de 16 células de pé (401 × 291 × ~140) não cabia sob os trilhos G-02 (127 mm
+# livres). Ele vira dois módulos de 8 células (2 × 4, de pé), um de cada lado dos G-02, no vão
+# entre os G-02 (|X| ≤ 51) e as barras G-03 (|X| 221…237), onde há 145 a 147 mm livres.
+# Módulo: 4 × 36,35 + caixa ≈ 154 em X; 2 × 200,5 + caixa ≈ 410 em Y; 130,3 + barramento ≈ 140 em Z.
+MODULO_BAT = (154.0, 410.0, 140.0)   # caixa de um módulo (A VALIDAR com o montador do pack)
+X_MODULO = 137.0                     # centro de cada módulo em |X|: ocupa |X| 60…214
+BATERIA = (2 * X_MODULO + MODULO_BAT[0], MODULO_BAT[1], MODULO_BAT[2])  # envolvente dos dois (428 × 410 × 140)
+Z_BATERIA = (Z_QUADRO, Z_QUADRO + MODULO_BAT[2])
+
+
+def modulos_bateria():
+    """Caixas dos dois módulos: (x0, x1, y0, y1)."""
+    a, b = MODULO_BAT[0] / 2, MODULO_BAT[1] / 2
+    return [(sx * X_MODULO - a, sx * X_MODULO + a, -b, b) for sx in (1, -1)]
 
 
 def bateria_ref():
-    return [chapa('R-04', 'z', Z_BATERIA[0], Z_BATERIA[1],
-                  retangulo(-BATERIA[0] / 2, BATERIA[0] / 2, -BATERIA[1] / 2, BATERIA[1] / 2), estilo='ref')]
+    return [chapa('R-04', 'z', Z_BATERIA[0], Z_BATERIA[1], retangulo(x0, x1, y0, y1), estilo='ref')
+            for (x0, x1, y0, y1) in modulos_bateria()]
+
+
+def _batente_x(face, sentido):
+    """Cantoneira 40×40×4 ao longo de Y, encostada na face X `face` de um módulo, aba para `sentido`."""
+    s = sentido
+    perfil = [(face + s * 2, Z_QUADRO), (face + s * 2, Z_QUADRO + 40), (face + s * 6, Z_QUADRO + 40),
+              (face + s * 6, Z_QUADRO + 4), (face + s * 40, Z_QUADRO + 4), (face + s * 40, Z_QUADRO)]
+    if s < 0:
+        perfil = perfil[::-1]
+    return Prisma('B-01', 'y', -75.0, 75.0, perfil)
 
 
 def retencao_bateria():
-    """B-01: batente em cantoneira 40×40×4 com rasgo para a cinta (4×)."""
+    """B-01: dois batentes por módulo (face interna e externa), 4 no total, com rasgo para a cinta."""
     ps = []
-    for sx in (1, -1):
-        perfil = [(sx * 245 - sx * 20, Z_QUADRO), (sx * 245 - sx * 20, Z_QUADRO + 4),
-                  (sx * 245 + sx * 16, Z_QUADRO + 4), (sx * 245 + sx * 16, Z_QUADRO + 40),
-                  (sx * 245 + sx * 20, Z_QUADRO + 40), (sx * 245 + sx * 20, Z_QUADRO)]
-        if sx < 0:
-            perfil = perfil[::-1]
-        ps.append(Prisma('B-01', 'y', -75.0, 75.0, perfil))
-    for sy in (1, -1):
-        perfil = [(sy * 185 - sy * 20, Z_QUADRO), (sy * 185 - sy * 20, Z_QUADRO + 4),
-                  (sy * 185 + sy * 16, Z_QUADRO + 4), (sy * 185 + sy * 16, Z_QUADRO + 40),
-                  (sy * 185 + sy * 20, Z_QUADRO + 40), (sy * 185 + sy * 20, Z_QUADRO)]
-        if sy < 0:
-            perfil = perfil[::-1]
-        ps.append(Prisma('B-01', 'x', -75.0, 75.0, perfil))
+    for (x0, x1, _, _) in modulos_bateria():
+        ps.append(_batente_x(x1, 1))
+        ps.append(_batente_x(x0, -1))
     return ps
 
 
@@ -1702,7 +1712,7 @@ def fixadores():
          'Entrada de cabo no tubo M-10, 30 mm abaixo de cada posto de OAK-D'),
         ('F-22', 'Parafuso M6×20 ISO 7380 + porca-rebite M6', 'Inox A4', 24,
          'Batentes B-01 e bandejas E-01/E-02 na malha da chapa'),
-        ('F-23', 'Cinta de poliéster 25 mm com catraca, LC ≥ 250 daN', 'Poliéster', 2, 'Amarração da bateria'),
+        ('F-23', 'Cinta de poliéster 25 mm com catraca, LC ≥ 250 daN', 'Poliéster', 2, 'Amarração da bateria (1 por módulo)'),
         ('F-24', 'Parafuso M6×12 passante (travamento da haste)', 'Inox A4-70', 4, 'Haste na luva'),
         ('F-25', 'Parafuso M5×16 + porca', 'Inox A4', 8, 'E-10 e E-11 na tampa traseira'),
         ('F-26', 'Parafuso M5×16 + porca-rebite M5', 'Inox A4', 4, 'Suporte da antena GNSS na tampa'),

@@ -749,10 +749,12 @@ mesmos materiais — e soma as <b>correções de cálculo de 15/10/2026</b>
 <code>suspensao.py</code>, energia de <code>modular.py</code>. Nada digitado.</p>
 <h3>5 · O que pede atenção</h3>
 <ol class="notas">{''.join(f'<li>{a}</li>' for a in atencao)}</ol>
-<h3>6 · Folhas com conteúdo alterado</h3>
-<p class="mini">Em todas: revisão J, data {OP.DATA}, documento e NN/43. Conteúdo: 01, 02, 04, 06 a 09, 11, 12,
-14 a 17, 24, 25, 27, 29 a 31, 33 a 35 e esta, 43. Materiais e massas saem do modelo; os DXF trazem o material
-no nome.</p>""")
+<h3>6 · Rev K (28/10/2026) {tag('REV K')}</h3>
+<p class="mini">Decisões dos sócios: chassi em aço (opção B, agora padrão) e bateria em <b>2 módulos de 8 células</b>
+entre os G-02 e as G-03 (folha 20), porque o pack inteiro não cabia sob os G-02. Batentes B-01 refeitos (2 por
+módulo) e uma cinta por módulo. Compressor na baia traseira, reservatório em 2 tubos Ø75 nas faixas dianteiras,
+Jetson e driver de pé na faixa traseira, BMS na baia dianteira (<code>espaco.py</code>). Autonomia de 8 h a
+2 m/s: <code>autonomia.py</code>.</p>""")
     return F
 
 

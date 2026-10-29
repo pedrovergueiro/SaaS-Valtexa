@@ -48,8 +48,8 @@ N_MOTORES = 4
 MASSA_BATERIA = 36.5
 """kg — tabela 5.1 da baseline Rev E (16 células LiFePO4)."""
 
-H_BATERIA = 130.0
-"""mm — altura da caixa. ESTIMATIVA (dimensional.py, P-18): o arranjo real não está documentado."""
+H_BATERIA = 140.0
+"""mm — altura dos módulos (Rev K: 16 células EVE LF105 de pé, 130,3 mm + barramento). ESTIMATIVA."""
 
 Z_BASE_BATERIA = 250.0
 """mm — face superior da chapa de fundo C-01."""
@@ -146,9 +146,11 @@ def inventario(estado: str = 'entrega') -> list[Item]:
             out.append(Item('Motor-roda', MASSA_MOTOR, sx * xs, sy * ys, M.Z_EIXO, 'DATASHEET', 'motor',
                             'MPW86; a massa do ZLTECH escolhido não é publicada'))
     z_bat = Z_BASE_BATERIA + H_BATERIA / 2
-    out.append(Item('Bateria 16S LiFePO4', MASSA_BATERIA, 0.0, 0.0, z_bat, 'BASELINE', 'bateria',
-                    'massa da baseline; posição = centro dos batentes B-01 (simétricos); altura da '
-                    'caixa estimada'))
+    for sx in (1, -1):   # Rev K: dois módulos de 8 células, simétricos em X
+        out.append(Item('Bateria 16S LiFePO4 · módulo', MASSA_BATERIA / 2, sx * M.X_MODULO, 0.0, z_bat,
+                        'BASELINE', 'bateria',
+                        'massa da baseline dividida em 2 módulos; posição = centro do módulo entre os '
+                        'batentes B-01; altura estimada'))
     m_resto = m_mant - N_MOTORES * MASSA_MOTOR - MASSA_BATERIA
     z_resto = (m_mant * z_mant - N_MOTORES * MASSA_MOTOR * M.Z_EIXO - MASSA_BATERIA * z_bat) / m_resto
     out.append(Item('Bloco restante da baseline', m_resto, 0.0, 0.0, z_resto, 'DERIVADO', 'resto',
@@ -180,8 +182,16 @@ def inventario(estado: str = 'entrega') -> list[Item]:
                             'ESTIMATIVA', 'sensor', 'massa suposta'))
 
     # ---- grupo pneumático (comprado; faixa de catálogo, não ficha)
-    zx, zy = _centro_zona('Grupo pneumático')
+    # Rev K: o grupo saiu da zona única. Reservatório em 2 tubos nas faixas dianteiras; o resto
+    # (compressor, secador, manifold, linhas) na baia traseira.
+    zx, zy = _centro_zona('Compressor (baia traseira)')
+    tubos = [_centro_zona('Faixa dianteira esquerda'), _centro_zona('Faixa dianteira direita')]
     for (cod, nome, qtd, kg, z, orig) in SU.COMPRADOS:
+        if 'eservat' in nome:
+            for (tx, ty) in tubos:
+                out.append(Item(f'{cod} {nome} (tubo)', kg * qtd / 2, tx, ty, z, orig, 'pneumático',
+                                'Rev K: metade em cada faixa dianteira (espaco.py)'))
+            continue
         if cod in ('W-15', 'W-16'):
             for sx in (1, -1):
                 for sy in (1, -1):
@@ -190,7 +200,7 @@ def inventario(estado: str = 'entrega') -> list[Item]:
         else:
             for _ in range(qtd):
                 out.append(Item(f'{cod} {nome}', kg, zx, zy, z, 'ZONA', 'pneumático',
-                                'centro da zona reservada ao grupo pneumático (espaco.py)'))
+                                'centro da baia traseira do compressor (espaco.py, Rev K)'))
     return out
 
 

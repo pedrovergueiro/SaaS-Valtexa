@@ -722,18 +722,11 @@ ele é o limitador de extensão, e tem de ficar esticado ali e só ali.</li>
 <p>O compartimento tem <b>{dec(vol["volume_livre_L"], 1)} L livres</b>, descontada toda peça do
 modelo. Esse número não é o produto de três cotas externas: a altura livre varia de ponto a
 ponto, porque as barras G-03 da gaiola descem a Z 377 e atravessam o rover em |X| 230 e 330.</p>
-{tabela(['Zona', 'Altura máxima de componente', 'Área'],
-        [[r['zona'], f'{num(r["altura_maxima"], 0)} mm', f'{num(r["area_cm2"], 0)} cm²']
-         for r in ES.requisitos_de_componente()], col=[46, 30, 24])}
 <ol class="notas">
-<li>A <b>bateria estimada de 130 mm não cabe</b>: o teto da zona central é
-{num(ES.requisitos_de_componente()[0]["altura_maxima"], 0)} mm. Como a ficha técnica da
-bateria é pendência (P-05), isto vira <b>requisito de compra</b>: altura ≤ 125 mm. {tag('CALC')}</li>
-<li>Todos os outros componentes estimados cabem — a varredura está em
-<code>revisao-h/espaco.py</code>, seção 4, com a posição onde cada um entra.</li>
-<li>A bandeja E-02 encolheu nesta revisão: ia de |Y| 105 a 250 e colidia com o colar do
-fole. A faixa que sobra é 100 a 152. É perda real de área, e é o preço de ter
-suspensão. {tag('NOVO')}</li>
+<li><b>Rev K:</b> a bateria vai em 2 módulos de 8 células (folha 20), com 145 a 147 mm livres; o pack
+inteiro não cabia sob os trilhos G-02 (127 mm). {tag('REV K')}</li>
+<li>Leiaute interno da Rev K: as {len(ES.ZONAS)} zonas de <code>revisao-h/espaco.py</code> comportam o que
+o projeto põe nelas — com as dimensões ainda estimadas até chegarem as fichas.</li>
 <li>Modo de falha do sistema de ar: perda de pressão <b>desce</b> para o vão mínimo e
 trava. Nunca sobe sozinho. É requisito de controle, não de hardware.</li>
 </ol>''')
